@@ -28,6 +28,9 @@ python demo_symbolic.py
 # Quick test (1000 samples)
 python examples/train_symbolic_example.py --use_proj --use_v --batch_size 32 --max_samples 1000
 
+# Sample training run 
+python examples/train_symbolic_example.py --use_proj --use_v --batch_size 32 --max_epochs 5 --max_samples 1000000
+
 # Or use script
 ./scripts/train.sh
 ```
