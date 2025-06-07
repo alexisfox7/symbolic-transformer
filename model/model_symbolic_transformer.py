@@ -74,63 +74,179 @@ class SymbolicLayerNorm(nn.Module):
 
 class VocabularyProjectionFFN(nn.Module):
     """
-    Feed Forward Network (FFN) that constrains outputs to the vocabulary embedding manifold.
-    This ensures all FFN outputs remain symbolically interpretable.
+    Feed Forward Network (FFN) that constrains outputs to the vocabulary embedding manifold
+    with proper head-channel decomposition. Each head channel operates independently on
+    its corresponding slice of the vocabulary embeddings.
     """
     def __init__(self, config, vocab_embeddings_ref):
         super().__init__()
         self.vocab_size = config.vocab_size
         self.n_embd = config.n_embd
+        self.n_head = config.n_head
+        self.head_dim = config.n_embd // config.n_head
         self.dropout = nn.Dropout(config.dropout)
-        
+
+        assert self.n_embd % self.n_head == 0, "n_embd must be divisible by n_head"
+
         # Store reference to vocabulary embeddings (not a copy)
         self.vocab_embeddings_ref = vocab_embeddings_ref
-        
-        # Intermediate projection for computing vocabulary attention
-        self.vocab_query = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
-        self.vocab_attention = nn.Linear(config.n_embd, config.vocab_size, bias=False)
-        
-        # Learnable temperature for attention sharpness
-        self.temperature = nn.Parameter(torch.ones(1))
-        
-        # Optional refinement layers
+
+        # Per-channel FFN transformations
+        self.channel_ffns = nn.ModuleList([
+            nn.Linear(self.head_dim, self.head_dim, bias=config.bias)
+            for _ in range(self.n_head)
+        ])
+
+        # Per-channel vocabulary attention projections
+        self.channel_vocab_attentions = nn.ModuleList([
+            nn.Linear(self.head_dim, self.vocab_size, bias=False)
+            for _ in range(self.n_head)
+        ])
+
+        # Per-channel learnable temperature for attention sharpness
+        self.channel_temperatures = nn.Parameter(torch.ones(self.n_head))
+
+        # Optional refinement layers per channel
         self.use_refinement = getattr(config, 'use_vocab_refinement', False)
         if self.use_refinement:
-            self.refinement = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
-            self.refinement_gate = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
-    
+            self.channel_refinements = nn.ModuleList([
+                nn.Linear(self.head_dim, self.head_dim, bias=config.bias)
+                for _ in range(self.n_head)
+            ])
+            self.channel_refinement_gates = nn.ModuleList([
+                nn.Linear(self.head_dim, self.head_dim, bias=config.bias)
+                for _ in range(self.n_head)
+            ])
+
+    def _get_vocab_channel(self, channel_idx):
+        """
+        Extract the channel_idx-th slice of vocabulary embeddings.
+
+        Args:
+            channel_idx: Index of the head channel (0 to n_head-1)
+
+        Returns:
+            E_h: Vocabulary embeddings for channel h, shape (vocab_size, head_dim)
+        """
+        start_idx = channel_idx * self.head_dim
+        end_idx = (channel_idx + 1) * self.head_dim
+        return self.vocab_embeddings_ref.weight[:, start_idx:end_idx]  # (vocab_size, head_dim)
+
     def forward(self, x):
         """
-        Project input to vocabulary embedding manifold via learned attention.
-        
+        Project input to vocabulary embedding manifold via channel-wise learned attention.
+
         Args:
             x: Input tensor (B, T, n_embd)
-            
+
         Returns:
             Vocabulary-grounded output tensor (B, T, n_embd)
         """
-        # Compute query for vocabulary attention
-        query = self.vocab_query(x)  # (B, T, n_embd)
-        
-        # Compute attention weights over vocabulary
-        vocab_logits = self.vocab_attention(query)  # (B, T, vocab_size)
-        vocab_weights = F.softmax(vocab_logits / torch.clamp(self.temperature, min=0.1), dim=-1)
-        
-        # Project to vocabulary manifold
-        vocab_output = torch.matmul(vocab_weights, self.vocab_embeddings_ref.weight)  # (B, T, n_embd)
-        
-        # Optional refinement while maintaining vocabulary grounding
-        if self.use_refinement:
-            refinement = torch.tanh(self.refinement(x))
-            gate = torch.sigmoid(self.refinement_gate(x))
-            vocab_output = vocab_output * (1 - gate) + refinement * gate
-            
-            # Re-project to ensure vocabulary grounding is maintained
-            refined_logits = self.vocab_attention(vocab_output)
-            refined_weights = F.softmax(refined_logits / torch.clamp(self.temperature, min=0.1), dim=-1)
-            vocab_output = torch.matmul(refined_weights, self.vocab_embeddings_ref.weight)
-        
-        return self.dropout(vocab_output)
+        B, T, C = x.shape
+        assert C == self.n_embd, f"Input dim {C} != expected {self.n_embd}"
+
+        # Reshape to separate head channels: (B, T, n_head, head_dim)
+        x_channels = x.view(B, T, self.n_head, self.head_dim)
+
+        channel_outputs = []
+
+        for h in range(self.n_head):
+            # Extract channel h: (B, T, head_dim)
+            x_h = x_channels[:, :, h, :]
+
+            # Apply channel-specific FFN transformation
+            ffn_h = self.channel_ffns[h](x_h)  # (B, T, head_dim)
+
+            # Get vocabulary embeddings for this channel
+            E_h = self._get_vocab_channel(h)  # (vocab_size, head_dim)
+
+            # Compute attention weights over vocabulary for this channel
+            vocab_logits_h = self.channel_vocab_attentions[h](ffn_h)  # (B, T, vocab_size)
+
+            # Apply temperature scaling
+            temp_h = torch.clamp(self.channel_temperatures[h], min=0.1)
+            vocab_weights_h = F.softmax(vocab_logits_h / temp_h, dim=-1)  # (B, T, vocab_size)
+
+            # Project to vocabulary manifold for this channel
+            vocab_output_h = torch.matmul(vocab_weights_h, E_h)  # (B, T, head_dim)
+
+            # Optional refinement while maintaining vocabulary grounding
+            if self.use_refinement:
+                refinement_h = torch.tanh(self.channel_refinements[h](x_h))
+                gate_h = torch.sigmoid(self.channel_refinement_gates[h](x_h))
+                vocab_output_h = vocab_output_h * (1 - gate_h) + refinement_h * gate_h
+
+                # Re-project to ensure vocabulary grounding is maintained
+                refined_logits_h = self.channel_vocab_attentions[h](vocab_output_h)
+                refined_weights_h = F.softmax(refined_logits_h / temp_h, dim=-1)
+                vocab_output_h = torch.matmul(refined_weights_h, E_h)
+
+            channel_outputs.append(vocab_output_h)
+
+        # Concatenate all channel outputs: (B, T, n_head, head_dim) -> (B, T, n_embd)
+        output = torch.stack(channel_outputs, dim=2).view(B, T, self.n_embd)
+
+        return self.dropout(output)
+
+#class VocabularyProjectionFFN(nn.Module):
+#    """
+#    Feed Forward Network (FFN) that constrains outputs to the vocabulary embedding manifold.
+#    This ensures all FFN outputs remain symbolically interpretable.
+#    """
+#    def __init__(self, config, vocab_embeddings_ref):
+#        super().__init__()
+#        self.vocab_size = config.vocab_size
+#        self.n_embd = config.n_embd
+#        self.dropout = nn.Dropout(config.dropout)
+#        
+#        # Store reference to vocabulary embeddings (not a copy)
+#        self.vocab_embeddings_ref = vocab_embeddings_ref
+#        
+#        # Intermediate projection for computing vocabulary attention
+#        self.vocab_query = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
+#        self.vocab_attention = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+#        
+#        # Learnable temperature for attention sharpness
+#        self.temperature = nn.Parameter(torch.ones(1))
+#        
+#        # Optional refinement layers
+#        self.use_refinement = getattr(config, 'use_vocab_refinement', False)
+#        if self.use_refinement:
+#            self.refinement = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
+#            self.refinement_gate = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
+#    
+#    def forward(self, x):
+#        """
+#        Project input to vocabulary embedding manifold via learned attention.
+#        
+#        Args:
+#            x: Input tensor (B, T, n_embd)
+#            
+#        Returns:
+#            Vocabulary-grounded output tensor (B, T, n_embd)
+#        """
+#        # Compute query for vocabulary attention
+#        query = self.vocab_query(x)  # (B, T, n_embd)
+#        
+#        # Compute attention weights over vocabulary
+#        vocab_logits = self.vocab_attention(query)  # (B, T, vocab_size)
+#        vocab_weights = F.softmax(vocab_logits / torch.clamp(self.temperature, min=0.1), dim=-1)
+#        
+#        # Project to vocabulary manifold
+#        vocab_output = torch.matmul(vocab_weights, self.vocab_embeddings_ref.weight)  # (B, T, n_embd)
+#        
+#        # Optional refinement while maintaining vocabulary grounding
+#        if self.use_refinement:
+#            refinement = torch.tanh(self.refinement(x))
+#            gate = torch.sigmoid(self.refinement_gate(x))
+#            vocab_output = vocab_output * (1 - gate) + refinement * gate
+#            
+#            # Re-project to ensure vocabulary grounding is maintained
+#            refined_logits = self.vocab_attention(vocab_output)
+#            refined_weights = F.softmax(refined_logits / torch.clamp(self.temperature, min=0.1), dim=-1)
+#            vocab_output = torch.matmul(refined_weights, self.vocab_embeddings_ref.weight)
+#        
+#        return self.dropout(vocab_output)
 
 
 class SymbolicCausalSelfAttentionALiBi(nn.Module):
