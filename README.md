@@ -26,10 +26,7 @@ python demo_symbolic.py
 ### 3. Train
 ```bash
 # Quick test (1000 samples)
-python train_symbolic.py --preset tiny --max_samples 1000 --save_model
-
-# Small training run
-python train_symbolic.py --preset small --max_samples 50000 --save_model
+python examples/train_symbolic_example.py --use_proj --use_v --batch_size 32 --max_samples 1000
 
 # Or use script
 ./scripts/train.sh
