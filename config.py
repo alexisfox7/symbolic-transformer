@@ -112,7 +112,7 @@ def print_config(config: SymbolicConfig, dataset_name: str = None):
     print(f"  Output Constraints:  {config.use_proj}")
     print(f"  ALiBi Encoding:      Yes (no learned positions)")
     
-    print(f"\n🎓 TRAINING:")
+    print(f"\n TRAINING:")
     print(f"  Batch Size:          {config.batch_size}")
     print(f"  Epochs:              {config.num_epochs}")
     print(f"  Learning Rate:       {config.learning_rate}")
