@@ -10,6 +10,8 @@ Key features demonstrated:
 - Channel-wise layer normalization preserving head structure
 - Vocabulary-grounded FFN projections ensuring interpretability
 - ALiBi positional encoding maintaining symbolic purity
+- Checkpoint resumption capability
+- Gradient accumulation for efficient training
 
 Usage examples:
 python ./examples/train_symbolic_example.py \
@@ -21,6 +23,25 @@ python ./examples/train_symbolic_example.py \
   --num_epochs 5 \
   --output_dir "./outputs/symbolic_test" \
   --test_generation
+
+# With gradient accumulation:
+python ./examples/train_symbolic_example.py \
+  --dataset "roneneldan/TinyStories" \
+  --max_samples 100000 \
+  --preset small \
+  --batch_size 8 \
+  --effective_batch_size 32 \
+  --num_epochs 5 \
+  --output_dir "./outputs/symbolic_test"
+
+# Resume from checkpoint:
+python ./examples/train_symbolic_example.py \
+  --dataset "roneneldan/TinyStories" \
+  --max_samples 100000 \
+  --preset small \
+  --resume_from_checkpoint "./outputs/symbolic_test/checkpoint_epoch_3.pt" \
+  --num_epochs 5 \
+  --output_dir "./outputs/symbolic_test"
 
 python ./examples/train_symbolic_example.py \
   --dataset "wikimedia/wikipedia" \
@@ -301,7 +322,7 @@ def parse_args():
     
     # Training parameters
     parser.add_argument('--batch_size', type=int, default=None,
-                       help='Batch size for training')
+                       help='Mini-batch size for training (will be used with gradient accumulation)')
     parser.add_argument('--num_epochs', type=int, default=5,
                        help='Number of training epochs')
     parser.add_argument('--learning_rate', type=float, default=None,
@@ -312,6 +333,16 @@ def parse_args():
                        help="Max norm for gradient clipping")
     parser.add_argument("--trainer_type", type=str, default="simple",
                        help="Type of trainer to use")
+    
+    # Gradient accumulation parameters
+    parser.add_argument("--gradient_accumulation_steps", type=int, default=1,
+                       help="Number of mini-batches to accumulate before updating parameters")
+    parser.add_argument("--effective_batch_size", type=int, default=None,
+                       help="Target effective batch size (will calculate accumulation steps automatically)")
+    
+    # Checkpoint resumption
+    parser.add_argument("--resume_from_checkpoint", type=str, default=None,
+                       help="Path to the model checkpoint to resume training from.")
     
     # Data and tokenizer
     parser.add_argument('--tokenizer_type', type=str, default='gpt2',
@@ -348,6 +379,111 @@ def parse_args():
     return parser.parse_args()
 
 
+def load_checkpoint_for_resumption(checkpoint_path, model, optimizer, device, logger):
+    """
+    Load checkpoint for training resumption.
+    
+    Args:
+        checkpoint_path: Path to checkpoint file
+        model: Model instance
+        optimizer: Optimizer instance
+        device: Device to load on
+        logger: Logger instance
+        
+    Returns:
+        start_epoch: Epoch to start from (0 if no valid checkpoint)
+    """
+    start_epoch = 0
+    
+    if checkpoint_path and os.path.exists(checkpoint_path):
+        logger.info(f"Resuming training from checkpoint: {checkpoint_path}")
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+            
+            # Load model state
+            if 'model_state_dict' in checkpoint:
+                model.load_state_dict(checkpoint['model_state_dict'])
+                logger.info("Model state loaded successfully")
+            else:
+                logger.warning("No model_state_dict found in checkpoint")
+            
+            # Load optimizer state
+            if 'optimizer_state_dict' in checkpoint:
+                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                logger.info("Optimizer state loaded successfully")
+            else:
+                logger.warning("No optimizer_state_dict found in checkpoint")
+            
+            # Get starting epoch
+            if 'epoch' in checkpoint:
+                start_epoch = checkpoint['epoch'] + 1
+                logger.info(f"Resuming from epoch {start_epoch}")
+            else:
+                logger.warning("No epoch information found in checkpoint, starting from epoch 0")
+                
+            # Log additional checkpoint info
+            if 'loss' in checkpoint:
+                logger.info(f"Checkpoint loss: {checkpoint['loss']:.6f}")
+                
+        except Exception as e:
+            logger.error(f"Error loading checkpoint: {e}")
+            logger.warning("Starting training from scratch")
+            start_epoch = 0
+    else:
+        if checkpoint_path:
+            logger.warning(f"Checkpoint file not found at '{checkpoint_path}'. Starting training from scratch.")
+    
+    return start_epoch
+
+
+class ResumeTrainer:
+    """
+    Wrapper to handle resumption with the existing trainer system.
+    This class tracks the current epoch for proper checkpoint saving.
+    """
+    def __init__(self, trainer, start_epoch=0):
+        self.trainer = trainer
+        self.current_epoch = start_epoch
+        
+    def train(self):
+        """Modified training loop that supports resumption."""
+        # Store original num_epochs
+        original_num_epochs = self.trainer.num_epochs
+        
+        # Adjust training to account for already completed epochs
+        remaining_epochs = original_num_epochs - self.current_epoch
+        
+        if remaining_epochs <= 0:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"No epochs remaining to train. Already completed {self.current_epoch} epochs.")
+            return {'final_loss': 0.0, 'training_time': 0.0}
+        
+        # Temporarily adjust the trainer's num_epochs
+        self.trainer.num_epochs = remaining_epochs
+        
+        # Modify the trainer's save_checkpoint calls to use correct epoch numbers
+        original_save_checkpoint = self.trainer.save_checkpoint
+        
+        def adjusted_save_checkpoint(path, epoch=None, **kwargs):
+            adjusted_epoch = epoch + self.current_epoch if epoch is not None else None
+            # Modify the path to reflect the true epoch number
+            if epoch is not None and self.trainer.output_dir:
+                filename = f"checkpoint_epoch_{adjusted_epoch}.pt"
+                path = os.path.join(self.trainer.output_dir, filename)
+            return original_save_checkpoint(path, adjusted_epoch, **kwargs)
+        
+        self.trainer.save_checkpoint = adjusted_save_checkpoint
+        
+        # Run training
+        result = self.trainer.train()
+        
+        # Restore original values
+        self.trainer.num_epochs = original_num_epochs
+        self.trainer.save_checkpoint = original_save_checkpoint
+        
+        return result
+
+
 def main():
     """Main training function."""
     args = parse_args()
@@ -364,6 +500,10 @@ def main():
         logger.info("STARTING SYMBOLIC TRANSFORMER TRAINING")
         logger.info("="*60)
         logger.info(f"Session timestamp: {timestamp}")
+        
+        # Log checkpoint resumption status
+        if args.resume_from_checkpoint:
+            logger.info(f"Checkpoint resumption requested: {args.resume_from_checkpoint}")
         
         # Set device
         if args.device == 'auto':
@@ -422,10 +562,36 @@ def main():
         print(f"Use Vocab Refinement:      {config.use_vocab_refinement}")
         print(f"Use V Projection:          {config.use_v}")
         print(f"Use Output Projection:     {config.use_proj}")
+        
+        # Print gradient accumulation info
+        mini_batch_size = config.batch_size
+        if args.effective_batch_size:
+            accumulation_steps = max(1, args.effective_batch_size // mini_batch_size)
+            effective_batch = accumulation_steps * mini_batch_size
+            print(f"Mini-batch size:           {mini_batch_size}")
+            print(f"Gradient accumulation:     {accumulation_steps} steps")
+            print(f"Effective batch size:      {effective_batch}")
+            if effective_batch != args.effective_batch_size:
+                print(f"  (Adjusted from requested {args.effective_batch_size})")
+        elif args.gradient_accumulation_steps > 1:
+            effective_batch = args.gradient_accumulation_steps * mini_batch_size
+            print(f"Mini-batch size:           {mini_batch_size}")
+            print(f"Gradient accumulation:     {args.gradient_accumulation_steps} steps")
+            print(f"Effective batch size:      {effective_batch}")
+        else:
+            print(f"Batch size:                {mini_batch_size} (no accumulation)")
+        
+        # Checkpoint resumption info
+        if args.resume_from_checkpoint:
+            print(f"Resume from checkpoint:    {args.resume_from_checkpoint}")
+        
+        # Print standard config (this handles dataset info, model params, etc.)
         print_config(config, dataset_name=args.dataset)
+        
+        # Additional dataset info
         if args.dataset_config:
-            print(f"Dataset Config:          {args.dataset_config}")
-        print(f"Max Samples:             {args.max_samples}")
+            print(f"Dataset Config:            {args.dataset_config}")
+        print(f"Max Samples:               {args.max_samples}")
         print("=" * 60)
         
         # Load and prepare data
@@ -456,6 +622,11 @@ def main():
             weight_decay=config.weight_decay
         )
         
+        # Load checkpoint if resuming
+        start_epoch = load_checkpoint_for_resumption(
+            args.resume_from_checkpoint, model, optimizer, device, logger
+        )
+        
         # Initialize trainer
         trainer = get_trainer(
             trainer_type=args.trainer_type,
@@ -466,25 +637,37 @@ def main():
             num_epochs=config.num_epochs,
             output_dir=args.output_dir,
             clip_grad_norm=args.clip_grad_norm,
-            log_interval=args.log_interval
+            log_interval=args.log_interval,
+            gradient_accumulation_steps=args.gradient_accumulation_steps,
+            effective_batch_size=args.effective_batch_size
         )
+        
+        # Wrap trainer for resumption support
+        resume_trainer = ResumeTrainer(trainer, start_epoch)
         
         # Train the model
         logger.info("="*60)
-        logger.info("STARTING SYMBOLIC TRAINING")
+        logger.info(f"STARTING SYMBOLIC TRAINING from epoch {start_epoch}")
         logger.info("="*60)
-        trainer.train()
+        training_result = resume_trainer.train()
         logger.info("SYMBOLIC TRAINING COMPLETED")
         
-        # Save model
+        # Save final model
         model_path = os.path.join(args.output_dir, args.save_model_filename)
-        torch.save({
+        
+        # Enhanced save with checkpoint resumption info
+        save_dict = {
             'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'epoch': config.num_epochs,  # Final epoch
             'config': config,
             'tokenizer': tokenizer,
             'training_args': vars(args),
             'timestamp': timestamp,
-        }, model_path)
+            'training_result': training_result,
+        }
+        
+        torch.save(save_dict, model_path)
         logger.info(f"Symbolic model saved to {model_path}")
         
         # Generate sample text
@@ -497,7 +680,7 @@ def main():
                 "The door was locked.  Tim had a key to the door.  Tim used ",
                 "The brave knight",
                 "Spotty loved the sun",
-                "The bird was a shiny",
+                "The bird saw a shiny",
             ]
             
             model.eval()
@@ -530,6 +713,8 @@ def main():
         print(f"- Channel-wise normalization preserves head structure")
         print(f"- FFN outputs constrained to symbolic manifold")
         print(f"- {num_params/1e6:.2f}M parameters with full symbolic interpretability")
+        if args.resume_from_checkpoint:
+            print(f"- Successfully resumed from epoch {start_epoch}")
         print("="*60)
         
     finally:
