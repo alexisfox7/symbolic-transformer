@@ -494,11 +494,10 @@ def main():
             logger.info("="*60)
             
             symbolic_prompts = [
-                "A B C",
-                "1 2 3",
-                "cat dog",
-                "If X then Y. If Y then Z. If X then",
-                "red blue green yellow",
+                "The door was locked.  Tim had a key to the door.  Tim used ",
+                "The brave knight",
+                "Spotty loved the sun",
+                "The bird was a shiny",
             ]
             
             model.eval()
