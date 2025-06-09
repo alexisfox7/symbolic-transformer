@@ -532,13 +532,6 @@ def main():
         # Initialize tokenizer
         logger.info(f"Initializing {args.tokenizer_type} tokenizer...")
 
-        if args.use_reconstruction:  # NEW
-            model = get_model("SymbolicReconstruct", config=config).to(device)  # NEW
-            logger.info(f"Using Symbolic Transformer WITH reconstruction loss (weight: {config.reconstruction_loss_weight})")
-        else:
-            model = get_model("Symbolic", config=config).to(device)
-            logger.info("Using Symbolic Transformer WITHOUT reconstruction loss")
-        
         if args.tokenizer_path:
             tokenizer = create_tokenizer(args.tokenizer_type, from_pretrained=args.tokenizer_path)
         else:
@@ -571,6 +564,13 @@ def main():
         
         # Update config with tokenizer info
         config.update_from_tokenizer(tokenizer)
+        
+        if args.use_reconstruction:  # NEW
+            model = get_model("SymbolicReconstruct", config=config).to(device)  # NEW
+            logger.info(f"Using Symbolic Transformer WITH reconstruction loss (weight: {config.reconstruction_loss_weight})")
+        else:
+            model = get_model("Symbolic", config=config).to(device)
+            logger.info("Using Symbolic Transformer WITHOUT reconstruction loss")
         
         # Print configuration with symbolic emphasis
         print("=" * 60)
