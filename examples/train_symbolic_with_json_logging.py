@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # ./examples/train_symbolic_with_json_logging.py
 """
-Simplified training script for Symbolic Transformer with JSON logging.
+Simplified training script for Symbolic Transformer with JSON logging and validation.
 No gradient accumulation complexity - clean and straightforward.
 
 Usage:
-    python examples/train_symbolic_with_json_logging.py --preset small --json_log_steps 50
-    python examples/train_symbolic_with_json_logging.py --preset medium --disable_json_logging
-    python examples/train_symbolic_with_json_logging.py --use_proj --use_v --batch_size 32
+    python examples/train_symbolic_with_json_logging.py --preset small --json_log_steps 50 --val_ratio 0.1
+    python examples/train_symbolic_with_json_logging.py --preset medium --disable_json_logging --validate_every 2
+    python examples/train_symbolic_with_json_logging.py --use_proj --use_v --batch_size 32 --no_validation
 """
 
 import argparse
@@ -32,13 +32,16 @@ from datasets import load_dataset
 from utils.json_logger import create_json_logger_for_training
 from trainers.json_trainer import create_accelerate_trainer_with_json_logging
 
+# Validation imports
+from torch.utils.data import DataLoader, random_split
+
 # Suppress output on non-main processes
 if os.environ.get('LOCAL_RANK', '0') != '0': 
     sys.stdout = open(os.devnull, 'w')
 
 def parse_args():
-    """Parse command line arguments with JSON logging support."""
-    parser = argparse.ArgumentParser(description='Train Symbolic Transformer with JSON Logging')
+    """Parse command line arguments with JSON logging and validation support."""
+    parser = argparse.ArgumentParser(description='Train Symbolic Transformer with JSON Logging and Validation')
     
     # Dataset arguments
     parser.add_argument("--dataset", type=str, default="roneneldan/TinyStories")
@@ -103,7 +106,252 @@ def parse_args():
     parser.add_argument("--experiment_name", type=str, default="symbolic_transformer",
                        help="Experiment name for JSON logs")
     
+    # VALIDATION ARGUMENTS (NEW)
+    parser.add_argument("--val_ratio", type=float, default=0.1,
+                       help="Validation split ratio (default: 0.1 = 10%)")
+    parser.add_argument("--validate_every", type=int, default=1,
+                       help="Validate every N epochs (default: 1)")
+    parser.add_argument("--no_validation", action="store_true",
+                       help="Disable validation (use full dataset for training)")
+    
     return parser.parse_args()
+
+
+def create_train_val_split(dataset, val_ratio: float = 0.1, seed: int = 42):
+    """
+    Split dataset into train and validation sets.
+    
+    Args:
+        dataset: Full dataset to split
+        val_ratio: Fraction for validation (default: 0.1 = 10%)
+        seed: Random seed for reproducible splits
+        
+    Returns:
+        (train_dataset, val_dataset)
+    """
+    generator = torch.Generator().manual_seed(seed)
+    
+    total_size = len(dataset)
+    val_size = int(total_size * val_ratio)
+    train_size = total_size - val_size
+    
+    train_dataset, val_dataset = random_split(
+        dataset, [train_size, val_size], generator=generator
+    )
+    
+    logging.getLogger(__name__).info(f"Dataset split: {train_size} train, {val_size} validation")
+    return train_dataset, val_dataset
+
+
+def run_validation(model: torch.nn.Module, 
+                  val_dataloader: DataLoader, 
+                  device: torch.device):
+    """
+    Run validation and return metrics.
+    
+    Args:
+        model: Model to evaluate
+        val_dataloader: Validation data loader
+        device: Device to run on
+        
+    Returns:
+        Dictionary with validation metrics
+    """
+    model.eval()
+    total_loss = 0.0
+    total_samples = 0
+    
+    with torch.no_grad():
+        for batch_data in val_dataloader:
+            # Move to device
+            batch = {k: v.to(device) for k, v in batch_data.items() if isinstance(v, torch.Tensor)}
+            
+            # Forward pass
+            outputs = model(**batch)
+            loss = outputs.get('loss')
+            
+            if loss is not None and not torch.isnan(loss):
+                batch_size = batch.get('input_ids', next(iter(batch.values()))).size(0)
+                total_loss += loss.item() * batch_size
+                total_samples += batch_size
+    
+    model.train()  # Return to training mode
+    
+    avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
+    perplexity = torch.exp(torch.tensor(avg_loss)).item() if not torch.isnan(torch.tensor(avg_loss)) else float('nan')
+    
+    return {
+        'loss': avg_loss,
+        'perplexity': perplexity,
+        'samples': total_samples
+    }
+
+
+def load_and_prepare_data_with_validation(dataset_name, dataset_config, tokenizer, max_samples, 
+                                        max_seq_length, batch_size, val_ratio=0.1, 
+                                        mlm=False, split='train', shuffle=True):
+    """
+    Load data and create train/validation split.
+    
+    Args:
+        val_ratio: Fraction for validation (default: 0.1)
+        ... (other args same as original)
+        
+    Returns:
+        (train_dataloader, val_dataloader, tokenizer)
+    """
+    logger = logging.getLogger(__name__)
+    
+    # Load full dataset
+    full_dataloader, tokenizer = load_and_prepare_data(
+        dataset_name=dataset_name,
+        dataset_config=dataset_config,
+        tokenizer=tokenizer,
+        max_samples=max_samples,
+        max_seq_length=max_seq_length,
+        batch_size=batch_size,
+        mlm=mlm,
+        split=split,
+        shuffle=False  # Don't shuffle yet, we'll split first
+    )
+    
+    # Get the dataset from the dataloader
+    full_dataset = full_dataloader.dataset
+    
+    # Create train/val split
+    train_dataset, val_dataset = create_train_val_split(full_dataset, val_ratio)
+    
+    # Create separate dataloaders
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=full_dataloader.collate_fn,
+        drop_last=True,
+        num_workers=0
+    )
+    
+    val_dataloader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,  # Don't shuffle validation
+        collate_fn=full_dataloader.collate_fn,
+        drop_last=False,
+        num_workers=0
+    )
+    
+    logger.info(f"Created train dataloader: {len(train_dataloader)} batches")
+    logger.info(f"Created val dataloader: {len(val_dataloader)} batches")
+    
+    return train_dataloader, val_dataloader, tokenizer
+
+
+class ValidationTrainerWrapper:
+    """
+    Wrapper to add validation to existing trainers.
+    """
+    def __init__(self, trainer, val_dataloader=None, validate_every=1, json_logger=None):
+        self.trainer = trainer
+        self.val_dataloader = val_dataloader
+        self.validate_every = validate_every
+        self.json_logger = json_logger
+        
+    def train(self):
+        """Enhanced training with validation."""
+        logger = logging.getLogger(__name__)
+        
+        # Store original methods
+        original_log_epoch = self.trainer.log_epoch
+        original_trigger_callbacks = self.trainer._trigger_callbacks
+        
+        validation_metrics = {
+            'val_losses': [],
+            'val_perplexities': []
+        }
+        
+        def enhanced_log_epoch(epoch: int, avg_loss: float, metrics=None):
+            """Enhanced epoch logging with validation."""
+            # Call original logging
+            original_log_epoch(epoch, avg_loss, metrics)
+            
+            # Run validation if needed
+            if (self.val_dataloader and 
+                epoch % self.validate_every == 0 and 
+                hasattr(self.trainer, 'model') and 
+                hasattr(self.trainer, 'device')):
+                
+                logger.info(f"Running validation for epoch {epoch}...")
+                val_metrics = run_validation(self.trainer.model, self.val_dataloader, self.trainer.device)
+                
+                validation_metrics['val_losses'].append(val_metrics['loss'])
+                validation_metrics['val_perplexities'].append(val_metrics['perplexity'])
+                
+                logger.info(f"Validation - Loss: {val_metrics['loss']:.4f}, Perplexity: {val_metrics['perplexity']:.2f}")
+                
+                # Log to JSON if available
+                if self.json_logger:
+                    # Check if we're in distributed training
+                    is_main_process = True
+                    if hasattr(self.trainer, 'accelerator'):
+                        is_main_process = self.trainer.accelerator.is_main_process
+                    
+                    if is_main_process:
+                        self.json_logger.log_validation(epoch, val_metrics)
+                
+                # Update metrics for callbacks
+                if metrics is None:
+                    metrics = {}
+                metrics.update({
+                    'val_loss': val_metrics['loss'],
+                    'val_perplexity': val_metrics['perplexity']
+                })
+        
+        def enhanced_trigger_callbacks(event_name: str, *args, **kwargs):
+            """Enhanced callbacks with validation metrics."""
+            # For epoch_end events, add validation metrics to logs
+            if event_name == 'on_epoch_end' and len(args) >= 2:
+                epoch = args[0]
+                logs = args[1] if len(args) > 1 else kwargs.get('logs', {})
+                
+                # Add latest validation metrics if available
+                if (validation_metrics['val_losses'] and 
+                    epoch % self.validate_every == 0):
+                    val_idx = (epoch // self.validate_every) - 1
+                    if 0 <= val_idx < len(validation_metrics['val_losses']):
+                        if isinstance(logs, dict):
+                            logs.update({
+                                'val_loss': validation_metrics['val_losses'][val_idx],
+                                'val_perplexity': validation_metrics['val_perplexities'][val_idx]
+                            })
+            
+            # Call original callbacks
+            original_trigger_callbacks(event_name, *args, **kwargs)
+        
+        # Replace methods
+        self.trainer.log_epoch = enhanced_log_epoch
+        self.trainer._trigger_callbacks = enhanced_trigger_callbacks
+        
+        try:
+            # Run training
+            result = self.trainer.train()
+            
+            # Add validation metrics to result
+            if isinstance(result, dict):
+                result.update(validation_metrics)
+                if validation_metrics['val_losses']:
+                    result['final_val_loss'] = validation_metrics['val_losses'][-1]
+                    result['final_val_perplexity'] = validation_metrics['val_perplexities'][-1]
+            
+            return result
+            
+        finally:
+            # Restore original methods
+            self.trainer.log_epoch = original_log_epoch
+            self.trainer._trigger_callbacks = original_trigger_callbacks
+    
+    def __getattr__(self, name):
+        """Delegate all other attributes to the wrapped trainer."""
+        return getattr(self.trainer, name)
 
 
 def create_symbolic_config(args):
@@ -197,7 +445,7 @@ def load_checkpoint_for_resumption(checkpoint_path, model, optimizer, device, lo
 
 
 def main():
-    """Main training function with JSON logging."""
+    """Main training function with JSON logging and validation."""
     args = parse_args()
 
     # Setup
@@ -209,13 +457,19 @@ def main():
         device = torch.device(args.device)
     
     logger.info("="*60)
-    logger.info("SYMBOLIC TRANSFORMER TRAINING WITH JSON LOGGING")
+    logger.info("SYMBOLIC TRANSFORMER TRAINING WITH JSON LOGGING AND VALIDATION")
     logger.info("="*60)
     logger.info(f"Device: {device}")
     logger.info(f"Trainer: {args.trainer_type}")
     logger.info(f"JSON logging: {'Enabled' if not args.disable_json_logging else 'Disabled'}")
     if not args.disable_json_logging:
         logger.info(f"JSON log interval: every {args.json_log_steps} batches")
+    
+    # Validation info (NEW)
+    if not args.no_validation:
+        logger.info(f"Validation: Enabled ({args.val_ratio:.1%} split, validate every {args.validate_every} epochs)")
+    else:
+        logger.info("Validation: Disabled")
     
     # Create configuration
     config = create_symbolic_config(args)
@@ -283,6 +537,8 @@ def main():
                 'num_epochs': config.num_epochs,
                 'learning_rate': config.learning_rate,
                 'trainer_type': args.trainer_type,
+                'val_ratio': args.val_ratio if not args.no_validation else 0.0,
+                'validate_every': args.validate_every,
             },
             'system_config': {
                 'device': str(device),
@@ -291,20 +547,38 @@ def main():
         })
         logger.info(f"JSON logging enabled: {json_logger.log_file}")
     
-    # Load and prepare data
+    # Load and prepare data WITH validation (MODIFIED)
     logger.info("Loading and preparing data...")
-    dataloader, tokenizer = load_and_prepare_data(
-        dataset_name=args.dataset,
-        dataset_config=args.dataset_config,
-        tokenizer=tokenizer,
-        max_samples=args.max_samples,
-        max_seq_length=config.block_size,
-        batch_size=config.batch_size,
-        mlm=False,
-        split='train',
-        shuffle=True
-    )
-    logger.info(f"Data loaded. DataLoader has {len(dataloader)} batches.")
+    if args.no_validation:
+        # Original behavior - no validation split
+        dataloader, tokenizer = load_and_prepare_data(
+            dataset_name=args.dataset,
+            dataset_config=args.dataset_config,
+            tokenizer=tokenizer,
+            max_samples=args.max_samples,
+            max_seq_length=config.block_size,
+            batch_size=config.batch_size,
+            mlm=False,
+            split='train',
+            shuffle=True
+        )
+        val_dataloader = None
+        logger.info(f"Data loaded. DataLoader has {len(dataloader)} batches (no validation).")
+    else:
+        # New behavior - with validation split
+        dataloader, val_dataloader, tokenizer = load_and_prepare_data_with_validation(
+            dataset_name=args.dataset,
+            dataset_config=args.dataset_config,
+            tokenizer=tokenizer,
+            max_samples=args.max_samples,
+            max_seq_length=config.block_size,
+            batch_size=config.batch_size,
+            val_ratio=args.val_ratio,
+            mlm=False,
+            split='train',
+            shuffle=True
+        )
+        logger.info(f"Data loaded. Train: {len(dataloader)} batches, Validation: {len(val_dataloader)} batches.")
     
     # Initialize model
     logger.info("Initializing Symbolic Transformer...")
@@ -351,6 +625,16 @@ def main():
             clip_grad_norm=args.clip_grad_norm,
             log_interval=args.log_interval
         )
+    
+    # Wrap trainer with validation support (NEW)
+    if val_dataloader is not None:
+        trainer = ValidationTrainerWrapper(
+            trainer=trainer,
+            val_dataloader=val_dataloader,
+            validate_every=args.validate_every,
+            json_logger=json_logger
+        )
+        logger.info("Trainer wrapped with validation support")
     
     # Adjust for resumption if needed
     if start_epoch > 0:
@@ -423,6 +707,8 @@ def main():
                     is_main_process = True
                     if hasattr(trainer, 'accelerator'):
                         is_main_process = trainer.accelerator.is_main_process
+                    elif hasattr(trainer, 'trainer') and hasattr(trainer.trainer, 'accelerator'):
+                        is_main_process = trainer.trainer.accelerator.is_main_process
                     
                     if is_main_process:
                         json_logger.log_generation(
@@ -443,7 +729,10 @@ def main():
     logger.info("SYMBOLIC TRANSFORMER TRAINING COMPLETED!")
     logger.info("="*60)
     logger.info(f"Model: {num_params/1e6:.2f}M parameters")
-    logger.info(f"Final loss: {training_result.get('final_loss', 'N/A')}")
+    logger.info(f"Final training loss: {training_result.get('final_loss', 'N/A')}")
+    if 'final_val_loss' in training_result:
+        logger.info(f"Final validation loss: {training_result['final_val_loss']:.4f}")
+        logger.info(f"Final validation perplexity: {training_result.get('final_val_perplexity', 'N/A')}")
     logger.info(f"Training time: {training_result.get('training_time', 'N/A')}")
     if json_logger:
         logger.info(f"JSON logs: {json_logger.log_file}")
