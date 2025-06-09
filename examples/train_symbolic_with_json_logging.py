@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # ./examples/train_symbolic_with_json_logging.py
 """
-Training script for Symbolic Transformer with built-in JSON logging support.
-Clean implementation with AccelerateTrainer + step-based JSON logging.
+Simplified training script for Symbolic Transformer with JSON logging.
+No gradient accumulation complexity - clean and straightforward.
 
 Usage:
-    python examples/train_symbolic_with_json_logging.py --preset small --json_log_steps 256
+    python examples/train_symbolic_with_json_logging.py --preset small --json_log_steps 50
     python examples/train_symbolic_with_json_logging.py --preset medium --disable_json_logging
-    python examples/train_symbolic_with_json_logging.py --use_proj --use_v --effective_batch_size 64
+    python examples/train_symbolic_with_json_logging.py --use_proj --use_v --batch_size 32
 """
 
 import argparse
@@ -32,102 +32,72 @@ from datasets import load_dataset
 from utils.json_logger import create_json_logger_for_training
 from trainers.json_trainer import create_accelerate_trainer_with_json_logging
 
-if os.environ.get('LOCAL_RANK', '0') != '0': sys.stdout = open(os.devnull, 'w')
+# Suppress output on non-main processes
+if os.environ.get('LOCAL_RANK', '0') != '0': 
+    sys.stdout = open(os.devnull, 'w')
 
 def parse_args():
     """Parse command line arguments with JSON logging support."""
     parser = argparse.ArgumentParser(description='Train Symbolic Transformer with JSON Logging')
     
     # Dataset arguments
-    parser.add_argument("--dataset", type=str, default="roneneldan/TinyStories",
-                        help="Dataset name")
-    parser.add_argument("--dataset_config", type=str, default=None,
-                        help="Dataset configuration")
-    parser.add_argument("--max_samples", type=int, default=10000,
-                        help="Maximum number of samples to use")
+    parser.add_argument("--dataset", type=str, default="roneneldan/TinyStories")
+    parser.add_argument("--dataset_config", type=str, default=None)
+    parser.add_argument("--max_samples", type=int, default=10000)
     
     # Model configuration
     parser.add_argument('--preset', type=str, default='small', 
-                       choices=['tiny', 'small', 'medium', 'large'],
-                       help='Model size preset')
-    parser.add_argument('--block_size', type=int, default=None,
-                       help='Training sequence length')
-    parser.add_argument("--n_layer", type=int, default=None, help="Number of layers")
-    parser.add_argument("--n_head", type=int, default=None, help="Number of heads")
-    parser.add_argument("--n_embd", type=int, default=None, help="Embedding dimension")
-    parser.add_argument("--dropout", type=float, default=None, help="Dropout probability")
-    parser.add_argument("--bias", action='store_true', help="Use bias in linear layers")
+                       choices=['tiny', 'small', 'medium', 'large'])
+    parser.add_argument('--block_size', type=int, default=None)
+    parser.add_argument("--n_layer", type=int, default=None)
+    parser.add_argument("--n_head", type=int, default=None)
+    parser.add_argument("--n_embd", type=int, default=None)
+    parser.add_argument("--dropout", type=float, default=None)
+    parser.add_argument("--bias", action='store_true')
     
     # Symbolic-specific parameters
-    parser.add_argument("--use_symbolic_ffn", action='store_true', default=True,
-                       help="Use vocabulary-constrained FFN")
-    parser.add_argument("--no_symbolic_ffn", action='store_false', dest='use_symbolic_ffn',
-                       help="Disable symbolic FFN")
-    parser.add_argument("--use_vocab_refinement", action='store_true', default=False,
-                       help="Use vocabulary refinement in projections")
-    parser.add_argument("--use_v", action='store_true', default=False,
-                       help="Use value projection in attention")
-    parser.add_argument("--use_proj", action='store_true', default=False,
-                       help="Use output projection in attention")
+    parser.add_argument("--use_symbolic_ffn", action='store_true', default=True)
+    parser.add_argument("--no_symbolic_ffn", action='store_false', dest='use_symbolic_ffn')
+    parser.add_argument("--use_vocab_refinement", action='store_true', default=False)
+    parser.add_argument("--use_v", action='store_true', default=False)
+    parser.add_argument("--use_proj", action='store_true', default=False)
     
     # Training parameters
-    parser.add_argument('--batch_size', type=int, default=None,
-                       help='Mini-batch size for training')
-    parser.add_argument('--num_epochs', type=int, default=5,
-                       help='Number of training epochs')
-    parser.add_argument('--learning_rate', type=float, default=None,
-                       help='Learning rate')
-    parser.add_argument('--weight_decay', type=float, default=0.01,
-                       help='Weight decay')
-    parser.add_argument("--clip_grad_norm", type=float, default=1.0, 
-                       help="Max norm for gradient clipping")
+    parser.add_argument('--batch_size', type=int, default=None)
+    parser.add_argument('--num_epochs', type=int, default=5)
+    parser.add_argument('--learning_rate', type=float, default=None)
+    parser.add_argument('--weight_decay', type=float, default=0.01)
+    parser.add_argument("--clip_grad_norm", type=float, default=1.0)
     
     # Trainer selection
     parser.add_argument("--trainer_type", type=str, default="accelerate",
-                       choices=["simple", "accelerate"],
-                       help="Type of trainer to use")
-    
-    # Gradient accumulation parameters
-    parser.add_argument("--gradient_accumulation_steps", type=int, default=1,
-                       help="Number of mini-batches to accumulate")
-    parser.add_argument("--effective_batch_size", type=int, default=None,
-                       help="Target effective batch size")
+                       choices=["simple", "accelerate"])
     
     # Checkpoint resumption
-    parser.add_argument("--resume_from_checkpoint", type=str, default=None,
-                       help="Path to checkpoint to resume from")
+    parser.add_argument("--resume_from_checkpoint", type=str, default=None)
     
     # Tokenizer
     parser.add_argument('--tokenizer_type', type=str, default='gpt2',
-                       choices=['gpt2', 'character'],
-                       help='Type of tokenizer to use')
+                       choices=['gpt2', 'character'])
     
     # Output and logging
-    parser.add_argument('--output_dir', type=str, default='./outputs/symbolic_json',
-                       help='Output directory for checkpoints')
-    parser.add_argument('--log_interval', type=int, default=256,
-                       help='Logging interval')
-    parser.add_argument("--save_model_filename", type=str, default="symbolic_model.pt",
-                       help="Filename for the saved model")
+    parser.add_argument('--output_dir', type=str, default='./outputs/symbolic_json')
+    parser.add_argument('--log_interval', type=int, default=50)
+    parser.add_argument("--save_model_filename", type=str, default="symbolic_model.pt")
     
     # Device
     parser.add_argument('--device', type=str, default='auto',
-                       choices=['auto', 'cpu', 'cuda', 'mps'],
-                       help='Device to use')
+                       choices=['auto', 'cpu', 'cuda', 'mps'])
     
     # Generation testing
-    parser.add_argument("--skip_generation", action="store_true", 
-                       help="Skip sample text generation after training")
-    parser.add_argument("--generation_max_len", type=int, default=30, 
-                       help="Max new tokens for generation")
-    parser.add_argument("--temperature", type=float, default=0.5, 
-                       help="Sampling temperature")
-    parser.add_argument("--top_k", type=int, default=20, 
-                       help="Top-k sampling parameter")
+    parser.add_argument("--skip_generation", action="store_true")
+    parser.add_argument("--generation_max_len", type=int, default=30)
+    parser.add_argument("--temperature", type=float, default=0.5)
+    parser.add_argument("--top_k", type=int, default=20)
     
     # JSON LOGGING ARGUMENTS
-    parser.add_argument("--json_log_steps", type=int, default=256,
-                       help="Log training metrics every N steps to JSON (default: 256)")
+    parser.add_argument("--json_log_steps", type=int, default=100,
+                       help="Log training metrics every N batches to JSON (default: 100)")
     parser.add_argument("--disable_json_logging", action="store_true",
                        help="Disable JSON logging")
     parser.add_argument("--experiment_name", type=str, default="symbolic_transformer",
@@ -230,10 +200,6 @@ def main():
     """Main training function with JSON logging."""
     args = parse_args()
 
-    import os
-    if os.environ.get('LOCAL_RANK', '0') != '0':
-        import sys; sys.stdout = open(os.devnull, 'w')
-    
     # Setup
     logger = setup_logging_and_output(args.output_dir)
     
@@ -249,7 +215,7 @@ def main():
     logger.info(f"Trainer: {args.trainer_type}")
     logger.info(f"JSON logging: {'Enabled' if not args.disable_json_logging else 'Disabled'}")
     if not args.disable_json_logging:
-        logger.info(f"JSON log interval: every {args.json_log_steps} steps")
+        logger.info(f"JSON log interval: every {args.json_log_steps} batches")
     
     # Create configuration
     config = create_symbolic_config(args)
@@ -317,8 +283,6 @@ def main():
                 'num_epochs': config.num_epochs,
                 'learning_rate': config.learning_rate,
                 'trainer_type': args.trainer_type,
-                'gradient_accumulation_steps': args.gradient_accumulation_steps,
-                'effective_batch_size': args.effective_batch_size,
             },
             'system_config': {
                 'device': str(device),
@@ -372,8 +336,7 @@ def main():
             num_epochs=config.num_epochs,
             output_dir=args.output_dir,
             clip_grad_norm=args.clip_grad_norm,
-            log_interval=args.log_interval,
-            gradient_accumulation_steps=args.gradient_accumulation_steps
+            log_interval=args.log_interval
         )
     else:
         # Simple trainer fallback
@@ -386,9 +349,7 @@ def main():
             num_epochs=config.num_epochs,
             output_dir=args.output_dir,
             clip_grad_norm=args.clip_grad_norm,
-            log_interval=args.log_interval,
-            gradient_accumulation_steps=args.gradient_accumulation_steps,
-            effective_batch_size=args.effective_batch_size
+            log_interval=args.log_interval
         )
     
     # Adjust for resumption if needed

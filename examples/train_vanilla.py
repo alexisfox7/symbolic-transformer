@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 # ./examples/train_vanilla.py
 """
-Simple script to train a Vanilla Transformer with the same parameters as the Symbolic Transformer.
-Uses the same argument structure as train_symbolic_example.py for easy comparison.
+Simplified script to train a Vanilla Transformer as baseline.
+All gradient accumulation complexity has been removed for clarity.
+
+Usage examples:
+python examples/train_vanilla.py --preset small --batch_size 32
+python examples/train_vanilla.py --n_embd 384 --batch_size 16 --num_epochs 5
 """
 
 import argparse
@@ -57,7 +61,7 @@ def create_vanilla_config(args):
 
 
 def parse_args():
-    """Parse command line arguments - same structure as symbolic script."""
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='Train Vanilla Transformer (Baseline)')
     
     # Dataset arguments
@@ -82,20 +86,15 @@ def parse_args():
     parser.add_argument('--weight_decay', type=float, default=0.01)
     parser.add_argument("--clip_grad_norm", type=float, default=1.0)
     
-    # Gradient accumulation
-    parser.add_argument("--gradient_accumulation_steps", type=int, default=1)
-    parser.add_argument("--effective_batch_size", type=int, default=None)
-    
     # Checkpoint resumption
-    parser.add_argument("--resume_from_checkpoint", type=str, default=None,
-                       help="Path to checkpoint to resume from")
+    parser.add_argument("--resume_from_checkpoint", type=str, default=None)
     
     # Tokenizer
     parser.add_argument('--tokenizer_type', type=str, default='gpt2',
                        choices=['gpt2', 'character'])
     
     # Output
-    parser.add_argument('--output_dir', type=str, default='./outputs/vanilla_baseline')
+    parser.add_argument('--output_dir', type=str, default='./outputs/vanilla_simple')
     parser.add_argument('--device', type=str, default='auto',
                        choices=['auto', 'cpu', 'cuda', 'mps'])
     
@@ -117,21 +116,18 @@ def load_checkpoint_for_resumption(checkpoint_path, model, optimizer, device, lo
         try:
             checkpoint = torch.load(checkpoint_path, map_location=device)
             
-            # Load model state
             if 'model_state_dict' in checkpoint:
                 model.load_state_dict(checkpoint['model_state_dict'])
                 logger.info("Model state loaded successfully")
             
-            # Load optimizer state
             if 'optimizer_state_dict' in checkpoint:
                 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
                 logger.info("Optimizer state loaded successfully")
             
-            # Get starting epoch
             if 'epoch' in checkpoint:
                 start_epoch = checkpoint['epoch'] + 1
                 logger.info(f"Resuming from epoch {start_epoch}")
-            
+                
             if 'loss' in checkpoint:
                 logger.info(f"Checkpoint loss: {checkpoint['loss']:.6f}")
                 
@@ -141,7 +137,7 @@ def load_checkpoint_for_resumption(checkpoint_path, model, optimizer, device, lo
             start_epoch = 0
     else:
         if checkpoint_path:
-            logger.warning(f"Checkpoint file not found at '{checkpoint_path}'. Starting training from scratch.")
+            logger.warning(f"Checkpoint file not found. Starting from scratch.")
     
     return start_epoch
 
@@ -201,7 +197,7 @@ def main():
         device = torch.device(args.device)
     
     print("="*60)
-    print("VANILLA TRANSFORMER TRAINING (BASELINE)")
+    print("SIMPLIFIED VANILLA TRANSFORMER TRAINING (BASELINE)")
     print("="*60)
     
     if args.resume_from_checkpoint:
@@ -239,7 +235,7 @@ def main():
     config.update_from_tokenizer(tokenizer)
     
     # Print config
-    print_config(config, dataset_name=args.dataset, model=model)
+    print_config(config, dataset_name=args.dataset)
     
     # Load data
     logger.info("Loading data...")
@@ -283,9 +279,7 @@ def main():
         num_epochs=config.num_epochs,
         output_dir=args.output_dir,
         clip_grad_norm=args.clip_grad_norm,
-        log_interval=256,
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
-        effective_batch_size=args.effective_batch_size
+        log_interval=10
     )
     
     # Wrap trainer for resumption support
