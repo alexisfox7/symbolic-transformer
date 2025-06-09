@@ -4,10 +4,6 @@
 
 set -e  # Exit on any error
 
-if [ "${LOCAL_RANK:-0}" != "0" ]; then
-    exec > /dev/null 2>&1
-fi
-
 # Configuration
 DIR="./outputs/sym_4gpu_fixed"
 N=100000
