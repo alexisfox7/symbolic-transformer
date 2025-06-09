@@ -1,7 +1,6 @@
 # ./trainers/accelerate_trainer.py
 """
-Simple Trainer with Accelerate integration.
-Handles gradient accumulation, mixed precision, and distributed training automatically.
+Fixed Accelerate Trainer with proper gradient accumulation handling.
 """
 
 import time
@@ -18,7 +17,7 @@ from .base_trainer import BaseTrainer, Callback
 logger = logging.getLogger(__name__)
 
 class AccelerateTrainer(BaseTrainer):
-    """Simple trainer with Accelerate integration for automatic gradient accumulation."""
+    """Accelerate trainer with proper gradient accumulation handling."""
 
     def __init__(self,
                  model: torch.nn.Module,
@@ -28,14 +27,14 @@ class AccelerateTrainer(BaseTrainer):
                  num_epochs: int = 5,
                  output_dir: Optional[str] = None,
                  clip_grad_norm: Optional[float] = None,
-                 log_interval: int = 10,
+                 log_interval: int = 10,  # This is now in terms of gradient update steps
                  callbacks: Optional[List[Callback]] = None,
                  gradient_accumulation_steps: int = 1):
         
         # Initialize accelerator first
         self.accelerator = Accelerator(
             gradient_accumulation_steps=gradient_accumulation_steps,
-            log_with=None,  # Can add wandb/tensorboard later
+            log_with=None,
             project_dir=output_dir
         )
         
@@ -44,7 +43,7 @@ class AccelerateTrainer(BaseTrainer):
         
         self.num_epochs = num_epochs
         self.clip_grad_norm = clip_grad_norm
-        self.log_interval = log_interval
+        self.log_interval = log_interval  # Now refers to gradient update steps
         self.gradient_accumulation_steps = gradient_accumulation_steps
         
         # Prepare everything with accelerator
@@ -56,11 +55,12 @@ class AccelerateTrainer(BaseTrainer):
         logger.info(f"  Device: {self.accelerator.device}")
         logger.info(f"  Gradient accumulation steps: {gradient_accumulation_steps}")
         logger.info(f"  Mixed precision: {self.accelerator.mixed_precision}")
+        logger.info(f"  Log interval: every {log_interval} gradient update steps")
         if self.accelerator.num_processes > 1:
             logger.info(f"  Distributed training: {self.accelerator.num_processes} processes")
 
     def train(self) -> Dict[str, Any]:
-        """Execute training loop with accelerate."""
+        """Execute training loop with proper accelerate gradient accumulation."""
         logger.info("Starting training with accelerate...")
         
         self.trainer_state['num_epochs'] = self.num_epochs
@@ -76,13 +76,16 @@ class AccelerateTrainer(BaseTrainer):
             'total_samples': 0
         }
 
+        # Track gradient update steps separately from mini-batches
+        global_step = 0
+
         for epoch in range(1, self.num_epochs + 1):
             self.trainer_state['current_epoch'] = epoch
             self._trigger_callbacks('on_epoch_begin', epoch, logs=self.trainer_state)
             epoch_start_time = time.time()
             
             epoch_loss = 0.0
-            num_updates = 0
+            num_gradient_updates = 0
 
             progress_bar = tqdm(
                 self.dataloader,
@@ -96,7 +99,7 @@ class AccelerateTrainer(BaseTrainer):
                 batch_logs = {'batch_data_keys': list(batch_data.keys())}
                 self._trigger_callbacks('on_batch_begin', batch_idx, logs=batch_logs)
 
-                # No need to move to device - accelerator handles this
+                # Use accelerator's accumulation context - this handles when to actually step
                 with self.accelerator.accumulate(self.model):
                     # Forward pass
                     outputs = self.model(**batch_data)
@@ -113,47 +116,74 @@ class AccelerateTrainer(BaseTrainer):
                         training_metrics['training_time'] = time.time() - total_start_time
                         return training_metrics
 
-                    # Backward pass - accelerator handles gradient accumulation
+                    # Backward pass - accelerator handles gradient scaling
                     self.accelerator.backward(loss)
 
-                    # Gradient clipping and optimizer step handled automatically by accelerator.accumulate
+                    # Gradient clipping if specified
                     if self.clip_grad_norm is not None:
                         self.accelerator.clip_grad_norm_(self.model.parameters(), self.clip_grad_norm)
                     
+                    # Optimizer step - accelerator.accumulate context handles whether to actually step
                     self.optimizer.step()
                     self.optimizer.zero_grad()
 
-                    # Track metrics
+                # Check if a gradient update actually happened
+                # This is tricky with accelerate, but we can track it by checking if we're at accumulation boundary
+                if (batch_idx + 1) % self.gradient_accumulation_steps == 0:
+                    global_step += 1
+                    num_gradient_updates += 1
+                    
+                    # Track metrics for actual gradient updates
                     batch_loss_item = loss.item()
                     epoch_loss += batch_loss_item
-                    num_updates += 1
 
-                    # Update progress bar
-                    progress_bar.set_postfix({"loss": f"{batch_loss_item:.4f}"})
+                    # Update progress bar with current loss and step info
+                    progress_bar.set_postfix({
+                        "loss": f"{batch_loss_item:.4f}",
+                        "step": f"{global_step}",
+                        "accum": f"{(batch_idx + 1) % self.gradient_accumulation_steps}/{self.gradient_accumulation_steps}"
+                    })
 
-                    self._trigger_callbacks('on_batch_end', batch_idx, logs={'loss': batch_loss_item})
-
-                    # Log at intervals
-                    if num_updates % self.log_interval == 0:
-                        samples_processed = (batch_idx + 1) * self.dataloader.batch_size
+                    # Log at gradient update intervals (not mini-batch intervals)
+                    if global_step % self.log_interval == 0:
+                        samples_processed = (batch_idx + 1) * self.dataloader.batch_size * self.accelerator.num_processes
                         self.log_batch(
-                            num_updates, batch_loss_item, epoch=epoch,
-                            metrics={'samples': samples_processed}
+                            global_step, batch_loss_item, epoch=epoch,
+                            metrics={
+                                'samples': samples_processed,
+                                'mini_batch': batch_idx + 1,
+                                'effective_batch_size': self.dataloader.batch_size * self.gradient_accumulation_steps * self.accelerator.num_processes
+                            }
                         )
 
-            # Calculate epoch metrics
-            avg_epoch_loss = epoch_loss / num_updates if num_updates > 0 else float('nan')
+                # Always trigger batch end callback (for compatibility)
+                batch_loss_item = loss.item() if loss is not None else None
+                self._trigger_callbacks('on_batch_end', batch_idx, logs={'loss': batch_loss_item, 'global_step': global_step})
+
+            # Handle final partial accumulation at end of epoch
+            if len(self.dataloader) % self.gradient_accumulation_steps != 0:
+                global_step += 1
+                num_gradient_updates += 1
+                epoch_loss += batch_loss_item if 'batch_loss_item' in locals() else 0.0
+
+            # Calculate epoch metrics based on gradient updates
+            avg_epoch_loss = epoch_loss / num_gradient_updates if num_gradient_updates > 0 else float('nan')
             training_metrics['epoch_losses'].append(avg_epoch_loss)
-            training_metrics['total_steps'] += num_updates
+            training_metrics['total_steps'] += num_gradient_updates
             training_metrics['total_samples'] += len(self.dataloader.dataset)
 
             epoch_duration = time.time() - epoch_start_time
-            self.log_epoch(epoch, avg_epoch_loss, metrics={'duration': f"{epoch_duration:.2f}s"})
+            self.log_epoch(epoch, avg_epoch_loss, metrics={
+                'duration': f"{epoch_duration:.2f}s",
+                'gradient_updates': num_gradient_updates,
+                'global_step': global_step
+            })
 
             epoch_end_logs = {
                 'loss': avg_epoch_loss, 
                 'epoch_duration': epoch_duration,
-                'steps': num_updates
+                'gradient_updates': num_gradient_updates,
+                'global_step': global_step
             }
             self.trainer_state.update(epoch_end_logs)
             self._trigger_callbacks('on_epoch_end', epoch, logs=self.trainer_state)
@@ -165,15 +195,17 @@ class AccelerateTrainer(BaseTrainer):
                     checkpoint_path, 
                     epoch=epoch, 
                     loss=avg_epoch_loss,
-                    step=training_metrics['total_steps']
+                    step=global_step
                 )
 
         # Final metrics
         if training_metrics['epoch_losses']:
             training_metrics['final_loss'] = training_metrics['epoch_losses'][-1]
         training_metrics['training_time'] = time.time() - total_start_time
+        training_metrics['total_gradient_steps'] = global_step
 
         logger.info(f"Training completed in {training_metrics['training_time']:.2f}s")
+        logger.info(f"Total gradient updates: {global_step}")
         logger.info(f"Final average training loss: {training_metrics['final_loss']:.6f}")
 
         self.trainer_state['status'] = 'Completed'
@@ -193,6 +225,7 @@ class AccelerateTrainer(BaseTrainer):
             'model_state_dict': self.accelerator.unwrap_model(self.model).state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'epoch': epoch,
+            'accelerator_state': self.accelerator.get_state_dict(),
             **kwargs
         }
 

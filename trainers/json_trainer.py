@@ -1,7 +1,7 @@
 # trainers/json_trainer.py
 """
-Integration helpers for JSON logging with step-based tracking.
-Specifically designed for AccelerateTrainer integration.
+Fixed integration helpers for JSON logging with proper step-based tracking.
+Correctly handles gradient accumulation for AccelerateTrainer.
 """
 
 import logging
@@ -11,14 +11,13 @@ from utils.json_logger import JSONLogger, create_json_logger_for_training
 
 class StepTrackingAccelerateTrainer:
     """
-    Wrapper around AccelerateTrainer to add step-based JSON logging.
-    Integrates with the accelerate training loop and gradient accumulation.
+    Fixed wrapper around AccelerateTrainer for proper step-based JSON logging.
+    Correctly tracks gradient update steps, not mini-batch steps.
     """
     
     def __init__(self, accelerate_trainer, json_logger: Optional[JSONLogger] = None):
         self.trainer = accelerate_trainer
         self.json_logger = json_logger
-        self.global_step = 0
         self.logger = logging.getLogger(__name__)
         
         # Track accelerate-specific info
@@ -26,7 +25,7 @@ class StepTrackingAccelerateTrainer:
         self.gradient_accumulation_steps = accelerate_trainer.gradient_accumulation_steps
     
     def train(self):
-        """Training loop with step-based JSON logging for AccelerateTrainer."""
+        """Training loop with corrected step-based JSON logging for AccelerateTrainer."""
         if self.json_logger and self.accelerator.is_main_process:
             # Log initial config including accelerate info
             config_data = {
@@ -39,7 +38,7 @@ class StepTrackingAccelerateTrainer:
             }
             self.json_logger.log_config(config_data)
         
-        # Enhance the original log_batch method for accelerate
+        # Enhance the log_batch method to properly track gradient update steps
         original_log_batch = self.trainer.log_batch
         
         def enhanced_log_batch(step_idx: int, loss: float, epoch: Optional[int] = None, metrics: Optional[Dict[str, Any]] = None):
@@ -47,22 +46,20 @@ class StepTrackingAccelerateTrainer:
             original_log_batch(step_idx, loss, epoch, metrics)
             
             # Add JSON logging (only on main process)
+            # step_idx is now correctly the gradient update step from the fixed trainer
             if self.json_logger and self.accelerator.is_main_process:
-                # In accelerate trainer, step_idx is already the gradient update step
-                self.global_step = step_idx
-                
                 step_metrics = {'loss': loss}
                 if metrics:
                     step_metrics.update(metrics)
                 
                 # Add accelerate-specific metrics
                 step_metrics.update({
-                    'gradient_accumulation_step': step_idx % self.gradient_accumulation_steps,
-                    'is_gradient_update': True  # This is called after gradient updates
+                    'is_gradient_update_step': True,
+                    'num_processes': self.accelerator.num_processes
                 })
                 
                 self.json_logger.log_step(
-                    step=self.global_step,
+                    step=step_idx,  # This is now correctly the gradient update step
                     epoch=epoch or 0,
                     metrics=step_metrics
                 )
@@ -79,13 +76,14 @@ class StepTrackingAccelerateTrainer:
             
             # Add JSON logging (only on main process)
             if self.json_logger and self.accelerator.is_main_process:
-                epoch_metrics = {'loss': avg_loss, 'global_step': self.global_step}
+                epoch_metrics = {'loss': avg_loss}
                 if metrics:
                     epoch_metrics.update(metrics)
                 
                 # Add accelerate-specific info
                 epoch_metrics.update({
                     'num_processes': self.accelerator.num_processes,
+                    'gradient_accumulation_steps': self.gradient_accumulation_steps,
                     'effective_batch_size': self.trainer.dataloader.batch_size * self.gradient_accumulation_steps * self.accelerator.num_processes
                 })
                 
@@ -104,12 +102,47 @@ class StepTrackingAccelerateTrainer:
             if self.json_logger and self.accelerator.is_main_process:
                 checkpoint_metrics = kwargs.copy()
                 checkpoint_metrics.update({
-                    'global_step': self.global_step,
-                    'epoch': epoch
+                    'epoch': epoch,
+                    'num_processes': self.accelerator.num_processes
                 })
                 self.json_logger.log_checkpoint(epoch or 0, path, checkpoint_metrics)
         
         self.trainer.save_checkpoint = enhanced_save_checkpoint
+        
+        # Enhance batch-end callback to track steps correctly
+        original_trigger_callbacks = self.trainer._trigger_callbacks
+        
+        def enhanced_trigger_callbacks(event_name: str, *args, **kwargs):
+            # Call original callback triggering
+            original_trigger_callbacks(event_name, *args, **kwargs)
+            
+            # Add JSON logging for batch ends with correct step tracking
+            if (event_name == 'on_batch_end' and 
+                self.json_logger and 
+                self.accelerator.is_main_process and 
+                len(args) >= 2):
+                
+                batch_idx = args[0]
+                logs = args[1] if len(args) > 1 else kwargs.get('logs', {})
+                
+                if isinstance(logs, dict) and 'global_step' in logs:
+                    global_step = logs['global_step']
+                    loss = logs.get('loss')
+                    
+                    # Only log if this was a gradient update step and we have a valid loss
+                    # Check if this batch resulted in a gradient update
+                    if ((batch_idx + 1) % self.gradient_accumulation_steps == 0 and 
+                        loss is not None and 
+                        global_step % self.json_logger.log_every_n_steps == 0):
+                        
+                        self.json_logger.log_batch(
+                            epoch=self.trainer.trainer_state.get('current_epoch', 0),
+                            batch=batch_idx + 1,
+                            step=global_step,
+                            metrics={'loss': loss, 'is_gradient_update': True}
+                        )
+        
+        self.trainer._trigger_callbacks = enhanced_trigger_callbacks
         
         # Run the actual training
         try:
@@ -119,9 +152,9 @@ class StepTrackingAccelerateTrainer:
             if self.json_logger and self.accelerator.is_main_process:
                 final_metrics = result.copy() if isinstance(result, dict) else {}
                 final_metrics.update({
-                    'total_steps': self.global_step,
                     'total_processes': self.accelerator.num_processes,
-                    'final_device': str(self.accelerator.device)
+                    'final_device': str(self.accelerator.device),
+                    'gradient_accumulation_steps': self.gradient_accumulation_steps
                 })
                 self.json_logger.log_experiment_end(final_metrics)
             
@@ -131,8 +164,8 @@ class StepTrackingAccelerateTrainer:
             if self.json_logger and self.accelerator.is_main_process:
                 self.json_logger.log_custom("training_error", {
                     "error": str(e),
-                    "step": self.global_step,
-                    "process_index": self.accelerator.process_index
+                    "process_index": self.accelerator.process_index,
+                    "num_processes": self.accelerator.num_processes
                 })
             raise
         
@@ -141,6 +174,7 @@ class StepTrackingAccelerateTrainer:
             self.trainer.log_batch = original_log_batch
             self.trainer.log_epoch = original_log_epoch
             self.trainer.save_checkpoint = original_save_checkpoint
+            self.trainer._trigger_callbacks = original_trigger_callbacks
     
     def __getattr__(self, name):
         """Delegate all other attributes to the wrapped trainer."""
@@ -151,7 +185,7 @@ def create_accelerate_trainer_with_json_logging(
     model, dataloader, optimizer, device, json_logger=None, **trainer_kwargs
 ):
     """
-    Create AccelerateTrainer with JSON logging integration.
+    Create AccelerateTrainer with corrected JSON logging integration.
     
     Args:
         model: Model to train
@@ -162,7 +196,7 @@ def create_accelerate_trainer_with_json_logging(
         **trainer_kwargs: Additional arguments for AccelerateTrainer
         
     Returns:
-        StepTrackingAccelerateTrainer instance
+        StepTrackingAccelerateTrainer instance with corrected step tracking
     """
     from trainers import get_trainer
     
@@ -176,49 +210,15 @@ def create_accelerate_trainer_with_json_logging(
         **trainer_kwargs
     )
     
-    # Wrap with JSON logging
+    # Wrap with corrected JSON logging
     return StepTrackingAccelerateTrainer(trainer, json_logger)
 
-
-def add_json_logging_to_accelerate_training():
-    """
-    Example of how to add JSON logging to AccelerateTrainer.
-    
-    Replace:
-        trainer = get_trainer("accelerate", ...)
-        result = trainer.train()
-    
-    With:
-        json_logger = create_json_logger_for_training(output_dir, "experiment", log_every_n_steps=256)
-        trainer = create_accelerate_trainer_with_json_logging(
-            model, dataloader, optimizer, device, json_logger, **kwargs
-        )
-        result = trainer.train()
-    """
-    pass
-
-
-def add_json_logging_to_training_script():
-    """
-    Example of how to add JSON logging to existing training scripts with minimal changes.
-    
-    Just replace:
-        trainer = get_trainer(...)
-        result = trainer.train()
-    
-    With:
-        trainer = get_trainer(...)
-        json_logger = create_json_logger_for_training(output_dir, "experiment", log_every_n_steps=256)
-        wrapped_trainer = StepTrackingSimpleTrainer(trainer, json_logger)
-        result = wrapped_trainer.train()
-    """
-    pass
 
 # Quick CLI argument helper
 def add_json_logging_args(parser):
     """Add JSON logging arguments to existing argument parser."""
     parser.add_argument("--json_log_steps", type=int, default=256,
-                       help="Log training metrics every N steps to JSON (default: 256)")
+                       help="Log training metrics every N gradient update steps to JSON (default: 256)")
     parser.add_argument("--disable_json_logging", action="store_true",
                        help="Disable JSON logging")
     return parser
