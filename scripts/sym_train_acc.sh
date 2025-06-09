@@ -4,6 +4,8 @@
 
 set -e  # Exit on any error
 
+export ACCELERATE_LOG_LEVEL=WARNING
+
 # Configuration
 DIR="./outputs/sym_4gpu_json"
 N=100000
