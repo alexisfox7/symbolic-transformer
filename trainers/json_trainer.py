@@ -82,14 +82,13 @@ class JSONLoggingAccelerateTrainer:
                 
                 batch_size = getattr(self.trainer.dataloader, 'batch_size', None)
                 if batch_size is not None:
-                    effective_batch_size = batch_size * self.gradient_accumulation_steps * self.accelerator.num_processes
+                    effective_batch_size = batch_size * self.accelerator.num_processes
                 else:
                     # Try to infer batch size from first batch if available
                     effective_batch_size = None
 
                 epoch_metrics.update({
                     'num_processes': self.accelerator.num_processes,
-                    'gradient_accumulation_steps': self.gradient_accumulation_steps,
                     'effective_batch_size': effective_batch_size
                 })
                                 
