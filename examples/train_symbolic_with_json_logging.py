@@ -228,6 +228,10 @@ def load_checkpoint_for_resumption(checkpoint_path, model, optimizer, device, lo
 def main():
     """Main training function with JSON logging."""
     args = parse_args()
+
+    import os
+    if os.environ.get('LOCAL_RANK', '0') != '0':
+        import sys; sys.stdout = open(os.devnull, 'w')
     
     # Setup
     logger = setup_logging_and_output(args.output_dir)

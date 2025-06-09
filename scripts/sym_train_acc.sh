@@ -68,8 +68,7 @@ accelerate launch \
     --json_log_steps $JSON_LOG_STEPS \
     --experiment_name "${EXPERIMENT_NAME}_stage1" \
     --learning_rate 3e-4 \
-    --clip_grad_norm 1.0 \
-    2>/dev/null
+    --clip_grad_norm 1.0
 
 if [ $? -ne 0 ]; then
     echo "Stage 1 failed. Exiting."
@@ -104,8 +103,7 @@ accelerate launch \
     --json_log_steps $JSON_LOG_STEPS \
     --experiment_name "${EXPERIMENT_NAME}_stage2" \
     --learning_rate 2e-4 \
-    --clip_grad_norm 1.0 \
-    2>/dev/null
+    --clip_grad_norm 1.0
 
 if [ $? -ne 0 ]; then
     echo "Stage 2 failed. Exiting."
@@ -140,8 +138,7 @@ accelerate launch \
     --json_log_steps $JSON_LOG_STEPS \
     --experiment_name "${EXPERIMENT_NAME}_stage3" \
     --learning_rate 1e-4 \
-    --clip_grad_norm 1.0 \
-    2>/dev/null
+    --clip_grad_norm 1.0
 
 if [ $? -ne 0 ]; then
     echo "Stage 3 failed. Exiting."
