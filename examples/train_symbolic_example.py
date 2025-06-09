@@ -330,8 +330,8 @@ def parse_args():
     
     parser.add_argument("--use_reconstruction", action='store_true', default=False,
                        help="Use reconstruction loss version of symbolic transformer")
-    parser.add_argument("--reconstruction_loss_weight", type=float, default=0.1,
-                       help="Weight for reconstruction loss (default: 0.1)")
+    parser.add_argument("--reconstruction_loss_weight", type=float, default=1.0,
+                       help="Weight for reconstruction loss (default: 1.0)")
     
 
     # Training parameters

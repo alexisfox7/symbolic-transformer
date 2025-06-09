@@ -380,8 +380,8 @@ class SymbolicTransformerModelWithReconstruction(nn.Module):
         self.use_proj = getattr(config, 'use_proj', False)
         self.use_vocab_refinement = getattr(config, 'use_vocab_refinement', False)
         
-        # Reconstruction loss weight (NEW)
-        self.reconstruction_loss_weight = getattr(config, 'reconstruction_loss_weight', 0.1)
+        # Reconstruction loss weight 
+        self.reconstruction_loss_weight = getattr(config, 'reconstruction_loss_weight', 1.0)
         
         # Core model components (no positional embeddings with ALiBi)
         self.transformer = nn.ModuleDict(dict(
