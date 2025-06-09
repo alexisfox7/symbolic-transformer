@@ -4,28 +4,24 @@ Trainers module for cleanGPT.
 
 This module provides the necessary classes and factory functions for
 creating and managing different training loop implementations (trainers)
-and their associated callbacks.
+and their associated callbacks, including gradient accumulation support.
 """
 
 import torch
 import logging
-from typing import Dict, Type, Any, List, Optional # Added List and Optional
+from typing import Dict, Type, Any, List, Optional
 
 # Import base classes first
 from .base_trainer import BaseTrainer, Callback
 
 # Import concrete trainer implementations
 from .simple_trainer import SimpleTrainer
-# Example: from .advanced_trainer import AdvancedTrainer # If you add more
 
 logger = logging.getLogger(__name__)
 
 # Registry of available trainer types
-# This dictionary maps a string identifier (e.g., 'simple') to the
-# corresponding trainer class.
 TRAINER_REGISTRY: Dict[str, Type[BaseTrainer]] = {
     'simple': SimpleTrainer,
-    # 'advanced': AdvancedTrainer, # Add more trainers here as they are implemented
 }
 
 def get_trainer(trainer_type: str,
@@ -34,9 +30,11 @@ def get_trainer(trainer_type: str,
                 optimizer: torch.optim.Optimizer,
                 device: torch.device,
                 callbacks: Optional[List[Callback]] = None,
+                gradient_accumulation_steps: int = 1,
+                effective_batch_size: Optional[int] = None,
                 **kwargs) -> BaseTrainer:
     """
-    Factory function to get an initialized trainer instance.
+    Factory function to get an initialized trainer instance with gradient accumulation support.
 
     This function looks up the trainer_type in the TRAINER_REGISTRY
     and instantiates it with the provided arguments.
@@ -50,8 +48,13 @@ def get_trainer(trainer_type: str,
         device (torch.device): The device (CPU or GPU) to train on.
         callbacks (Optional[List[Callback]]): A list of callback instances to
                                               be used during training. Defaults to None.
+        gradient_accumulation_steps (int): Number of mini-batches to accumulate before
+                                          updating parameters. Defaults to 1 (no accumulation).
+        effective_batch_size (Optional[int]): Target effective batch size. If provided,
+                                             will calculate gradient_accumulation_steps
+                                             automatically based on dataloader.batch_size.
+                                             Takes precedence over gradient_accumulation_steps.
         **kwargs: Additional keyword arguments specific to the chosen trainer type.
-                  These will be passed directly to the trainer's constructor.
                   Common arguments might include 'num_epochs', 'output_dir', etc.
 
     Returns:
@@ -68,16 +71,35 @@ def get_trainer(trainer_type: str,
         )
 
     trainer_class = TRAINER_REGISTRY[trainer_type]
-    logger.info(f"Initializing trainer of type: {trainer_type}")
+    
+    # Log gradient accumulation configuration
+    if effective_batch_size is not None:
+        mini_batch_size = dataloader.batch_size
+        calculated_steps = max(1, effective_batch_size // mini_batch_size)
+        logger.info(f"Initializing trainer '{trainer_type}' with:")
+        logger.info(f"  Mini-batch size: {mini_batch_size}")
+        logger.info(f"  Target effective batch size: {effective_batch_size}")
+        logger.info(f"  Calculated accumulation steps: {calculated_steps}")
+    elif gradient_accumulation_steps > 1:
+        mini_batch_size = dataloader.batch_size
+        effective_size = gradient_accumulation_steps * mini_batch_size
+        logger.info(f"Initializing trainer '{trainer_type}' with:")
+        logger.info(f"  Mini-batch size: {mini_batch_size}")
+        logger.info(f"  Gradient accumulation steps: {gradient_accumulation_steps}")
+        logger.info(f"  Effective batch size: {effective_size}")
+    else:
+        logger.info(f"Initializing trainer '{trainer_type}' without gradient accumulation")
 
-    # Pass common arguments and any trainer-specific kwargs
+    # Pass gradient accumulation parameters to trainer
     return trainer_class(
         model=model,
         dataloader=dataloader,
         optimizer=optimizer,
         device=device,
-        callbacks=callbacks, # Pass the callbacks list
-        **kwargs # Pass along other trainer-specific arguments like num_epochs, output_dir
+        callbacks=callbacks,
+        gradient_accumulation_steps=gradient_accumulation_steps,
+        effective_batch_size=effective_batch_size,
+        **kwargs
     )
 
 def register_trainer(name: str, trainer_class: Type[BaseTrainer]):
@@ -108,14 +130,11 @@ def register_trainer(name: str, trainer_class: Type[BaseTrainer]):
     logger.info(f"Registered new trainer type: '{name}' -> {trainer_class.__name__}")
 
 # Define what is exported when 'from trainers import *' is used.
-# It's generally good practice to be explicit.
 __all__ = [
     'BaseTrainer',
     'Callback',
     'SimpleTrainer',
-    # 'AdvancedTrainer', # Add other trainers as they are created
     'get_trainer',
     'register_trainer',
-    'TRAINER_REGISTRY' # Exposing the registry can be useful for introspection
+    'TRAINER_REGISTRY'
 ]
-

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR="./outputs/sym_test_2"
-N=64
+N=100000
 
 # 1. Original training (1 epoch)
 python examples/train_symbolic_example.py \

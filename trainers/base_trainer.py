@@ -286,9 +286,18 @@ class BaseTrainer(ABC):
         """
         metrics_str = ""
         if metrics:
-            metrics_str = ", ".join(f"{k}: {v:.4f}" for k, v in metrics.items())
+            # Handle mixed types in metrics - format floats, keep strings as-is
+            formatted_metrics = []
+            for k, v in metrics.items():
+                if isinstance(v, (int, float)):
+                    if isinstance(v, float):
+                        formatted_metrics.append(f"{k}: {v:.4f}")
+                    else:
+                        formatted_metrics.append(f"{k}: {v}")
+                else:
+                    # For strings and other types, just convert to string
+                    formatted_metrics.append(f"{k}: {v}")
+            metrics_str = ", ".join(formatted_metrics)
 
         logger.info(f"Epoch {epoch} completed, Avg Training Loss: {avg_loss:.4f}" +
                    (f", {metrics_str}" if metrics_str else ""))
-
-
