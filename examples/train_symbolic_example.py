@@ -243,8 +243,10 @@ def create_symbolic_config(args):
     config.model_type = "Symbolic"
     config.transformer_block_type = "Symbolic"
     
-    if args.use_reconstruction:  # NEW
-        config.model_type = "SymbolicReconstruct"  # NEW
+    if args.use_reconstruction:
+        config.model_type = "SymbolicReconstruct"
+    elif args.use_standard_norm:
+        config.model_type = "SymbolicStandardNorm"
     else:
         config.model_type = "Symbolic"
 
@@ -332,7 +334,8 @@ def parse_args():
                        help="Use reconstruction loss version of symbolic transformer")
     parser.add_argument("--reconstruction_loss_weight", type=float, default=1.0,
                        help="Weight for reconstruction loss (default: 1.0)")
-    
+    parser.add_argument("--use_standard_norm", action='store_true', default=False,
+                       help="Use standard LayerNorm instead of channel-wise LayerNorm (for testing)")
 
     # Training parameters
     parser.add_argument('--batch_size', type=int, default=None,
@@ -565,12 +568,16 @@ def main():
         # Update config with tokenizer info
         config.update_from_tokenizer(tokenizer)
         
-        if args.use_reconstruction:  # NEW
-            model = get_model("SymbolicReconstruct", config=config).to(device)  # NEW
+        if args.use_reconstruction:  
+            model = get_model("SymbolicReconstruct", config=config).to(device)  
             logger.info(f"Using Symbolic Transformer WITH reconstruction loss (weight: {config.reconstruction_loss_weight})")
+        elif args.use_standard_norm:
+            model = get_model("SymbolicStandardNorm", config=config).to(device)
+            logger.info("Using Symbolic Transformer WITH standard LayerNorm (for testing)")
         else:
             model = get_model("Symbolic", config=config).to(device)
-            logger.info("Using Symbolic Transformer WITHOUT reconstruction loss")
+            logger.info("Using Symbolic Transformer WITH channel-wise LayerNorm")
+
         
         # Print configuration with symbolic emphasis
         print("=" * 60)
@@ -633,10 +640,16 @@ def main():
         
         # Initialize symbolic model
         logger.info("Initializing Symbolic Transformer model...")
-        model = get_model("Symbolic", config=config).to(device)
+        model = get_model(config.model_type, config=config).to(device)
         num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        logger.info(f"Symbolic Transformer initialized with {num_params/1e6:.2f}M parameters.")
         
+        if args.use_standard_norm:
+            logger.info(f"Symbolic Transformer (Standard LayerNorm) initialized with {num_params/1e6:.2f}M parameters.")
+        elif args.use_reconstruction:
+            logger.info(f"Symbolic Transformer (with reconstruction loss) initialized with {num_params/1e6:.2f}M parameters.")
+        else:
+            logger.info(f"Symbolic Transformer (Channel-wise LayerNorm) initialized with {num_params/1e6:.2f}M parameters.")
+
         # Setup optimizer
         optimizer = torch.optim.AdamW(
             model.parameters(),

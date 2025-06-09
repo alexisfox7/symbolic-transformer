@@ -6,6 +6,7 @@ Model factory for cleanGPT models.
 from .model_symbolic_transformer import SymbolicTransformerModel
 from .model_vanilla_transformer import VanillaTransformerModel
 from .model_symbolic_reconstruct import SymbolicTransformerModelWithReconstruction
+from .model_symbolic_norm import SymbolicTransformerStandardNorm
 
 def get_model(model_type, config=None, **kwargs):
     """
@@ -14,8 +15,10 @@ def get_model(model_type, config=None, **kwargs):
     model_registry = {
         'Symbolic': SymbolicTransformerModel,
         'SymbolicTransformer': SymbolicTransformerModel,
-        'SymbolicReconstruct': SymbolicTransformerModelWithReconstruction,  # NEW
-        'SymbolicRecon': SymbolicTransformerModelWithReconstruction,        # NEW (alias)
+        'SymbolicReconstruct': SymbolicTransformerModelWithReconstruction,
+        'SymbolicRecon': SymbolicTransformerModelWithReconstruction,
+        'SymbolicStandardNorm': SymbolicTransformerStandardNorm,  # NEW test version
+        'SymbolicStdNorm': SymbolicTransformerStandardNorm,       # NEW alias
         'Vanilla': VanillaTransformerModel,
         'VanillaTransformer': VanillaTransformerModel,
         'Standard': VanillaTransformerModel,
@@ -32,4 +35,10 @@ def get_model(model_type, config=None, **kwargs):
     
     return model_class(config, **kwargs)
 
-__all__ = ['get_model', 'SymbolicTransformerModel', 'SymbolicTransformerModelWithReconstruction',  'VanillaTransformerModel']
+__all__ = [
+    'get_model', 
+    'SymbolicTransformerModel', 
+    'SymbolicTransformerModelWithReconstruction',  
+    'SymbolicTransformerStandardNorm',  
+    'VanillaTransformerModel'
+]
