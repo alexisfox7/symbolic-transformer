@@ -6,7 +6,7 @@ set -e  # Exit on any error
 
 # Configuration - matching original script
 DIR="./outputs/sym_4gpu_simple"
-N=100000
+N=5000
 EXPERIMENT_NAME="symbolic_4gpu_simple"
 
 # Model configuration - matching original
@@ -18,7 +18,7 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3
 NUM_GPUS=4
 
 # Simplified batch configuration (no gradient accumulation, no stages)
-BATCH_SIZE=4  # Direct batch size per GPU
+BATCH_SIZE=128  # Direct batch size per GPU
 
 # JSON logging configuration
 JSON_LOG_STEPS=64

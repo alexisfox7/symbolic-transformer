@@ -197,23 +197,52 @@ class AccelerateTrainer(BaseTrainer):
         return training_metrics
 
     def save_checkpoint(self, path: str, epoch: Optional[int] = None, **kwargs):
-        """Save checkpoint using accelerator."""
+        """Save checkpoint using accelerator with timeout protection."""
         if not self.accelerator.is_main_process:
             return
             
-        self.accelerator.wait_for_everyone()
+        # Add timeout to prevent hanging
+        import signal
+        import time
         
-        checkpoint = {
-            'model_state_dict': self.accelerator.unwrap_model(self.model).state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'epoch': epoch,
-            'accelerator_state': self.accelerator.get_state_dict(),
-            **kwargs
-        }
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Checkpoint save timed out")
+        
+        try:
+            # Set 30 second timeout
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(30)
+            
+            # Minimal wait - don't hang forever
+            try:
+                # Use a shorter timeout for wait_for_everyone
+                self.accelerator.wait_for_everyone()
+            except:
+                logger.warning("Accelerator sync timed out, proceeding anyway")
+            
+            checkpoint = {
+                'model_state_dict': self.accelerator.unwrap_model(self.model).state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+                'epoch': epoch,
+                **kwargs
+            }
 
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        torch.save(checkpoint, path)
-        logger.info(f"Checkpoint saved to: {path}")
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            
+            # Save to temp file first
+            temp_path = path + '.tmp'
+            torch.save(checkpoint, temp_path)
+            
+            # Atomic move
+            os.replace(temp_path, path)
+            logger.info(f"Checkpoint saved to: {path}")
+            
+        except TimeoutError:
+            logger.error("Checkpoint save timed out!")
+            raise
+        finally:
+            signal.alarm(0)  # Cancel timeout
 
     def evaluate(self, eval_dataloader: Optional[DataLoader] = None) -> Dict[str, Any]:
         """Evaluate with accelerator."""
