@@ -28,7 +28,7 @@ def create_vanilla_config(args):
     """Create configuration for vanilla transformer using same structure as symbolic."""
     config = get_preset_config(args.preset)
     
-    # Override with command line arguments (same as symbolic script)
+    # Override with command line arguments 
     if args.block_size is not None:
         config.block_size = args.block_size
     if args.n_layer is not None:
@@ -239,7 +239,7 @@ def main():
     config.update_from_tokenizer(tokenizer)
     
     # Print config
-    print_config(config, dataset_name=args.dataset)
+    print_config(config, dataset_name=args.dataset, model=model)
     
     # Load data
     logger.info("Loading data...")
