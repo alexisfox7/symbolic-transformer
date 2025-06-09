@@ -6,7 +6,7 @@ Specifically designed for AccelerateTrainer integration.
 
 import logging
 from typing import Dict, Any, Optional
-from utils.json_logger import JSONLogger
+from utils.json_logger import JSONLogger, create_json_logger_for_training
 
 
 class StepTrackingAccelerateTrainer:
@@ -213,58 +213,6 @@ def add_json_logging_to_training_script():
         result = wrapped_trainer.train()
     """
     pass
-
-
-# Example usage in training script
-def integrate_json_logging_accelerate_example():
-    """Example showing integration with AccelerateTrainer in existing training code."""
-    
-    # Existing training setup...
-    # model, dataloader, optimizer, device = ...
-    
-    # Add these lines:
-    from utils.json_logger import create_json_logger_for_training
-    from trainers.json_logger_integration import create_accelerate_trainer_with_json_logging
-    
-    # Configure step interval (every 256 steps by default)
-    log_every_steps = 256  # Or get from args
-    json_logger = create_json_logger_for_training(
-        output_dir="./outputs/experiment", 
-        experiment_name="symbolic_transformer",
-        log_every_n_steps=log_every_steps
-    )
-    
-    # Create accelerate trainer with JSON logging
-    trainer = create_accelerate_trainer_with_json_logging(
-        model=model,
-        dataloader=dataloader,
-        optimizer=optimizer,
-        device=device,
-        json_logger=json_logger,
-        num_epochs=config.num_epochs,
-        output_dir=args.output_dir,
-        clip_grad_norm=args.clip_grad_norm,
-        log_interval=args.log_interval,
-        gradient_accumulation_steps=args.gradient_accumulation_steps
-    )
-    
-    # Train normally - JSON logging happens automatically
-    result = trainer.train()
-    
-    # Optionally log generation examples (only on main process)
-    if json_logger and not skip_generation and trainer.accelerator.is_main_process:
-        test_prompts = ["The brave knight", "Once upon a time"]
-        for prompt in test_prompts:
-            try:
-                _, generated = run_generation(model, tokenizer, prompt, device)
-                json_logger.log_generation(
-                    epoch=config.num_epochs,
-                    prompt=prompt,
-                    generated=generated
-                )
-            except Exception as e:
-                logger.error(f"Generation error: {e}")
-
 
 # Quick CLI argument helper
 def add_json_logging_args(parser):
