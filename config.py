@@ -90,7 +90,7 @@ def get_preset_config(preset_name: str) -> SymbolicConfig:
     return presets[preset_name]
 
 
-def print_config(config: SymbolicConfig, dataset_name: str = None):
+def print_config(config: SymbolicConfig, dataset_name: str = None, model = None):
     """Print configuration in a formatted way."""
     print("=" * 60)
     print("SYMBOLIC TRANSFORMER CONFIGURATION")
@@ -128,6 +128,11 @@ def print_config(config: SymbolicConfig, dataset_name: str = None):
         params = estimate_parameters(config)
         print(f"\n MODEL SIZE:")
         print(f"  Estimated Params:    {params/1e6:.2f}M")
+    
+    if model is not None:
+        print(f"\n MODEL SIZE:")
+        total_params = sum(p.numel() for p in model.parameters())
+        print(f"  Actual Params:       {total_params/1e6:.2f}M")
     
     print("=" * 60)
 
