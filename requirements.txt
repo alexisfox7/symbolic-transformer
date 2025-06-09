@@ -9,3 +9,4 @@ tqdm>=4.64.0
 # Optional dependencies
 matplotlib>=3.5.0
 seaborn>=0.11.0
+accelerate>=0.20.0
