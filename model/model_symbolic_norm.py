@@ -69,52 +69,42 @@ class VocabularyProjectionFFN(nn.Module):
         B, T, C = x.shape
         assert C == self.n_embd, f"Input dim {C} != expected {self.n_embd}"
 
-        # Reshape to separate and flatten head channels
+        # Reshape to separate head channels
         x_channels = x.view(B, T, self.n_head, self.head_dim)
-        x_flat = x_channels.view(B * T * self.n_head, self.head_dim)
 
-        # Apply batched FFN transformation to all channels simultaneously
-        ffn_output = self.channel_ffns(x_flat)
+        # Process each channel separately to avoid einsum issues
+        channel_outputs = []
         
-        # Reshape FFN output for batched vocabulary similarity computation
-        ffn_reshaped = ffn_output.view(B * T, self.n_head, self.head_dim)
-
-        # Get all vocabulary channel embeddings efficiently
-        vocab_channels = self._get_vocab_channels_batched()
-
-        # Compute TRUE vocabulary attention using direct similarity
-        vocab_logits = torch.einsum('bnh,hvd->bnv', ffn_reshaped, vocab_channels)
+        for h in range(self.n_head):
+            # Extract channel h: (B, T, head_dim)
+            x_h = x_channels[:, :, h, :]  # (B, T, head_dim)
+            x_h_flat = x_h.view(B * T, self.head_dim)  # (B*T, head_dim)
+            
+            # Apply FFN transformation for this channel
+            ffn_h = self.channel_ffns(x_h_flat)  # (B*T, head_dim)
+            
+            # Get vocabulary embeddings for this channel
+            vocab_h = self.vocab_embeddings_ref.weight.view(self.vocab_size, self.n_head, self.head_dim)[:, h, :]  # (vocab_size, head_dim)
+            
+            # Compute vocabulary attention: (B*T, head_dim) @ (head_dim, vocab_size) = (B*T, vocab_size)
+            logits_h = torch.matmul(ffn_h, vocab_h.T)  # (B*T, vocab_size)
+            
+            # Apply temperature scaling
+            temp_h = torch.clamp(self.channel_temperatures[h], min=0.1)
+            logits_h = logits_h / temp_h
+            
+            # Compute attention weights
+            weights_h = F.softmax(logits_h, dim=-1)  # (B*T, vocab_size)
+            
+            # Apply attention to vocabulary embeddings: (B*T, vocab_size) @ (vocab_size, head_dim) = (B*T, head_dim)
+            output_h = torch.matmul(weights_h, vocab_h)  # (B*T, head_dim)
+            
+            # Reshape back: (B*T, head_dim) -> (B, T, head_dim)
+            output_h = output_h.view(B, T, self.head_dim)
+            channel_outputs.append(output_h)
         
-        # Apply channel-specific temperature scaling
-        temps_clamped = torch.clamp(self.channel_temperatures, min=0.1)[None, :, None]
-        vocab_logits_scaled = vocab_logits / temps_clamped
-        
-        # Compute attention weights
-        vocab_weights = F.softmax(vocab_logits_scaled, dim=-1)
-
-        # Batched vocabulary projection
-        vocab_output = torch.einsum('bnv,hvd->bnh', vocab_weights, vocab_channels)
-
-        # Optional refinement while maintaining vocabulary grounding
-        if self.use_refinement:
-            x_flat_for_refinement = x_channels.view(B * T * self.n_head, self.head_dim)
-            vocab_flat = vocab_output.view(B * T * self.n_head, self.head_dim)
-            
-            refinement = torch.tanh(self.channel_refinements(x_flat_for_refinement))
-            gate = torch.sigmoid(self.channel_refinement_gates(x_flat_for_refinement))
-            
-            refined_output = vocab_flat * (1 - gate) + refinement * gate
-            
-            # Re-project to ensure vocabulary grounding is maintained
-            refined_reshaped = refined_output.view(B * T, self.n_head, self.head_dim)
-            refined_logits = torch.einsum('bnh,hvd->bnv', refined_reshaped, vocab_channels)
-            refined_logits_scaled = refined_logits / temps_clamped
-            refined_weights = F.softmax(refined_logits_scaled, dim=-1)
-            
-            vocab_output = torch.einsum('bnv,hvd->bnh', refined_weights, vocab_channels)
-
-        # Reshape back to original format
-        output = vocab_output.view(B, T, self.n_embd)
+        # Concatenate all channels: (B, T, n_head * head_dim) = (B, T, n_embd)
+        output = torch.cat(channel_outputs, dim=-1)
 
         return self.dropout(output)
 
