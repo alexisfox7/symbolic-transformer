@@ -146,13 +146,14 @@ class AccelerateTrainer(BaseTrainer):
 
                     # Log at gradient update intervals (not mini-batch intervals)
                     if global_step % self.log_interval == 0:
-                        samples_processed = (batch_idx + 1) * self.dataloader.batch_size * self.accelerator.num_processes
+                        batch_size = batch_data.get('input_ids', next(iter(batch_data.values()))).shape[0]
+                        samples_processed = (batch_idx + 1) * batch_size * self.accelerator.num_processes
                         self.log_batch(
                             global_step, batch_loss_item, epoch=epoch,
                             metrics={
                                 'samples': samples_processed,
                                 'mini_batch': batch_idx + 1,
-                                'effective_batch_size': self.dataloader.batch_size * self.gradient_accumulation_steps * self.accelerator.num_processes
+                                'effective_batch_size': batch_size * self.gradient_accumulation_steps * self.accelerator.num_processes
                             }
                         )
 
