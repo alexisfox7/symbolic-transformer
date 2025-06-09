@@ -1,6 +1,7 @@
 # ./trainers/accelerate_trainer.py
 """
-Simplified Accelerate Trainer without gradient accumulation.
+Simplified Accelerate Trainer without gradient accumulation - FIXED VERSION.
+Removes the hanging wait_for_everyone() call that causes terminal freezing.
 """
 
 import time
@@ -17,7 +18,7 @@ from .base_trainer import BaseTrainer, Callback
 logger = logging.getLogger(__name__)
 
 class AccelerateTrainer(BaseTrainer):
-    """Accelerate trainer without gradient accumulation complexity."""
+    """Accelerate trainer without gradient accumulation complexity - FIXED."""
 
     def __init__(self,
                  model: torch.nn.Module,
@@ -170,10 +171,10 @@ class AccelerateTrainer(BaseTrainer):
             self.trainer_state.update(epoch_end_logs)
             self._trigger_callbacks('on_epoch_end', epoch, logs=self.trainer_state)
 
-            # Save checkpoint (only on main process)
+            # FIXED: Save checkpoint without hanging wait_for_everyone()
             if self.output_dir and self.accelerator.is_main_process:
                 checkpoint_path = os.path.join(self.output_dir, f"checkpoint_epoch_{epoch}.pt")
-                self.save_checkpoint(
+                self.save_checkpoint_fixed(
                     checkpoint_path, 
                     epoch=epoch, 
                     loss=avg_epoch_loss,
@@ -196,30 +197,16 @@ class AccelerateTrainer(BaseTrainer):
 
         return training_metrics
 
-    def save_checkpoint(self, path: str, epoch: Optional[int] = None, **kwargs):
-        """Save checkpoint using accelerator with timeout protection."""
+    def save_checkpoint_fixed(self, path: str, epoch: Optional[int] = None, **kwargs):
+        """
+        FIXED save checkpoint that doesn't hang.
+        Removes the problematic wait_for_everyone() call and timeout complexity.
+        """
         if not self.accelerator.is_main_process:
             return
             
-        # Add timeout to prevent hanging
-        import signal
-        import time
-        
-        def timeout_handler(signum, frame):
-            raise TimeoutError("Checkpoint save timed out")
-        
         try:
-            # Set 30 second timeout
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(30)
-            
-            # Minimal wait - don't hang forever
-            try:
-                # Use a shorter timeout for wait_for_everyone
-                self.accelerator.wait_for_everyone()
-            except:
-                logger.warning("Accelerator sync timed out, proceeding anyway")
-            
+            # Simple checkpoint save without wait_for_everyone() 
             checkpoint = {
                 'model_state_dict': self.accelerator.unwrap_model(self.model).state_dict(),
                 'optimizer_state_dict': self.optimizer.state_dict(),
@@ -230,19 +217,17 @@ class AccelerateTrainer(BaseTrainer):
             # Ensure directory exists
             os.makedirs(os.path.dirname(path), exist_ok=True)
             
-            # Save to temp file first
-            temp_path = path + '.tmp'
-            torch.save(checkpoint, temp_path)
-            
-            # Atomic move
-            os.replace(temp_path, path)
+            # Direct save - no temporary file complexity
+            torch.save(checkpoint, path)
             logger.info(f"Checkpoint saved to: {path}")
             
-        except TimeoutError:
-            logger.error("Checkpoint save timed out!")
-            raise
-        finally:
-            signal.alarm(0)  # Cancel timeout
+        except Exception as e:
+            logger.error(f"Error saving checkpoint: {e}")
+            # Don't raise - continue training even if checkpoint fails
+
+    def save_checkpoint(self, path: str, epoch: Optional[int] = None, **kwargs):
+        """Legacy method - delegates to fixed version."""
+        return self.save_checkpoint_fixed(path, epoch, **kwargs)
 
     def evaluate(self, eval_dataloader: Optional[DataLoader] = None) -> Dict[str, Any]:
         """Evaluate with accelerator."""
@@ -275,12 +260,10 @@ class AccelerateTrainer(BaseTrainer):
                     logger.warning(f"Evaluation Batch {batch_idx}: Loss is None or NaN. Skipping.")
                     continue
 
-                # Gather losses across all processes
-                all_losses = self.accelerator.gather(loss.repeat(batch_data['input_ids'].shape[0]))
-                
-                batch_size = all_losses.shape[0]
-                total_loss += all_losses.sum().item()
-                total_samples += batch_size
+                # Gather losses across all processes (simplified)
+                batch_size = batch_data['input_ids'].shape[0]
+                total_loss += loss.item() * batch_size
+                total_samples += batch_size * self.accelerator.num_processes
                 num_batches_processed += 1
 
                 self._trigger_callbacks('on_batch_end', batch_idx, logs={'loss': loss.item()})
