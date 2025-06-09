@@ -92,14 +92,14 @@ class SymbolicLayerNorm(nn.Module):
 class VocabularyProjectionFFN(nn.Module):
     """
     Feed Forward Network (FFN) that constrains outputs to the vocabulary embedding manifold
-    with proper head-channel decomposition. Each head channel operates independently on
-    its corresponding slice of the vocabulary embeddings.
+    with proper head-channel decomposition and TRUE weight tying to embedding matrix.
+    Each head channel operates independently on its corresponding slice of the vocabulary embeddings.
     
-    OPTIMIZED IMPLEMENTATION:
+    OPTIMIZED IMPLEMENTATION WITH TRUE WEIGHT TYING:
     - Vectorized channel processing eliminating explicit loops
-    - Memory-efficient batched operations
-    - Pre-allocated tensors for improved performance
-    - Streamlined refinement logic
+    - Memory-efficient batched operations using direct embedding similarity
+    - NO additional learnable vocabulary projection parameters
+    - TRUE vocabulary constraints via embedding weight reuse
     """
     def __init__(self, config, vocab_embeddings_ref):
         super().__init__()
@@ -120,10 +120,6 @@ class VocabularyProjectionFFN(nn.Module):
         # Batched FFN transformations for all channels
         # Input: (B*T*n_head, head_dim), Output: (B*T*n_head, head_dim)
         self.channel_ffns = nn.Linear(self.head_dim, self.head_dim, bias=config.bias)
-
-        # Batched vocabulary attention projections for all channels  
-        # Input: (B*T*n_head, head_dim), Output: (B*T*n_head, vocab_size)
-        self.channel_vocab_attentions = nn.Linear(self.head_dim, self.vocab_size, bias=False)
 
         # Per-channel learnable temperature for attention sharpness
         self.channel_temperatures = nn.Parameter(torch.ones(self.n_head))
@@ -154,12 +150,13 @@ class VocabularyProjectionFFN(nn.Module):
 
     def forward(self, x):
         """
-        Project input to vocabulary embedding manifold via channel-wise learned attention.
+        Project input to vocabulary embedding manifold via channel-wise TRUE vocabulary constraint.
+        Uses direct similarity computation with embedding weights - no additional parameters.
         
-        VECTORIZED IMPLEMENTATION:
+        VECTORIZED IMPLEMENTATION WITH TRUE WEIGHT TYING:
         - Processes all channels simultaneously using batched operations
         - Eliminates explicit channel loops for significant performance improvement
-        - Uses efficient tensor reshaping and broadcasting
+        - Uses direct embedding similarity instead of learnable projections
         - Memory-efficient with pre-allocated tensors where possible
         
         Args:
@@ -177,12 +174,21 @@ class VocabularyProjectionFFN(nn.Module):
 
         # Apply batched FFN transformation to all channels simultaneously
         ffn_output = self.channel_ffns(x_flat)  # (B*T*n_head, head_dim)
-
-        # Compute batched vocabulary attention weights
-        vocab_logits = self.channel_vocab_attentions(ffn_output)  # (B*T*n_head, vocab_size)
         
-        # Reshape to apply per-channel temperature scaling
-        vocab_logits = vocab_logits.view(B * T, self.n_head, self.vocab_size)
+        # Reshape FFN output for batched vocabulary similarity computation
+        ffn_reshaped = ffn_output.view(B * T, self.n_head, self.head_dim)  # (B*T, n_head, head_dim)
+
+        # Get all vocabulary channel embeddings efficiently
+        vocab_channels = self._get_vocab_channels_batched()  # (n_head, vocab_size, head_dim)
+
+        # Compute TRUE vocabulary attention using direct similarity (NO additional parameters)
+        # Using einsum for efficient batched computation:
+        # ffn_reshaped: (B*T, n_head, head_dim)
+        # vocab_channels: (n_head, vocab_size, head_dim)
+        # Result: (B*T, n_head, vocab_size)
+        # TODO: einsum is less computationally efficient that view and transpose operations
+        #       rewrite this as time permits
+        vocab_logits = torch.einsum('bnh,hvd->bnv', ffn_reshaped, vocab_channels)
         
         # Apply channel-specific temperature scaling using broadcasting
         # channel_temperatures: (n_head,) -> (1, n_head, 1)
@@ -192,20 +198,13 @@ class VocabularyProjectionFFN(nn.Module):
         # Compute attention weights
         vocab_weights = F.softmax(vocab_logits_scaled, dim=-1)  # (B*T, n_head, vocab_size)
 
-        # Get all vocabulary channel embeddings efficiently
-        vocab_channels = self._get_vocab_channels_batched()  # (n_head, vocab_size, head_dim)
-
-        # Batched matrix multiplication for vocabulary projection
+        # Batched vocabulary projection using einsum
         # vocab_weights: (B*T, n_head, vocab_size)
         # vocab_channels: (n_head, vocab_size, head_dim)
         # Result: (B*T, n_head, head_dim)
-        vocab_output = torch.bmm(
-            vocab_weights,  # (B*T, n_head, vocab_size)
-            vocab_channels.expand(B * T, -1, -1, -1).view(B * T * self.n_head, self.vocab_size, self.head_dim).view(B * T, self.n_head, self.vocab_size, self.head_dim).transpose(-2, -1)
-        )
-        
-        # Simplified batched vocabulary projection
-        vocab_output = torch.einsum('bnh,hvd->bnhd', vocab_weights, vocab_channels)  # (B*T, n_head, head_dim)
+        # TODO: einsum is less computationally efficient that view and transpose operations
+        #       rewrite this as time permits
+        vocab_output = torch.einsum('bnv,hvd->bnh', vocab_weights, vocab_channels)
 
         # Optional refinement while maintaining vocabulary grounding
         if self.use_refinement:
@@ -220,14 +219,18 @@ class VocabularyProjectionFFN(nn.Module):
             # Gated combination
             refined_output = vocab_flat * (1 - gate) + refinement * gate
             
-            # Re-project to ensure vocabulary grounding is maintained
-            refined_logits = self.channel_vocab_attentions(refined_output)
-            refined_logits = refined_logits.view(B * T, self.n_head, self.vocab_size)
+            # Re-project to ensure vocabulary grounding is maintained using TRUE constraint
+            refined_reshaped = refined_output.view(B * T, self.n_head, self.head_dim)
+            # TODO: einsum is less computationally efficient that view and transpose operations
+            #       rewrite this as time permits
+            refined_logits = torch.einsum('bnh,hvd->bnv', refined_reshaped, vocab_channels)
             refined_logits_scaled = refined_logits / temps_clamped
             refined_weights = F.softmax(refined_logits_scaled, dim=-1)
             
             # Final vocabulary projection
-            vocab_output = torch.einsum('bnh,hvd->bnhd', refined_weights, vocab_channels)
+            # TODO: einsum is less computationally efficient that view and transpose operations
+            #       rewrite this as time permits
+            vocab_output = torch.einsum('bnv,hvd->bnh', refined_weights, vocab_channels)
 
         # Reshape back to original format: (B*T, n_head, head_dim) -> (B, T, n_embd)
         output = vocab_output.view(B, T, self.n_embd)

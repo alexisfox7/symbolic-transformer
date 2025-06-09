@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DIR="./outputs/sym_test_2"
+DIR="./outputs/sym_test_2_fixed"
 N=100000
 
 # 1. Original training (1 epoch)
@@ -25,4 +25,3 @@ python examples/train_symbolic_example.py \
   --batch_size 4 --effective_batch_size 64 \
   --num_epochs 8 --max_samples $N --n_embd 384\
   --output_dir $DIR
-
