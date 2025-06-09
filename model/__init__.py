@@ -5,25 +5,20 @@ Model factory for cleanGPT models.
 
 from .model_symbolic_transformer import SymbolicTransformerModel
 from .model_vanilla_transformer import VanillaTransformerModel
+from .model_symbolic_reconstruct import SymbolicTransformerModelWithReconstruction
 
 def get_model(model_type, config=None, **kwargs):
     """
     Factory function to create model instances.
-    
-    Args:
-        model_type (str): Type of model to create
-        config: Model configuration object
-        **kwargs: Additional keyword arguments
-        
-    Returns:
-        torch.nn.Module: Model instance
     """
     model_registry = {
         'Symbolic': SymbolicTransformerModel,
         'SymbolicTransformer': SymbolicTransformerModel,
+        'SymbolicReconstruct': SymbolicTransformerModelWithReconstruction,  # NEW
+        'SymbolicRecon': SymbolicTransformerModelWithReconstruction,        # NEW (alias)
         'Vanilla': VanillaTransformerModel,
         'VanillaTransformer': VanillaTransformerModel,
-        'Standard': VanillaTransformerModel,  # Alias for vanilla
+        'Standard': VanillaTransformerModel,
     }
     
     if model_type not in model_registry:
@@ -37,4 +32,4 @@ def get_model(model_type, config=None, **kwargs):
     
     return model_class(config, **kwargs)
 
-__all__ = ['get_model', 'SymbolicTransformerModel', 'VanillaTransformerModel']
+__all__ = ['get_model', 'SymbolicTransformerModel', 'SymbolicTransformerModelWithReconstruction',  'VanillaTransformerModel']

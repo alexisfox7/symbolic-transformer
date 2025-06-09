@@ -243,6 +243,11 @@ def create_symbolic_config(args):
     config.model_type = "Symbolic"
     config.transformer_block_type = "Symbolic"
     
+    if args.use_reconstruction:  # NEW
+        config.model_type = "SymbolicReconstruct"  # NEW
+    else:
+        config.model_type = "Symbolic"
+
     # Override with command line arguments
     if args.block_size is not None:
         config.block_size = args.block_size
@@ -275,6 +280,9 @@ def create_symbolic_config(args):
     config.generation_max_len = args.generation_max_len
     config.temperature = args.temperature
     config.top_k = args.top_k
+    
+    if args.use_reconstruction:
+        config.reconstruction_loss_weight = args.reconstruction_loss_weight
     
     # Re-run post_init to validate
     config.__post_init__()
@@ -320,6 +328,12 @@ def parse_args():
     parser.add_argument("--use_proj", action='store_true', default=False,
                        help="Use output projection in attention")
     
+    parser.add_argument("--use_reconstruction", action='store_true', default=False,
+                       help="Use reconstruction loss version of symbolic transformer")
+    parser.add_argument("--reconstruction_loss_weight", type=float, default=0.1,
+                       help="Weight for reconstruction loss (default: 0.1)")
+    
+
     # Training parameters
     parser.add_argument('--batch_size', type=int, default=None,
                        help='Mini-batch size for training (will be used with gradient accumulation)')
@@ -517,6 +531,14 @@ def main():
         
         # Initialize tokenizer
         logger.info(f"Initializing {args.tokenizer_type} tokenizer...")
+
+        if args.use_reconstruction:  # NEW
+            model = get_model("SymbolicReconstruct", config=config).to(device)  # NEW
+            logger.info(f"Using Symbolic Transformer WITH reconstruction loss (weight: {config.reconstruction_loss_weight})")
+        else:
+            model = get_model("Symbolic", config=config).to(device)
+            logger.info("Using Symbolic Transformer WITHOUT reconstruction loss")
+        
         if args.tokenizer_path:
             tokenizer = create_tokenizer(args.tokenizer_type, from_pretrained=args.tokenizer_path)
         else:

@@ -30,7 +30,9 @@ class SymbolicConfig:
     use_vocab_refinement: bool = False       # Use refinement in projections
     use_v: bool = True                       # Use value projection constraints
     use_proj: bool = True                    # Use output projection constraints
-    
+
+    reconstruction_loss_weight: float = 1.0 
+
     # Training parameters
     batch_size: int = 32                     # Batch size
     num_epochs: int = 5                      # Training epochs
