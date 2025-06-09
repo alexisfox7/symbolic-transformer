@@ -120,7 +120,7 @@ class AccelerateTrainer(BaseTrainer):
                     self.accelerator.backward(loss)
 
                     # Gradient clipping if specified
-                    if self.clip_grad_norm is not None:
+                    if self.accelerator.sync_gradients and self.clip_grad_norm is not None:
                         self.accelerator.clip_grad_norm_(self.model.parameters(), self.clip_grad_norm)
                     
                     # Optimizer step - accelerator.accumulate context handles whether to actually step

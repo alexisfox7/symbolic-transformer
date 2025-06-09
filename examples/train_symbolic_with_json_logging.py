@@ -2,7 +2,12 @@
 # ./examples/train_symbolic_with_json_logging.py
 """
 Training script for Symbolic Transformer with built-in JSON logging support.
-FIXED: Only prints from main process in distributed training.
+Clean implementation with AccelerateTrainer + step-based JSON logging.
+
+Usage:
+    python examples/train_symbolic_with_json_logging.py --preset small --json_log_steps 256
+    python examples/train_symbolic_with_json_logging.py --preset medium --disable_json_logging
+    python examples/train_symbolic_with_json_logging.py --use_proj --use_v --effective_batch_size 64
 """
 
 import argparse
@@ -27,26 +32,7 @@ from datasets import load_dataset
 from utils.json_logger import create_json_logger_for_training
 from trainers.json_trainer import create_accelerate_trainer_with_json_logging
 
-
-class DistributedLogger:
-    """Logger that only prints from main process in distributed training."""
-    
-    def __init__(self, accelerator=None):
-        self.accelerator = accelerator
-        self.is_main_process = accelerator.is_main_process if accelerator else True
-        
-    def info(self, message):
-        if self.is_main_process:
-            print(message)
-            
-    def warning(self, message):
-        if self.is_main_process:
-            print(f"WARNING: {message}")
-            
-    def error(self, message):
-        if self.is_main_process:
-            print(f"ERROR: {message}")
-
+if os.environ.get('LOCAL_RANK', '0') != '0': sys.stdout = open(os.devnull, 'w')
 
 def parse_args():
     """Parse command line arguments with JSON logging support."""
@@ -189,119 +175,87 @@ def create_symbolic_config(args):
     return config
 
 
-def setup_logging_and_output(output_dir, is_main_process):
-    """Setup logging and output directory - only on main process."""
-    if is_main_process:
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Setup basic logging only on main process
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
+def setup_logging_and_output(output_dir):
+    """Setup logging and output directory."""
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Setup basic logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
     
     return logging.getLogger(__name__)
 
 
-def load_checkpoint_for_resumption(checkpoint_path, model, optimizer, device, logger, is_main_process):
+def load_checkpoint_for_resumption(checkpoint_path, model, optimizer, device, logger):
     """Load checkpoint for training resumption."""
     start_epoch = 0
     
     if checkpoint_path and os.path.exists(checkpoint_path):
-        if is_main_process:
-            logger.info(f"Resuming training from checkpoint: {checkpoint_path}")
+        logger.info(f"Resuming training from checkpoint: {checkpoint_path}")
         try:
             checkpoint = torch.load(checkpoint_path, map_location=device)
             
             if 'model_state_dict' in checkpoint:
                 model.load_state_dict(checkpoint['model_state_dict'])
-                if is_main_process:
-                    logger.info("Model state loaded successfully")
+                logger.info("Model state loaded successfully")
             
             if 'optimizer_state_dict' in checkpoint:
                 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-                if is_main_process:
-                    logger.info("Optimizer state loaded successfully")
+                logger.info("Optimizer state loaded successfully")
             
             if 'epoch' in checkpoint:
                 start_epoch = checkpoint['epoch'] + 1
-                if is_main_process:
-                    logger.info(f"Resuming from epoch {start_epoch}")
+                logger.info(f"Resuming from epoch {start_epoch}")
                 
-            if 'loss' in checkpoint and is_main_process:
+            if 'loss' in checkpoint:
                 logger.info(f"Checkpoint loss: {checkpoint['loss']:.6f}")
                 
         except Exception as e:
-            if is_main_process:
-                logger.error(f"Error loading checkpoint: {e}")
-                logger.warning("Starting training from scratch")
+            logger.error(f"Error loading checkpoint: {e}")
+            logger.warning("Starting training from scratch")
             start_epoch = 0
     else:
-        if checkpoint_path and is_main_process:
+        if checkpoint_path:
             logger.warning(f"Checkpoint file not found. Starting from scratch.")
     
     return start_epoch
 
 
 def main():
-    """Main training function with JSON logging - FIXED for distributed training."""
+    """Main training function with JSON logging."""
     args = parse_args()
+
+    import os
+    if os.environ.get('LOCAL_RANK', '0') != '0':
+        import sys; sys.stdout = open(os.devnull, 'w')
     
-    # Create a temporary trainer to get accelerator for distributed setup
-    temp_trainer = None
-    accelerator = None
-    is_main_process = True
-    
-    if args.trainer_type == "accelerate":
-        try:
-            from trainers.accelerate_trainer import AccelerateTrainer
-            temp_trainer = AccelerateTrainer(
-                model=torch.nn.Linear(1, 1),  # Dummy model
-                dataloader=None,
-                optimizer=None,
-                device=torch.device('cpu'),
-                num_epochs=1
-            )
-            accelerator = temp_trainer.accelerator
-            is_main_process = accelerator.is_main_process
-        except:
-            pass  # Fall back to single process
-    
-    # Create distributed logger
-    dist_logger = DistributedLogger(accelerator)
-    
-    # Setup only on main process
-    logger = setup_logging_and_output(args.output_dir, is_main_process)
+    # Setup
+    logger = setup_logging_and_output(args.output_dir)
     
     if args.device == 'auto':
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     else:
         device = torch.device(args.device)
     
-    # Only print from main process
-    if is_main_process:
-        dist_logger.info("="*60)
-        dist_logger.info("SYMBOLIC TRANSFORMER TRAINING WITH JSON LOGGING")
-        dist_logger.info("="*60)
-        dist_logger.info(f"Device: {device}")
-        dist_logger.info(f"Trainer: {args.trainer_type}")
-        if accelerator:
-            dist_logger.info(f"Distributed training: {accelerator.num_processes} processes")
-            dist_logger.info(f"Process rank: {accelerator.process_index}")
-        dist_logger.info(f"JSON logging: {'Enabled' if not args.disable_json_logging else 'Disabled'}")
-        if not args.disable_json_logging:
-            dist_logger.info(f"JSON log interval: every {args.json_log_steps} steps")
+    logger.info("="*60)
+    logger.info("SYMBOLIC TRANSFORMER TRAINING WITH JSON LOGGING")
+    logger.info("="*60)
+    logger.info(f"Device: {device}")
+    logger.info(f"Trainer: {args.trainer_type}")
+    logger.info(f"JSON logging: {'Enabled' if not args.disable_json_logging else 'Disabled'}")
+    if not args.disable_json_logging:
+        logger.info(f"JSON log interval: every {args.json_log_steps} steps")
     
     # Create configuration
     config = create_symbolic_config(args)
     
     # Initialize tokenizer
-    if is_main_process:
-        dist_logger.info(f"Initializing {args.tokenizer_type} tokenizer...")
-        
+    logger.info(f"Initializing {args.tokenizer_type} tokenizer...")
     if args.tokenizer_type == "character":
         # Build character vocab from dataset sample
         temp_split_str = f"train[:{min(args.max_samples, 10000)}]"
@@ -319,8 +273,7 @@ def main():
             text_field = next((col for col in temp_dataset.column_names 
                              if temp_dataset.features[col].dtype == 'string'), None)
             if not text_field:
-                if is_main_process:
-                    dist_logger.error(f"Could not find text column. Available: {temp_dataset.column_names}")
+                logger.error(f"Could not find text column. Available: {temp_dataset.column_names}")
                 sys.exit(1)
             text_samples = temp_dataset[text_field]
         
@@ -332,13 +285,12 @@ def main():
     # Update config with tokenizer info
     config.update_from_tokenizer(tokenizer)
     
-    # Print configuration only on main process
-    if is_main_process:
-        print_config(config, dataset_name=args.dataset)
+    # Print configuration
+    print_config(config, dataset_name=args.dataset)
     
-    # Setup JSON logging (only on main process)
+    # Setup JSON logging
     json_logger = None
-    if not args.disable_json_logging and is_main_process:
+    if not args.disable_json_logging:
         json_logger = create_json_logger_for_training(
             args.output_dir, 
             args.experiment_name, 
@@ -371,16 +323,12 @@ def main():
             'system_config': {
                 'device': str(device),
                 'tokenizer_type': args.tokenizer_type,
-                'num_processes': accelerator.num_processes if accelerator else 1,
-                'process_index': accelerator.process_index if accelerator else 0,
             }
         })
-        dist_logger.info(f"JSON logging enabled: {json_logger.log_file}")
+        logger.info(f"JSON logging enabled: {json_logger.log_file}")
     
     # Load and prepare data
-    if is_main_process:
-        dist_logger.info("Loading and preparing data...")
-        
+    logger.info("Loading and preparing data...")
     dataloader, tokenizer = load_and_prepare_data(
         dataset_name=args.dataset,
         dataset_config=args.dataset_config,
@@ -392,19 +340,13 @@ def main():
         split='train',
         shuffle=True
     )
-    
-    if is_main_process:
-        dist_logger.info(f"Data loaded. DataLoader has {len(dataloader)} batches.")
+    logger.info(f"Data loaded. DataLoader has {len(dataloader)} batches.")
     
     # Initialize model
-    if is_main_process:
-        dist_logger.info("Initializing Symbolic Transformer...")
-        
+    logger.info("Initializing Symbolic Transformer...")
     model = get_model("Symbolic", config=config).to(device)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    
-    if is_main_process:
-        dist_logger.info(f"Model initialized with {num_params/1e6:.2f}M parameters")
+    logger.info(f"Model initialized with {num_params/1e6:.2f}M parameters")
     
     # Setup optimizer
     optimizer = torch.optim.AdamW(
@@ -415,13 +357,11 @@ def main():
     
     # Load checkpoint if resuming
     start_epoch = load_checkpoint_for_resumption(
-        args.resume_from_checkpoint, model, optimizer, device, logger, is_main_process
+        args.resume_from_checkpoint, model, optimizer, device, logger
     )
     
     # Create trainer with JSON logging
-    if is_main_process:
-        dist_logger.info(f"Setting up {args.trainer_type} trainer...")
-        
+    logger.info(f"Setting up {args.trainer_type} trainer...")
     if args.trainer_type == "accelerate":
         trainer = create_accelerate_trainer_with_json_logging(
             model=model,
@@ -455,48 +395,43 @@ def main():
     if start_epoch > 0:
         remaining_epochs = config.num_epochs - start_epoch
         if remaining_epochs <= 0:
-            if is_main_process:
-                dist_logger.warning(f"No epochs remaining. Already completed {start_epoch} epochs.")
+            logger.warning(f"No epochs remaining. Already completed {start_epoch} epochs.")
             return
         trainer.num_epochs = remaining_epochs
-        if is_main_process:
-            dist_logger.info(f"Adjusted training to {remaining_epochs} remaining epochs")
+        logger.info(f"Adjusted training to {remaining_epochs} remaining epochs")
     
     # Train the model
-    if is_main_process:
-        dist_logger.info("="*60)
-        dist_logger.info(f"STARTING TRAINING from epoch {start_epoch}")
-        dist_logger.info("="*60)
+    logger.info("="*60)
+    logger.info(f"STARTING TRAINING from epoch {start_epoch}")
+    logger.info("="*60)
     
     training_result = trainer.train()
     
-    if is_main_process:
-        dist_logger.info("="*60)
-        dist_logger.info("TRAINING COMPLETED")
-        dist_logger.info("="*60)
+    logger.info("="*60)
+    logger.info("TRAINING COMPLETED")
+    logger.info("="*60)
     
-    # Save final model (only main process)
-    if is_main_process:
-        model_path = os.path.join(args.output_dir, args.save_model_filename)
-        save_dict = {
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'epoch': config.num_epochs,
-            'config': config,
-            'tokenizer': tokenizer,
-            'training_args': vars(args),
-            'training_result': training_result,
-            'timestamp': datetime.now().isoformat(),
-        }
-        
-        torch.save(save_dict, model_path)
-        dist_logger.info(f"Model saved to {model_path}")
+    # Save final model
+    model_path = os.path.join(args.output_dir, args.save_model_filename)
+    save_dict = {
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'epoch': config.num_epochs,
+        'config': config,
+        'tokenizer': tokenizer,
+        'training_args': vars(args),
+        'training_result': training_result,
+        'timestamp': datetime.now().isoformat(),
+    }
     
-    # Test generation (only main process)
-    if not args.skip_generation and is_main_process:
-        dist_logger.info("="*60)
-        dist_logger.info("TESTING SYMBOLIC GENERATION")
-        dist_logger.info("="*60)
+    torch.save(save_dict, model_path)
+    logger.info(f"Model saved to {model_path}")
+    
+    # Test generation
+    if not args.skip_generation:
+        logger.info("="*60)
+        logger.info("TESTING SYMBOLIC GENERATION")
+        logger.info("="*60)
         
         test_prompts = [
             "The brave knight",
@@ -507,7 +442,7 @@ def main():
         
         model.eval()
         for i, prompt in enumerate(test_prompts):
-            dist_logger.info(f"\nTest {i+1}: '{prompt}'")
+            logger.info(f"\nTest {i+1}: '{prompt}'")
             try:
                 _, generated_text = run_generation(
                     model=model,
@@ -519,37 +454,39 @@ def main():
                     top_k=args.top_k,
                     show_progress=False
                 )
-                dist_logger.info(f"Generated: {generated_text}")
+                logger.info(f"Generated: {generated_text}")
                 
                 # Log generation to JSON
                 if json_logger:
-                    json_logger.log_generation(
-                        epoch=config.num_epochs,
-                        prompt=prompt,
-                        generated=generated_text,
-                        generation_params={
-                            'max_new_tokens': args.generation_max_len,
-                            'temperature': args.temperature,
-                            'top_k': args.top_k
-                        }
-                    )
+                    # Check if we're using accelerate trainer
+                    is_main_process = True
+                    if hasattr(trainer, 'accelerator'):
+                        is_main_process = trainer.accelerator.is_main_process
+                    
+                    if is_main_process:
+                        json_logger.log_generation(
+                            epoch=config.num_epochs,
+                            prompt=prompt,
+                            generated=generated_text,
+                            generation_params={
+                                'max_new_tokens': args.generation_max_len,
+                                'temperature': args.temperature,
+                                'top_k': args.top_k
+                            }
+                        )
                         
             except Exception as e:
-                dist_logger.error(f"Error generating for '{prompt}': {e}")
+                logger.error(f"Error generating for '{prompt}': {e}")
     
-    # Final summary (only main process)
-    if is_main_process:
-        dist_logger.info("\n" + "="*60)
-        dist_logger.info("SYMBOLIC TRANSFORMER TRAINING COMPLETED!")
-        dist_logger.info("="*60)
-        dist_logger.info(f"Model: {num_params/1e6:.2f}M parameters")
-        dist_logger.info(f"Final loss: {training_result.get('final_loss', 'N/A')}")
-        dist_logger.info(f"Training time: {training_result.get('training_time', 'N/A')}")
-        if json_logger:
-            dist_logger.info(f"JSON logs: {json_logger.log_file}")
-        if accelerator:
-            dist_logger.info(f"Trained on {accelerator.num_processes} processes")
-        dist_logger.info("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("SYMBOLIC TRANSFORMER TRAINING COMPLETED!")
+    logger.info("="*60)
+    logger.info(f"Model: {num_params/1e6:.2f}M parameters")
+    logger.info(f"Final loss: {training_result.get('final_loss', 'N/A')}")
+    logger.info(f"Training time: {training_result.get('training_time', 'N/A')}")
+    if json_logger:
+        logger.info(f"JSON logs: {json_logger.log_file}")
+    logger.info("="*60)
 
 
 if __name__ == "__main__":
