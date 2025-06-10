@@ -1,13 +1,13 @@
 #!/bin/bash
-# Simplified Progressive Symbolic Transformer Training with 4 GPUs
-# Same parameters as original but without gradient accumulation complexity
+# Symbolic Transformer Training with Simplified JSON Logging
+# Matches sym_train_acc.sh structure but with clean JSON logging
 
 set -e  # Exit on any error
 
 # Configuration - matching original script
-DIR="./outputs/sym_4gpu_simple"
+DIR="./outputs/sym_4gpu_json"
 N=110000
-EXPERIMENT_NAME="symbolic_4gpu_simple"
+EXPERIMENT_NAME="symbolic_4gpu_json"
 
 # Model configuration - matching original
 N_EMBD=384
@@ -17,20 +17,20 @@ PRESET="small"
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 NUM_GPUS=4
 
-# Simplified batch configuration (no gradient accumulation, no stages)
+# Batch configuration (no gradient accumulation)
 BATCH_SIZE=4  # Direct batch size per GPU
 
 # JSON logging configuration
-JSON_LOG_STEPS=64
+LOG_INTERVAL=100  # Log every 100 steps (simplified from JSON_LOG_STEPS)
 
 echo "========================================================"
-echo "SIMPLIFIED SYMBOLIC TRANSFORMER 4-GPU TRAINING"
+echo "SYMBOLIC TRANSFORMER 4-GPU TRAINING WITH JSON LOGGING"
 echo "========================================================"
 echo "Output directory: $DIR"
 echo "Max samples: $N"
 echo "Number of GPUs: $NUM_GPUS"
 echo "Model size: $N_EMBD dimensions"
-echo "JSON logging: Every $JSON_LOG_STEPS batches"
+echo "JSON logging: Every $LOG_INTERVAL steps"
 echo "Experiment name: $EXPERIMENT_NAME"
 echo ""
 echo "Batch size: $BATCH_SIZE per GPU (${BATCH_SIZE}×4 = $((BATCH_SIZE * 4)) total)"
@@ -55,11 +55,12 @@ echo "TRAINING: All 8 epochs"
 echo "Batch size: $BATCH_SIZE per GPU (${BATCH_SIZE}×4 = $((BATCH_SIZE * 4)) total)"
 echo "========================================================"
 
+# Using the simplified training script
 accelerate launch \
     --config_file ./accelerate_config_4gpu.yaml \
     --num_processes $NUM_GPUS \
     --multi_gpu \
-    examples/train_sym_json.py \
+    examples/train_symbolic_simplified.py \
     --use_proj --use_v \
     --preset $PRESET \
     --n_embd $N_EMBD \
@@ -68,11 +69,11 @@ accelerate launch \
     --max_samples $N \
     --output_dir $DIR \
     --trainer_type accelerate \
-    --json_log_steps $JSON_LOG_STEPS \
+    --log_interval $LOG_INTERVAL \
     --experiment_name $EXPERIMENT_NAME \
     --learning_rate 0.0012 \
     --clip_grad_norm 1.0 \
-    --log_interval 32
+    --console_log_interval 32
 
 if [ $? -ne 0 ]; then
     echo "Training failed. Exiting."
@@ -81,7 +82,7 @@ fi
 
 echo "Training completed successfully!"
 
-# Generate training plots from JSON logs - matching original
+# Generate training plots from JSON logs
 echo ""
 echo "========================================================"
 echo "GENERATING TRAINING PLOTS FROM JSON LOGS"
@@ -91,124 +92,140 @@ python -c "
 import os
 import json
 import matplotlib.pyplot as plt
+import numpy as np
 from datetime import datetime
 
-# Find all JSON log files
+# Find the JSON log file
 log_dir = '$DIR/logs'
-json_files = []
+json_file = None
 if os.path.exists(log_dir):
     for f in os.listdir(log_dir):
         if f.endswith('.jsonl') and '$EXPERIMENT_NAME' in f:
-            json_files.append(os.path.join(log_dir, f))
+            json_file = os.path.join(log_dir, f)
+            break
 
-print(f'Found {len(json_files)} JSON log files')
+if not json_file:
+    print('ERROR: No JSON log file found')
+    exit(1)
 
-# Extract training metrics (simple batch tracking)
-all_batches = []
-all_losses = []
+print(f'Processing: {json_file}')
+
+# Read all events
+events = []
+with open(json_file, 'r') as f:
+    for line in f:
+        if line.strip():
+            events.append(json.loads(line))
+
+# Extract metrics
+steps = []
+losses = []
 epoch_boundaries = []
+current_epoch = 0
 
-for json_file in sorted(json_files):
-    print(f'Processing: {json_file}')
-    with open(json_file, 'r') as f:
-        for line in f:
-            try:
-                event = json.loads(line.strip())
-                
-                # Track batches (much simpler now)
-                if event.get('event_type') == 'batch':
-                    step = event.get('step', 0)
-                    loss = event.get('metrics', {}).get('loss')
-                    if loss is not None:
-                        all_batches.append(step)
-                        all_losses.append(loss)
-                        
-                elif event.get('event_type') == 'epoch_end':
-                    epoch = event.get('epoch', 0)
-                    global_batch = event.get('metrics', {}).get('global_batch', 0)
-                    if global_batch > 0:
-                        epoch_boundaries.append((global_batch, epoch))
-            except:
-                continue
+for event in events:
+    if event['event'] == 'metrics':
+        steps.append(event['step'])
+        losses.append(event['metrics']['loss'])
+    elif event['event'] == 'epoch_summary':
+        epoch = event['epoch']
+        if epoch > current_epoch and steps:
+            epoch_boundaries.append((steps[-1], epoch))
+            current_epoch = epoch
 
-if all_batches and all_losses:
-    # Create training plot
-    plt.figure(figsize=(15, 10))
+if not steps:
+    print('No training metrics found')
+    exit(1)
+
+# Create plot
+plt.figure(figsize=(12, 6))
+
+# Smooth the losses for cleaner visualization
+window_size = min(50, len(losses) // 10)
+if window_size > 1:
+    smoothed_losses = np.convolve(losses, np.ones(window_size)/window_size, mode='valid')
+    smoothed_steps = steps[:len(smoothed_losses)]
+    plt.plot(smoothed_steps, smoothed_losses, 'b-', linewidth=2, label='Smoothed Loss')
+    plt.plot(steps, losses, 'b-', alpha=0.3, linewidth=0.5, label='Raw Loss')
+else:
+    plt.plot(steps, losses, 'b-', linewidth=2, label='Training Loss')
+
+plt.xlabel('Training Steps')
+plt.ylabel('Loss')
+plt.title('Training Progress - Symbolic Transformer (4 GPUs)')
+plt.grid(True, alpha=0.3)
+plt.legend()
+
+# Add epoch boundaries
+for step, epoch in epoch_boundaries:
+    plt.axvline(x=step, color='red', linestyle='--', alpha=0.5, linewidth=1)
+    plt.text(step, plt.ylim()[1], f'Epoch {epoch}', rotation=90, va='top', ha='right')
+
+plt.tight_layout()
+plot_path = '$DIR/training_progress.png'
+plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+print(f'Training plot saved to: {plot_path}')
+plt.close()
+
+# Print summary statistics
+print(f'\\nTraining Summary:')
+print(f'Total steps: {steps[-1]}')
+print(f'Final loss: {losses[-1]:.4f}')
+print(f'Best loss: {min(losses):.4f}')
+print(f'Epochs completed: {current_epoch}')
+if epoch_boundaries:
+    steps_per_epoch = epoch_boundaries[0][0]
+    print(f'Steps per epoch: ~{steps_per_epoch}')
+
+# Create epoch summary plot
+if epoch_boundaries:
+    plt.figure(figsize=(10, 6))
     
-    # Plot loss vs batches
-    plt.subplot(2, 1, 1)
-    plt.plot(all_batches, all_losses, alpha=0.7, linewidth=1, label='Training Loss')
-    plt.title('Simplified 4-GPU Symbolic Transformer Training Loss vs Batches')
-    plt.xlabel('Batch')
-    plt.ylabel('Loss')
+    epoch_nums = []
+    epoch_avg_losses = []
+    
+    start_idx = 0
+    for step, epoch in epoch_boundaries:
+        step_idx = steps.index(step) if step in steps else len(steps)-1
+        epoch_losses = losses[start_idx:step_idx+1]
+        if epoch_losses:
+            epoch_nums.append(epoch)
+            epoch_avg_losses.append(np.mean(epoch_losses))
+        start_idx = step_idx + 1
+    
+    plt.plot(epoch_nums, epoch_avg_losses, 'bo-', linewidth=2, markersize=8)
+    plt.xlabel('Epoch')
+    plt.ylabel('Average Loss')
+    plt.title('Average Loss per Epoch')
     plt.grid(True, alpha=0.3)
-    plt.legend()
-    
-    # Add epoch boundaries
-    for batch, epoch in epoch_boundaries:
-        plt.axvline(x=batch, color='red', linestyle='--', alpha=0.5, linewidth=1)
-        plt.text(batch, max(all_losses) * 0.9, f'E{epoch}', rotation=90, verticalalignment='bottom')
-    
-    # Plot smoothed loss
-    plt.subplot(2, 1, 2)
-    if len(all_losses) > 50:
-        # Simple moving average
-        window = min(50, len(all_losses) // 5)
-        smoothed = []
-        for i in range(len(all_losses)):
-            start = max(0, i - window // 2)
-            end = min(len(all_losses), i + window // 2)
-            smoothed.append(sum(all_losses[start:end]) / (end - start))
-        plt.plot(all_batches, smoothed, linewidth=2, color='orange', label='Smoothed Loss')
-        plt.title('Smoothed Training Loss vs Batches')
-    else:
-        plt.plot(all_batches, all_losses, linewidth=2, label='Training Loss')
-        plt.title('Training Loss vs Batches')
-    
-    plt.xlabel('Batch')
-    plt.ylabel('Loss')
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    
-    # Add epoch boundaries
-    for batch, epoch in epoch_boundaries:
-        plt.axvline(x=batch, color='red', linestyle='--', alpha=0.5, linewidth=1)
+    plt.xticks(epoch_nums)
     
     plt.tight_layout()
-    plot_path = '$DIR/training_progress_simple.png'
-    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-    print(f'Training plot saved to: {plot_path}')
+    epoch_plot_path = '$DIR/epoch_losses.png'
+    plt.savefig(epoch_plot_path, dpi=300, bbox_inches='tight')
+    print(f'Epoch plot saved to: {epoch_plot_path}')
     plt.close()
-    
-    # Print summary
-    print(f'\\nTraining Summary (Simplified):')
-    print(f'Total batches: {max(all_batches) if all_batches else 0}')
-    print(f'Final loss: {all_losses[-1]:.4f}' if all_losses else 'N/A')
-    print(f'Best loss: {min(all_losses):.4f}' if all_losses else 'N/A')
-    print(f'Epochs completed: {max([e for _, e in epoch_boundaries]) if epoch_boundaries else 0}')
-    print(f'Batches per epoch (avg): {(max(all_batches) / max([e for _, e in epoch_boundaries])) if epoch_boundaries else 0:.1f}')
-else:
-    print('No valid training data found in JSON logs')
 "
 
-# Final summary - matching original structure but simplified
+# Final summary
 echo ""
 echo "========================================================"
-echo "SIMPLIFIED 4-GPU TRAINING COMPLETED!"
+echo "4-GPU TRAINING WITH JSON LOGGING COMPLETED!"
 echo "========================================================"
-echo "Key simplifications:"
-echo "  ✓ No gradient accumulation complexity"
-echo "  ✓ Direct batch sizes instead of effective batch calculations"
-echo "  ✓ Simple batch-by-batch training and logging"
-echo "  ✓ Clean JSON logs with straightforward batch tracking"
-echo ""
-echo "Training stages (simplified):"
-echo "  Single run: 8 epochs, $BATCH_SIZE×4 = $((BATCH_SIZE * 4)) total batch size"
+echo "Training configuration:"
+echo "  Model: Symbolic Transformer ($PRESET, $N_EMBD dim)"
+echo "  Dataset: $N samples"
+echo "  Training: 8 epochs, batch size $BATCH_SIZE×$NUM_GPUS"
+echo "  Learning rate: 0.0012"
 echo ""
 echo "Output files:"
-echo "  Model: $DIR/symbolic_model.pt"
-echo "  Logs: $DIR/logs/"
-echo "  Plot: $DIR/training_progress_simple.png"
+echo "  Model: $DIR/model.pt"
+echo "  JSON logs: $DIR/logs/${EXPERIMENT_NAME}_*.jsonl"
+echo "  Training plot: $DIR/training_progress.png"
+echo "  Epoch plot: $DIR/epoch_losses.png"
 echo ""
-echo "Much cleaner and easier to understand!"
+echo "JSON log format (simplified):"
+echo "  - Each line is a JSON event"
+echo "  - Events: start, config, metrics, epoch_summary, end"
+echo "  - Clean structure for easy parsing"
 echo "========================================================"
