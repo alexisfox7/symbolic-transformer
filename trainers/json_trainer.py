@@ -114,11 +114,15 @@ class JSONLoggingAccelerateTrainer:
             # Call original logging
             original_log_batch(batch_idx, loss, epoch=epoch, metrics=metrics)
             
-            self.global_batch_count += 1
+            # Use metrics from the original trainer if available (contains global step info)
+            if metrics and 'global_batch' in metrics:
+                self.global_batch_count = metrics['global_batch']
+            else:
+                self.global_batch_count += 1
             
             # DEBUG: Print every batch to see if this is running
             if self.accelerator.is_main_process and self.global_batch_count <= 5:
-                print(f"DEBUG: Batch {self.global_batch_count}, checkpoint_every_n_batches={self.checkpoint_every_n_batches}")
+                print(f"DEBUG: Local batch {batch_idx}, Global batch {self.global_batch_count}, checkpoint_every_n_batches={self.checkpoint_every_n_batches}")
             
             # Only on main process for JSON logging
             if self.json_logger and self.accelerator.is_main_process:
@@ -143,12 +147,12 @@ class JSONLoggingAccelerateTrainer:
                     )
             
             # SIMPLE: Save lightweight checkpoint every N batches
-            # DEBUG: Always check the condition
-            if self.accelerator.is_main_process and self.global_batch_count >= 95:
-                print(f"DEBUG: Batch {self.global_batch_count}, modulo check: {self.global_batch_count} % {self.checkpoint_every_n_batches} = {self.global_batch_count % self.checkpoint_every_n_batches}")
+            # DEBUG: Always check the condition around checkpoint intervals
+            if self.accelerator.is_main_process and (self.global_batch_count % 10 == 0 or self.global_batch_count >= 95):
+                print(f"DEBUG: Local batch {batch_idx}, Global batch {self.global_batch_count}, modulo check: {self.global_batch_count} % {self.checkpoint_every_n_batches} = {self.global_batch_count % self.checkpoint_every_n_batches}")
             
             if self.checkpoint_every_n_batches > 0 and self.global_batch_count % self.checkpoint_every_n_batches == 0:
-                print(f"DEBUG: Triggering checkpoint save at batch {self.global_batch_count}")
+                print(f"DEBUG: Triggering checkpoint save at global batch {self.global_batch_count} (local batch {batch_idx})")
                 if self.accelerator.is_main_process:
                     print(f"DEBUG: Main process saving metrics to {self.metrics_save_dir}")
                     self.logger.info(f"Saving batch metrics at batch {self.global_batch_count}")
@@ -292,7 +296,7 @@ def analyze_batch_metrics(metrics_dir):
             batch_losses.append(data['train_loss'])
             batch_perplexities.append(data['train_perplexity'])
             
-            print(f"Batch {data['global_batch']:6d}: Loss=s{data['train_loss']:.4f}, PPL={data['train_perplexity']:.2f}")
+            print(f"Batch {data['global_batch']:6d}: Loss={data['train_loss']:.4f}, PPL={data['train_perplexity']:.2f}")
             
         except Exception as e:
             print(f"Error reading {metrics_file}: {e}")
