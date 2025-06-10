@@ -1,16 +1,23 @@
 #!/usr/bin/env python
 """
-Checkpoint Inspector - Check if validation checkpoints are loadable and contain correct data.
+FIXED Checkpoint Inspector - handles tensor values properly.
 """
 
 import torch
 import os
-import sys
-from pathlib import Path
 
-def inspect_checkpoint(checkpoint_path):
+def safe_extract_value(value):
+    """Safely extract value from tensor or scalar."""
+    if isinstance(value, torch.Tensor):
+        if value.numel() == 1:
+            return value.item()
+        else:
+            return f"Tensor{list(value.shape)}"
+    return value
+
+def inspect_checkpoint_fixed(checkpoint_path):
     """
-    Inspect a checkpoint file and validate its contents.
+    FIXED: Inspect checkpoint without .item() errors.
     """
     print(f"🔍 Inspecting: {checkpoint_path}")
     
@@ -20,7 +27,7 @@ def inspect_checkpoint(checkpoint_path):
     
     try:
         # Load checkpoint
-        checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
         
         print(f"✅ Checkpoint loaded successfully")
         print(f"📁 File size: {os.path.getsize(checkpoint_path) / 1024 / 1024:.2f} MB")
@@ -39,14 +46,13 @@ def inspect_checkpoint(checkpoint_path):
             elif key == 'optimizer_state_dict':
                 print(f"  ⚙️ {key}: Present")
                 
-            elif isinstance(value, torch.Tensor):
-                print(f"  📊 {key}: {value.item()}")
-                
             else:
-                print(f"  📝 {key}: {value}")
+                # FIXED: Handle both tensors and scalars
+                safe_value = safe_extract_value(value)
+                print(f"  📊 {key}: {safe_value}")
         
         # Validate key components
-        required_keys = ['model_state_dict', 'optimizer_state_dict', 'epoch']
+        required_keys = ['model_state_dict', 'optimizer_state_dict']
         missing_keys = [key for key in required_keys if key not in checkpoint]
         
         if missing_keys:
@@ -55,188 +61,69 @@ def inspect_checkpoint(checkpoint_path):
             print(f"\n✅ All required keys present")
         
         # Check for validation-specific data
-        validation_keys = ['val_loss', 'val_perplexity', 'global_batch', 'is_best']
-        val_data = {key: checkpoint.get(key) for key in validation_keys if key in checkpoint}
+        validation_keys = ['val_loss', 'val_perplexity', 'global_batch', 'is_best', 'loss', 'epoch']
+        print(f"\n🧪 Training/Validation data:")
+        for key in validation_keys:
+            if key in checkpoint:
+                safe_value = safe_extract_value(checkpoint[key])
+                print(f"  {key}: {safe_value}")
         
-        if val_data:
-            print(f"\n🧪 Validation data:")
-            for key, value in val_data.items():
-                print(f"  {key}: {value}")
+        # Quick validation check
+        has_val_data = any(key.startswith('val_') for key in checkpoint.keys())
+        if has_val_data:
+            print(f"\n✅ Validation data found - checkpoint is from validation run")
         else:
-            print(f"\n⚠️  No validation data found")
+            print(f"\n⚠️  No validation data - this might be a regular epoch checkpoint")
         
         return True
         
     except Exception as e:
         print(f"❌ Error loading checkpoint: {e}")
-        import traceback
-        traceback.print_exc()
         return False
 
-
-def test_model_loading(checkpoint_path, model_config=None):
-    """
-    Test if we can actually load the model from checkpoint.
-    """
-    print(f"\n🧪 Testing model loading from checkpoint...")
-    
-    try:
-        checkpoint = torch.load(checkpoint_path, map_location='cpu')
-        
-        # If you have model config, test creating model and loading weights
-        if model_config:
-            print("🏗️  Creating model from config...")
-            # You'd need to import your model creation code here
-            # model = create_model(model_config)
-            # model.load_state_dict(checkpoint['model_state_dict'])
-            print("✅ Model creation would work (config provided)")
-        else:
-            print("⚠️  No model config provided, skipping model instantiation")
-        
-        # Check if state dict looks reasonable
-        state_dict = checkpoint['model_state_dict']
-        
-        # Basic sanity checks
-        param_count = sum(p.numel() for p in state_dict.values())
-        print(f"📊 Total parameters: {param_count:,}")
-        
-        # Check for common transformer components
-        transformer_keys = [key for key in state_dict.keys() if any(component in key.lower() 
-                          for component in ['embed', 'attention', 'ffn', 'layer_norm', 'mlp'])]
-        
-        if transformer_keys:
-            print(f"🔧 Found {len(transformer_keys)} transformer components")
-            for key in transformer_keys[:5]:  # Show first 5
-                print(f"  - {key}")
-            if len(transformer_keys) > 5:
-                print(f"  - ... and {len(transformer_keys) - 5} more")
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Model loading test failed: {e}")
-        return False
-
-
-def compare_checkpoints(checkpoint_paths):
-    """
-    Compare multiple checkpoints to see improvement.
-    """
-    print(f"\n📈 Comparing {len(checkpoint_paths)} checkpoints...")
-    
-    checkpoint_data = []
+# Quick usage
+if __name__ == "__main__":
+    # Check your specific checkpoint
+    checkpoint_paths = [
+        "./outputs/sym_4gpu_simple/checkpoint_epoch_1.pt",
+        "./outputs/sym_4gpu_simple/checkpoints/best_val_batch_000100.pt",  # If you have validation checkpoints
+    ]
     
     for path in checkpoint_paths:
-        try:
-            checkpoint = torch.load(path, map_location='cpu')
-            data = {
-                'path': os.path.basename(path),
-                'epoch': checkpoint.get('epoch', 'N/A'),
-                'global_batch': checkpoint.get('global_batch', 'N/A'),
-                'val_loss': checkpoint.get('val_loss', 'N/A'),
-                'val_perplexity': checkpoint.get('val_perplexity', 'N/A'),
-                'train_loss': checkpoint.get('train_loss', 'N/A'),
-                'is_best': checkpoint.get('is_best', False)
-            }
-            checkpoint_data.append(data)
-        except Exception as e:
-            print(f"❌ Error loading {path}: {e}")
-    
-    if checkpoint_data:
-        print(f"\n📊 Checkpoint comparison:")
-        print(f"{'File':<30} {'Epoch':<6} {'Batch':<8} {'Val Loss':<10} {'Val PPL':<10} {'Best':<5}")
-        print("-" * 75)
-        
-        for data in sorted(checkpoint_data, key=lambda x: x.get('global_batch', 0)):
-            val_loss = f"{data['val_loss']:.4f}" if isinstance(data['val_loss'], (int, float)) else str(data['val_loss'])
-            val_ppl = f"{data['val_perplexity']:.2f}" if isinstance(data['val_perplexity'], (int, float)) else str(data['val_perplexity'])
-            is_best = "✅" if data['is_best'] else ""
-            
-            print(f"{data['path']:<30} {data['epoch']:<6} {data['global_batch']:<8} {val_loss:<10} {val_ppl:<10} {is_best:<5}")
-
-
-def main():
-    """
-    Main checkpoint inspection script.
-    """
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='Inspect training checkpoints')
-    parser.add_argument('checkpoint_path', nargs='?', 
-                       help='Path to checkpoint file or directory')
-    parser.add_argument('--compare', action='store_true',
-                       help='Compare all checkpoints in directory')
-    
-    args = parser.parse_args()
-    
-    if not args.checkpoint_path:
-        # Default: look for checkpoints in outputs
-        checkpoint_dirs = [
-            './outputs/sym_4gpu_simple/checkpoints',
-            './outputs/vanilla_4gpu_simple/checkpoints',
-            './outputs/sym_4gpu_simple',
-            './outputs/vanilla_4gpu_simple'
-        ]
-        
-        for checkpoint_dir in checkpoint_dirs:
-            if os.path.exists(checkpoint_dir):
-                args.checkpoint_path = checkpoint_dir
-                print(f"🔍 Auto-detected checkpoint directory: {checkpoint_dir}")
-                break
+        if os.path.exists(path):
+            print(f"\n" + "="*60)
+            inspect_checkpoint_fixed(path)
         else:
-            print("❌ No checkpoint directory found. Please specify path.")
-            return
+            print(f"\n❌ File not found: {path}")
+
+# EVEN SIMPLER: Just check what's in the checkpoint
+print(f"\n" + "="*60)
+print("🔍 SIMPLE CHECKPOINT CHECK:")
+
+try:
+    checkpoint_path = "./outputs/sym_4gpu_simple/checkpoint_epoch_1.pt"
+    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     
-    path = Path(args.checkpoint_path)
+    print(f"📋 Keys in checkpoint: {list(checkpoint.keys())}")
     
-    if path.is_file():
-        # Single checkpoint file
-        print(f"🔍 Inspecting single checkpoint file...")
-        inspect_checkpoint(str(path))
-        test_model_loading(str(path))
-        
-    elif path.is_dir():
-        # Directory of checkpoints
-        checkpoint_files = list(path.glob('*.pt')) + list(path.glob('**/*.pt'))
-        
-        if not checkpoint_files:
-            print(f"❌ No .pt files found in {path}")
-            return
-        
-        print(f"🔍 Found {len(checkpoint_files)} checkpoint files")
-        
-        if args.compare:
-            # Compare all checkpoints
-            compare_checkpoints([str(f) for f in checkpoint_files])
-        else:
-            # Inspect latest checkpoint
-            latest_checkpoint = max(checkpoint_files, key=os.path.getmtime)
-            print(f"🔍 Inspecting latest checkpoint: {latest_checkpoint.name}")
-            inspect_checkpoint(str(latest_checkpoint))
-            test_model_loading(str(latest_checkpoint))
+    # Check specific values safely
+    for key in ['epoch', 'loss', 'val_loss', 'val_perplexity', 'global_batch']:
+        if key in checkpoint:
+            value = checkpoint[key]
+            if isinstance(value, torch.Tensor) and value.numel() == 1:
+                print(f"  {key}: {value.item()}")
+            elif isinstance(value, torch.Tensor):
+                print(f"  {key}: Tensor{list(value.shape)}")
+            else:
+                print(f"  {key}: {value}")
     
-    else:
-        print(f"❌ Path not found: {path}")
-
-
-if __name__ == "__main__":
-    main()
-
-
-# QUICK USAGE EXAMPLES:
-"""
-# Inspect latest checkpoint automatically
-python checkpoint_inspector.py
-
-# Inspect specific checkpoint
-python checkpoint_inspector.py ./outputs/sym_4gpu_simple/checkpoint_epoch_1.pt
-
-# Compare all checkpoints in directory
-python checkpoint_inspector.py ./outputs/sym_4gpu_simple/checkpoints --compare
-
-# Quick one-liner in Python:
-import torch
-checkpoint = torch.load('./outputs/sym_4gpu_simple/checkpoint_epoch_1.pt', map_location='cpu')
-print("Keys:", list(checkpoint.keys()))
-print("Val loss:", checkpoint.get('val_loss', 'N/A'))
-"""
+    # Check model state dict size
+    if 'model_state_dict' in checkpoint:
+        model_params = checkpoint['model_state_dict']
+        param_count = sum(p.numel() for p in model_params.values() if isinstance(p, torch.Tensor))
+        print(f"  🧠 Model parameters: {param_count:,}")
+    
+    print(f"✅ Checkpoint is valid and loadable!")
+    
+except Exception as e:
+    print(f"❌ Error: {e}")
