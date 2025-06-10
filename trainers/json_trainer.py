@@ -24,7 +24,8 @@ class JSONLoggingAccelerateTrainer:
         self.trainer = accelerate_trainer
         self.json_logger = json_logger
         self.val_dataloader = val_dataloader
-        
+        self.best_val_loss = float('inf')
+        self.best_checkpoint_path = None
         # Handle both parameter names for backward compatibility
         if validate_every_n_batches is not None:
             self.checkpoint_every_n_batches = validate_every_n_batches
@@ -95,7 +96,7 @@ class JSONLoggingAccelerateTrainer:
                 self.json_logger.log_validation(
                     epoch=epoch,
                     metrics={
-                        'step': global_batch,
+                        'global_batch': global_batch,
                         'val_loss': avg_loss,
                         'val_perplexity': perplexity,
                         'val_samples': total_samples,
@@ -195,7 +196,7 @@ class JSONLoggingAccelerateTrainer:
             # Print validation check info (use the actual global batch from accelerate trainer)
             current_global_batch = metrics.get('global_batch', self.global_batch_count) if metrics else self.global_batch_count
             remainder = current_global_batch % self.checkpoint_every_n_batches if self.checkpoint_every_n_batches > 0 else -1
-            #print(f"📊 Global batch {current_global_batch}, validation check: {current_global_batch} % {self.checkpoint_every_n_batches} = {remainder}")
+            print(f"📊 Global batch {current_global_batch}, validation check: {current_global_batch} % {self.checkpoint_every_n_batches} = {remainder}")
             
             # REPLACED: Run validation instead of saving checkpoints
             if self.checkpoint_every_n_batches > 0 and remainder == 0 and self.val_dataloader is not None:
@@ -241,23 +242,8 @@ class JSONLoggingAccelerateTrainer:
                         print(f"✅ JSON logged successfully")
                     except Exception as e:
                         print(f"❌ JSON logging failed: {e}")
-            
-            # SIMPLE: Save lightweight checkpoint every N batches
-            # Always show when we're close to checkpoints
-            
-            if self.checkpoint_every_n_batches > 0 and remainder == 0:
-                #print(f"🎯 CHECKPOINT: Triggering save at global batch {self.global_batch_count}")
-                if self.accelerator.is_main_process:
-                    print(f"📁 Saving to: {self.metrics_save_dir}")
-                else:
-                    print(f"⚠️  Not main process, skipping save")
-                    
-                self.save_batch_metrics(
-                    epoch=epoch or 0,
-                    batch_idx=batch_idx,
-                    loss=loss,
-                    model_state=True  # Save model state for later validation
-                )
+
+
         
         # Enhance epoch logging (keep simple - no mid-epoch validation)
         def enhanced_log_epoch(epoch: int, avg_loss: float, metrics=None):
