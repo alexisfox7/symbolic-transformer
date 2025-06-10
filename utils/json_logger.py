@@ -1,270 +1,356 @@
-# utils/json_logger.py
+# trainers/json_trainer.py
 """
-Simple JSON logging utility for training metrics and events.
-Provides structured logging without overcomplicating the existing system.
+Simplified integration helpers for JSON logging with lightweight metric checkpoints.
+FIXED VERSION - Debug statements will actually print and checkpoints will save.
 """
 
-import json
-import os
-import time
-from datetime import datetime
-from typing import Dict, Any, Optional
 import logging
+import torch
+import math
+import os
+import json
+from typing import Dict, Any, Optional
+from datetime import datetime
+from utils.json_logger import JSONLogger, create_json_logger_for_training
 
 
-class JSONLogger:
-    """Simple JSON logger for training metrics and events."""
+class JSONLoggingAccelerateTrainer:
+    """
+    Enhanced AccelerateTrainer with lightweight metric checkpoints every N batches.
+    FIXED: Removed problematic main process checks and simplified logic.
+    """
     
-    def __init__(self, log_file: str, experiment_name: str = None, log_every_n_steps: int = 100):
-        """
-        Initialize JSON logger.
+    def __init__(self, accelerate_trainer, json_logger=None, val_dataloader=None, 
+                 checkpoint_every_n_batches=100, validate_every_n_batches=None, metrics_save_dir=None):
+        self.trainer = accelerate_trainer
+        self.json_logger = json_logger
+        self.val_dataloader = val_dataloader
         
-        Args:
-            log_file: Path to JSON log file
-            experiment_name: Optional experiment identifier
-            log_every_n_steps: Log training metrics every N steps (default: 100)
-        """
-        self.log_file = log_file
-        self.experiment_name = experiment_name or "experiment"
-        self.log_every_n_steps = log_every_n_steps
-        self.start_time = time.time()
-        self.step_count = 0
-        
-        # Create directory if needed
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
-        
-        # Initialize log file with experiment metadata
-        self._log_event("experiment_start", {
-            "experiment_name": self.experiment_name,
-            "start_time": datetime.now().isoformat(),
-            "log_file": self.log_file,
-            "log_every_n_steps": self.log_every_n_steps
-        })
-        
+        # Handle both parameter names for backward compatibility
+        if validate_every_n_batches is not None:
+            self.checkpoint_every_n_batches = validate_every_n_batches
+        else:
+            self.checkpoint_every_n_batches = checkpoint_every_n_batches
+            
         self.logger = logging.getLogger(__name__)
+        self.global_batch_count = 0
+        
+        # Setup metrics save directory
+        self.metrics_save_dir = metrics_save_dir or os.path.join(
+            getattr(accelerate_trainer, 'output_dir', './outputs'), 'batch_metrics'
+        )
+        
+        # Create directory on all processes (avoid race conditions)
+        os.makedirs(self.metrics_save_dir, exist_ok=True)
+        
+        # Track accelerate-specific info
+        self.accelerator = accelerate_trainer.accelerator
+        
+        # FIXED: Print setup info immediately
+        print(f"🚀 JSONLoggingAccelerateTrainer initialized:")
+        print(f"  📋 Checkpoint every: {self.checkpoint_every_n_batches} batches")
+        print(f"  📋 JSON log every: {self.json_logger.log_every_n_steps if self.json_logger else 'N/A'} steps")
+        print(f"  📋 Process rank: {self.accelerator.process_index}/{self.accelerator.num_processes}")
+        print(f"  📋 Main process: {self.accelerator.is_main_process}")
+        print(f"  📋 Metrics dir: {self.metrics_save_dir}")
     
-    def _log_event(self, event_type: str, data: Dict[str, Any]):
-        """Write a JSON event to the log file."""
-        event = {
-            "timestamp": datetime.now().isoformat(),
-            "elapsed_time": time.time() - self.start_time,
-            "event_type": event_type,
-            "experiment_name": self.experiment_name,
-            **data
-        }
+    def save_batch_metrics(self, epoch, batch_idx, loss, model_state=None):
+        """
+        Save lightweight metrics checkpoint with minimal model info.
+        FIXED: Only save on main process but print on all processes.
+        """
+        print(f"💾 save_batch_metrics called: epoch={epoch}, batch={batch_idx}, loss={loss:.4f}")
+        
+        if not self.accelerator.is_main_process:
+            print(f"⚠️  Not main process (rank {self.accelerator.process_index}), skipping file save")
+            return
         
         try:
-            with open(self.log_file, 'a', encoding='utf-8') as f:
-                f.write(json.dumps(event) + '\n')
-        except Exception as e:
-            self.logger.warning(f"Failed to write JSON log: {e}")
-    
-    def log_config(self, config: Dict[str, Any]):
-        """Log configuration/hyperparameters."""
-        self._log_event("config", {"config": config})
-    
-    def log_epoch_start(self, epoch: int):
-        """Log epoch start."""
-        self._log_event("epoch_start", {"epoch": epoch})
-    
-    def log_epoch_end(self, epoch: int, metrics: Dict[str, Any]):
-        """Log epoch completion with metrics."""
-        self._log_event("epoch_end", {
-            "epoch": epoch,
-            "metrics": metrics
-        })
-    
-    def log_step(self, step: int, epoch: int, metrics: Dict[str, Any]):
-        """Log training step metrics."""
-        self.step_count = step
-        if step % self.log_every_n_steps == 0:
-            self._log_event("training_step", {
-                "step": step,
-                "epoch": epoch,
-                "metrics": metrics
-            })
-    
-    def log_batch(self, epoch: int, batch: int, step: int, metrics: Dict[str, Any]):
-        """Log batch metrics (only at step intervals)."""
-        self.step_count = step
-        if step % self.log_every_n_steps == 0:
-            self._log_event("batch", {
-                "epoch": epoch,
-                "batch": batch,
-                "step": step,
-                "metrics": metrics
-            })
-    
-    def log_validation(self, epoch: int, metrics: Dict[str, Any]):
-        """Log validation metrics."""
-        self._log_event("validation", {
-            "epoch": epoch,
-            "metrics": metrics
-        })
-    
-    def log_generation(self, epoch: int, prompt: str, generated: str, 
-                      generation_params: Dict[str, Any] = None):
-        """Log text generation examples."""
-        self._log_event("generation", {
-            "epoch": epoch,
-            "prompt": prompt,
-            "generated": generated,
-            "generation_params": generation_params or {}
-        })
-    
-    def log_checkpoint(self, epoch: int, checkpoint_path: str, metrics: Dict[str, Any] = None):
-        """Log checkpoint save."""
-        self._log_event("checkpoint", {
-            "epoch": epoch,
-            "checkpoint_path": checkpoint_path,
-            "metrics": metrics or {}
-        })
-    
-    def log_experiment_end(self, final_metrics: Dict[str, Any] = None):
-        """Log experiment completion."""
-        self._log_event("experiment_end", {
-            "end_time": datetime.now().isoformat(),
-            "total_elapsed_time": time.time() - self.start_time,
-            "final_metrics": final_metrics or {}
-        })
-    
-    def log_custom(self, event_name: str, data: Dict[str, Any]):
-        """Log custom event."""
-        self._log_event(event_name, data)
-
-
-class JSONLoggerCallback:
-    """Callback for integrating JSONLogger with existing trainer system."""
-    
-    def __init__(self, json_logger: JSONLogger):
-        self.json_logger = json_logger
-        self.current_step = 0
-        self.current_epoch = 0
-    
-    def on_train_begin(self, logs: Optional[Dict[str, Any]] = None):
-        """Called at training start."""
-        if logs:
-            self.json_logger.log_config(logs)
-    
-    def on_epoch_begin(self, epoch: int, logs: Optional[Dict[str, Any]] = None):
-        """Called at epoch start."""
-        self.current_epoch = epoch
-        self.json_logger.log_epoch_start(epoch)
-    
-    def on_epoch_end(self, epoch: int, logs: Optional[Dict[str, Any]] = None):
-        """Called at epoch end."""
-        if logs:
-            self.json_logger.log_epoch_end(epoch, logs)
-    
-    def on_batch_end(self, batch_idx: int, logs: Optional[Dict[str, Any]] = None):
-        """Called at batch end - logs every N steps."""
-        if logs and 'loss' in logs and logs['loss'] is not None:
-            self.current_step += 1
-            self.json_logger.log_step(
-                step=self.current_step,
-                epoch=self.current_epoch, 
-                metrics={'loss': logs['loss'], 'batch': batch_idx}
-            )
-    
-    def on_evaluate_end(self, logs: Optional[Dict[str, Any]] = None):
-        """Called at evaluation end."""
-        if logs:
-            epoch = logs.get('epoch', self.current_epoch)
-            self.json_logger.log_validation(epoch, logs)
-
-
-def load_json_logs(log_file: str) -> list:
-    """
-    Load and parse JSON log file.
-    
-    Args:
-        log_file: Path to JSON log file
-        
-    Returns:
-        List of parsed JSON events
-    """
-    events = []
-    if not os.path.exists(log_file):
-        return events
-    
-    try:
-        with open(log_file, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        event = json.loads(line)
-                        events.append(event)
-                    except json.JSONDecodeError as e:
-                        logging.warning(f"Failed to parse JSON line: {e}")
-    except Exception as e:
-        logging.error(f"Failed to read JSON log file: {e}")
-    
-    return events
-
-
-def extract_metrics_from_logs(log_file: str) -> Dict[str, list]:
-    """
-    Extract training metrics from JSON logs.
-    
-    Args:
-        log_file: Path to JSON log file
-        
-    Returns:
-        Dictionary with metric lists (epochs, losses, etc.)
-    """
-    events = load_json_logs(log_file)
-    
-    metrics = {
-        'epochs': [],
-        'epoch_losses': [],
-        'batch_losses': [],
-        'validation_metrics': [],
-        'generation_examples': []
-    }
-    
-    for event in events:
-        event_type = event.get('event_type')
-        
-        if event_type == 'epoch_end':
-            epoch = event.get('epoch', 0)
-            event_metrics = event.get('metrics', {})
+            # Calculate metrics
+            train_perplexity = math.exp(loss) if loss < 20 else float('inf')
             
-            metrics['epochs'].append(epoch)
-            if 'loss' in event_metrics:
-                metrics['epoch_losses'].append(event_metrics['loss'])
-        
-        elif event_type == 'batch':
-            batch_metrics = event.get('metrics', {})
-            if 'loss' in batch_metrics:
-                metrics['batch_losses'].append(batch_metrics['loss'])
-        
-        elif event_type == 'validation':
-            metrics['validation_metrics'].append(event.get('metrics', {}))
-        
-        elif event_type == 'generation':
-            metrics['generation_examples'].append({
-                'epoch': event.get('epoch'),
-                'prompt': event.get('prompt'),
-                'generated': event.get('generated')
-            })
+            # Create metrics data
+            metrics_data = {
+                'timestamp': datetime.now().isoformat(),
+                'epoch': epoch,
+                'batch_idx': batch_idx,
+                'global_batch': self.global_batch_count,
+                'train_loss': loss,
+                'train_perplexity': train_perplexity,
+                'process_info': {
+                    'rank': self.accelerator.process_index,
+                    'num_processes': self.accelerator.num_processes,
+                    'device': str(self.accelerator.device)
+                }
+            }
+            
+            # Save to file
+            metrics_file = os.path.join(
+                self.metrics_save_dir, 
+                f'metrics_batch_{self.global_batch_count:06d}.json'
+            )
+            
+            with open(metrics_file, 'w') as f:
+                json.dump(metrics_data, f, indent=2)
+            
+            print(f"✅ Metrics saved to: {metrics_file}")
+            
+            # Optional: Save model state if requested
+            if model_state and hasattr(self.trainer, 'model'):
+                model_file = os.path.join(
+                    self.metrics_save_dir,
+                    f'model_batch_{self.global_batch_count:06d}.pt'
+                )
+                torch.save(self.trainer.model.state_dict(), model_file)
+                print(f"✅ Model state saved to: {model_file}")
+                
+        except Exception as e:
+            print(f"❌ Error saving batch metrics: {e}")
+            import traceback
+            traceback.print_exc()
     
-    return metrics
+    def train(self):
+        """
+        FIXED: Enhanced training with proper debug output and checkpoint saving.
+        """
+        print(f"🚀 Starting enhanced training with JSON logging")
+        
+        # Store original methods
+        original_log_batch = self.trainer.log_batch
+        original_log_epoch = self.trainer.log_epoch
+        
+        # FIXED: Enhanced batch logging with proper debug output
+        def enhanced_log_batch(batch_idx, loss, epoch=None, metrics=None):
+            # ALWAYS print this first - no process checks
+            print(f"🔥 BATCH {batch_idx}: loss={loss:.4f}, epoch={epoch}")
+            
+            # Call original logging
+            try:
+                original_log_batch(batch_idx, loss, epoch=epoch, metrics=metrics)
+            except Exception as e:
+                print(f"⚠️  Original log_batch failed: {e}")
+            
+            # Update global batch count
+            if metrics and 'global_batch' in metrics:
+                self.global_batch_count = metrics['global_batch']
+            else:
+                self.global_batch_count += 1
+            
+            # Print checkpoint check info
+            remainder = self.global_batch_count % self.checkpoint_every_n_batches if self.checkpoint_every_n_batches > 0 else -1
+            print(f"📊 Global batch {self.global_batch_count}, checkpoint check: {self.global_batch_count} % {self.checkpoint_every_n_batches} = {remainder}")
+            
+            # FIXED: Simple checkpoint logic
+            if self.checkpoint_every_n_batches > 0 and remainder == 0:
+                print(f"🎯 CHECKPOINT TRIGGER: Saving at global batch {self.global_batch_count}")
+                self.save_batch_metrics(
+                    epoch=epoch or 0,
+                    batch_idx=batch_idx,
+                    loss=loss,
+                    model_state=True
+                )
+            
+            # JSON logging (only on main process to avoid duplicate logs)
+            if self.json_logger and self.accelerator.is_main_process:
+                if self.global_batch_count % self.json_logger.log_every_n_steps == 0:
+                    print(f"📝 Logging to JSON at batch {self.global_batch_count}")
+                    
+                    # Calculate train perplexity
+                    train_perplexity = math.exp(loss) if loss < 20 else float('inf')
+                    
+                    batch_metrics = {
+                        'loss': loss,
+                        'perplexity': train_perplexity,
+                        'global_batch': self.global_batch_count
+                    }
+                    if metrics:
+                        batch_metrics.update(metrics)
+                    
+                    try:
+                        self.json_logger.log_batch(
+                            epoch=epoch or 0,
+                            batch=batch_idx,
+                            step=self.global_batch_count,
+                            metrics=batch_metrics
+                        )
+                        print(f"✅ JSON logged successfully")
+                    except Exception as e:
+                        print(f"❌ JSON logging failed: {e}")
+        
+        # Enhanced epoch logging
+        def enhanced_log_epoch(epoch: int, avg_loss: float, metrics=None):
+            print(f"🏁 EPOCH {epoch} COMPLETE: avg_loss={avg_loss:.4f}")
+            
+            # Call original logging
+            try:
+                original_log_epoch(epoch, avg_loss, metrics)
+            except Exception as e:
+                print(f"⚠️  Original log_epoch failed: {e}")
+            
+            # Only on main process for JSON logging
+            if self.json_logger and self.accelerator.is_main_process:
+                # Calculate train perplexity
+                train_perplexity = math.exp(avg_loss) if avg_loss < 20 else float('inf')
+                
+                epoch_metrics = {
+                    'loss': avg_loss,
+                    'train_perplexity': train_perplexity
+                }
+                if metrics:
+                    epoch_metrics.update(metrics)
+                
+                try:
+                    self.json_logger.log_epoch_end(epoch, epoch_metrics)
+                    print(f"✅ Epoch {epoch} logged to JSON")
+                except Exception as e:
+                    print(f"❌ Epoch JSON logging failed: {e}")
+        
+        # FIXED: Replace trainer methods with debug wrapper
+        print(f"🔧 Replacing trainer methods...")
+        self.trainer.log_batch = enhanced_log_batch
+        self.trainer.log_epoch = enhanced_log_epoch
+        print(f"✅ Methods replaced successfully")
+        
+        try:
+            # Run training
+            print(f"🏃 Starting actual training...")
+            result = self.trainer.train()
+            print(f"🏆 Training completed!")
+            
+            # Log final results (only on main process)
+            if self.json_logger and self.accelerator.is_main_process:
+                final_metrics = result.copy() if isinstance(result, dict) else {}
+                final_metrics.update({
+                    'total_processes': self.accelerator.num_processes,
+                    'final_device': str(self.accelerator.device),
+                    'total_batches': self.global_batch_count,
+                    'metrics_save_dir': self.metrics_save_dir
+                })
+                
+                try:
+                    self.json_logger.log_experiment_end(final_metrics)
+                    print(f"✅ Experiment end logged to JSON")
+                except Exception as e:
+                    print(f"❌ Experiment end logging failed: {e}")
+            
+            return result
+            
+        except Exception as e:
+            print(f"💥 Training failed: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
+            
+        finally:
+            # Restore original methods
+            print(f"🔧 Restoring original trainer methods...")
+            self.trainer.log_batch = original_log_batch
+            self.trainer.log_epoch = original_log_epoch
+            print(f"✅ Methods restored")
+    
+    def __getattr__(self, name):
+        """Delegate all other attributes to the wrapped trainer."""
+        return getattr(self.trainer, name)
 
 
-# Usage example for integration with existing code
-def create_json_logger_for_training(output_dir: str, experiment_name: str, log_every_n_steps: int = 100) -> JSONLogger:
+def create_accelerate_trainer_with_json_logging(
+    model, dataloader, optimizer, device, json_logger=None, val_dataloader=None, 
+    checkpoint_every_n_batches=100, validate_every_n_batches=None, metrics_save_dir=None, **trainer_kwargs
+):
     """
-    Create JSON logger for training runs.
+    Create AccelerateTrainer with lightweight metric checkpoints.
+    FIXED: Better error handling and debug output.
+    """
+    from trainers import get_trainer
     
-    Args:
-        output_dir: Training output directory
-        experiment_name: Name for this experiment
-        log_every_n_steps: Log training metrics every N steps (default: 100)
-        
-    Returns:
-        Configured JSONLogger instance
+    print(f"🏗️  Creating AccelerateTrainer...")
+    
+    # Create base AccelerateTrainer
+    trainer = get_trainer(
+        trainer_type="accelerate",
+        model=model,
+        dataloader=dataloader, 
+        optimizer=optimizer,
+        device=device,
+        **trainer_kwargs
+    )
+    
+    print(f"✅ Base trainer created: {type(trainer)}")
+    
+    # Wrap with enhanced JSON logging
+    wrapped_trainer = JSONLoggingAccelerateTrainer(
+        trainer, 
+        json_logger=json_logger,
+        val_dataloader=val_dataloader,
+        checkpoint_every_n_batches=checkpoint_every_n_batches,
+        validate_every_n_batches=validate_every_n_batches,
+        metrics_save_dir=metrics_save_dir
+    )
+    
+    print(f"✅ Wrapped trainer created: {type(wrapped_trainer)}")
+    return wrapped_trainer
+
+
+def add_json_logging_args(parser):
+    """Add JSON logging arguments to existing argument parser."""
+    parser.add_argument("--json_log_steps", type=int, default=100,
+                       help="Log training metrics every N batches to JSON (default: 100)")
+    parser.add_argument("--checkpoint_every_n_batches", type=int, default=100,
+                       help="Save lightweight checkpoint every N batches (default: 100)")
+    parser.add_argument("--disable_json_logging", action="store_true",
+                       help="Disable JSON logging")
+    return parser
+
+
+def create_json_logger_from_args(args, experiment_name="experiment"):
+    """Create JSON logger from parsed arguments."""
+    if getattr(args, 'disable_json_logging', False):
+        return None
+    
+    log_steps = getattr(args, 'json_log_steps', 100)
+    return create_json_logger_for_training(
+        args.output_dir, 
+        experiment_name, 
+        log_steps
+    )
+
+
+# Utility function to analyze saved metrics later
+def analyze_batch_metrics(metrics_dir):
     """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = os.path.join(output_dir, 'logs', f'{experiment_name}_{timestamp}.jsonl')
-    return JSONLogger(log_file, experiment_name, log_every_n_steps)
+    Analyze saved batch metrics to calculate validation and perplexity trends.
+    Run this after training to get insights from the saved checkpoints.
+    """
+    import glob
+    
+    metrics_files = sorted(glob.glob(os.path.join(metrics_dir, 'metrics_batch_*.json')))
+    
+    if not metrics_files:
+        print(f"No metrics files found in {metrics_dir}")
+        return
+    
+    print(f"Found {len(metrics_files)} metric checkpoints")
+    
+    # Load and analyze metrics
+    batch_losses = []
+    batch_perplexities = []
+    
+    for metrics_file in metrics_files:
+        try:
+            with open(metrics_file, 'r') as f:
+                data = json.load(f)
+            
+            batch_losses.append(data['train_loss'])
+            batch_perplexities.append(data['train_perplexity'])
+            
+            print(f"Batch {data['global_batch']:6d}: Loss={data['train_loss']:.4f}, PPL={data['train_perplexity']:.2f}")
+            
+        except Exception as e:
+            print(f"Error reading {metrics_file}: {e}")
+    
+    if batch_losses:
+        print(f"\nSummary:")
+        print(f"  Average Loss: {sum(batch_losses)/len(batch_losses):.4f}")
+        print(f"  Average Perplexity: {sum(batch_perplexities)/len(batch_perplexities):.2f}")
+        print(f"  Final Loss: {batch_losses[-1]:.4f}")
+        print(f"  Final Perplexity: {batch_perplexities[-1]:.2f}")

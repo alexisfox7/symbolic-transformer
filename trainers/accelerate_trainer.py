@@ -130,19 +130,24 @@ class AccelerateTrainer(BaseTrainer):
                 # Update progress bar
                 progress_bar.set_postfix({"loss": f"{batch_loss_item:.4f}"})
 
-                # Log at specified intervals
-                if (batch_idx + 1) % self.log_interval == 0:
-                    batch_size = batch_data.get('input_ids', next(iter(batch_data.values()))).shape[0]
-                    samples_processed = (batch_idx + 1) * batch_size * self.accelerator.num_processes
-                    self.log_batch(
-                        batch_idx + 1, batch_loss_item, epoch=epoch,
-                        metrics={
-                            'samples': samples_processed,
-                            'global_batch': global_batch,
-                            'num_processes': self.accelerator.num_processes
-                        }
-                    )
+                # Calculate batch metrics for every batch
+                batch_size = batch_data.get('input_ids', next(iter(batch_data.values()))).shape[0]
+                samples_processed = (batch_idx + 1) * batch_size * self.accelerator.num_processes
 
+                # ALWAYS call log_batch for checkpoints
+                self.log_batch(
+                    batch_idx + 1, batch_loss_item, epoch=epoch,
+                    metrics={
+                        'samples': samples_processed,
+                        'global_batch': global_batch,
+                        'num_processes': self.accelerator.num_processes
+                    }
+                )
+
+                # Optional: Still do detailed console logging only at intervals
+                if (batch_idx + 1) % self.log_interval == 0:
+                    logger.info(f"Epoch {epoch}, Batch {batch_idx + 1}: Loss={batch_loss_item:.4f}, "
+                                f"Samples={samples_processed}, Global Batch={global_batch}")
                 # Trigger batch end callback with global batch info
                 self._trigger_callbacks('on_batch_end', batch_idx, logs={
                     'loss': batch_loss_item, 
