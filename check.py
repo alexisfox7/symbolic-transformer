@@ -119,8 +119,24 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='c
         else:
             model = get_model("Vanilla", config=model_config).to(device)
         
-        # Load model weights
-        model.load_state_dict(model_state_dict)
+        # Load model weights with key fixing
+        try:
+            model.load_state_dict(model_state_dict)
+        except RuntimeError as e:
+            if "Missing key(s)" in str(e) or "module." in str(e):
+                print(f"🔧 Fixing checkpoint keys (removing 'module.' prefix)...")
+                
+                # Remove 'module.' prefix from checkpoint keys
+                fixed_state_dict = {}
+                for key, value in model_state_dict.items():
+                    new_key = key.replace('module.', '') if key.startswith('module.') else key
+                    fixed_state_dict[new_key] = value
+                
+                print(f"✅ Fixed {len(fixed_state_dict)} keys")
+                model.load_state_dict(fixed_state_dict)
+            else:
+                raise e
+        
         model.eval()
         
         print(f"✅ Model loaded from checkpoint")
