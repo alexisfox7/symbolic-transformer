@@ -1,88 +1,102 @@
 # trainers/json_trainer.py
 """
-Simplified integration helpers for JSON logging without gradient accumulation complexity.
+Simplified integration helpers for JSON logging with lightweight metric checkpoints.
 """
 
 import logging
 import torch
 import math
+import os
+import json
 from typing import Dict, Any, Optional
+from datetime import datetime
 from utils.json_logger import JSONLogger, create_json_logger_for_training
 
 
 class JSONLoggingAccelerateTrainer:
     """
-    Enhanced AccelerateTrainer with proper distributed validation and perplexity logging.
-    FIXED VERSION - uses accelerator.wait_for_everyone() for proper synchronization.
+    Enhanced AccelerateTrainer with lightweight metric checkpoints every N batches.
+    Simple approach - no hanging validation, just save metrics for later analysis.
     """
     
     def __init__(self, accelerate_trainer, json_logger=None, val_dataloader=None, 
-                 validate_every_n_batches=50):
+                 checkpoint_every_n_batches=100, metrics_save_dir=None):
         self.trainer = accelerate_trainer
         self.json_logger = json_logger
         self.val_dataloader = val_dataloader
-        self.validate_every_n_batches = validate_every_n_batches
+        self.checkpoint_every_n_batches = checkpoint_every_n_batches
         self.logger = logging.getLogger(__name__)
         self.global_batch_count = 0
+        
+        # Setup metrics save directory
+        self.metrics_save_dir = metrics_save_dir or os.path.join(
+            getattr(trainer, 'output_dir', './outputs'), 'batch_metrics'
+        )
+        if accelerate_trainer.accelerator.is_main_process:
+            os.makedirs(self.metrics_save_dir, exist_ok=True)
         
         # Track accelerate-specific info
         self.accelerator = accelerate_trainer.accelerator
     
-    def run_validation(self, model, val_dataloader, device):
+    def save_batch_metrics(self, epoch, batch_idx, loss, model_state=None):
         """
-        PROPER distributed validation with accelerator synchronization.
-        All processes participate and results are gathered correctly.
+        Save lightweight metrics checkpoint with minimal model info.
+        Only saves what's needed to calculate perplexity and validation later.
         """
-        model.eval()
-        total_loss = 0.0
-        total_samples = 0
+        if not self.accelerator.is_main_process:
+            return
         
-        # Prepare validation dataloader if not already prepared
-        if not hasattr(val_dataloader, '_accelerator_prepared'):
-            val_dataloader = self.accelerator.prepare(val_dataloader)
+        # Calculate basic metrics
+        train_perplexity = math.exp(loss) if loss < 20 else float('inf')
         
-        with torch.no_grad():
-            for batch_data in val_dataloader:
-                # Data is already on correct device from accelerator.prepare()
-                outputs = model(**batch_data)
-                loss = outputs.get('loss')
-                
-                if loss is not None and not torch.isnan(loss):
-                    batch_size = next(iter(batch_data.values())).size(0)
-                    total_loss += loss.item() * batch_size
-                    total_samples += batch_size
-        
-        # CRITICAL: Gather results from all processes using accelerator
-        total_loss_tensor = torch.tensor(total_loss, device=device)
-        total_samples_tensor = torch.tensor(total_samples, device=device)
-        
-        # Use accelerator.gather() to collect from all processes
-        all_losses = self.accelerator.gather(total_loss_tensor)
-        all_samples = self.accelerator.gather(total_samples_tensor)
-        
-        # Sum across all processes (only on main process)
-        if self.accelerator.is_main_process:
-            total_loss = all_losses.sum().item()
-            total_samples = all_samples.sum().item()
-        else:
-            # Non-main processes get dummy values
-            total_loss = 0.0
-            total_samples = 1
-        
-        model.train()
-        
-        # Calculate metrics
-        avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
-        perplexity = math.exp(avg_loss) if avg_loss < 20 else float('inf')
-        
-        return {
-            'loss': avg_loss, 
-            'perplexity': perplexity, 
-            'samples': total_samples
+        # Create metrics snapshot
+        metrics_data = {
+            'timestamp': datetime.now().isoformat(),
+            'global_batch': self.global_batch_count,
+            'epoch': epoch,
+            'batch_idx': batch_idx,
+            'train_loss': loss,
+            'train_perplexity': train_perplexity,
+            'model_training_state': {
+                'epoch': epoch,
+                'global_step': self.global_batch_count,
+                'loss': loss,
+            }
         }
+        
+        # Save metrics only (not full model weights)
+        metrics_file = os.path.join(
+            self.metrics_save_dir, 
+            f'metrics_batch_{self.global_batch_count:06d}.json'
+        )
+        
+        try:
+            with open(metrics_file, 'w') as f:
+                json.dump(metrics_data, f, indent=2)
+            
+            self.logger.info(f"Saved batch metrics to {metrics_file}")
+            
+            # Optionally save minimal model checkpoint for validation later
+            if model_state and self.val_dataloader:
+                checkpoint_file = os.path.join(
+                    self.metrics_save_dir,
+                    f'model_batch_{self.global_batch_count:06d}.pt'
+                )
+                # Save minimal checkpoint - just model state dict
+                torch.save({
+                    'model_state_dict': self.accelerator.unwrap_model(self.trainer.model).state_dict(),
+                    'global_batch': self.global_batch_count,
+                    'epoch': epoch,
+                    'train_loss': loss,
+                }, checkpoint_file)
+                
+                self.logger.info(f"Saved model checkpoint to {checkpoint_file}")
+                
+        except Exception as e:
+            self.logger.warning(f"Failed to save batch metrics: {e}")
     
     def train(self):
-        """Training loop with proper distributed validation and perplexity logging."""
+        """Training loop with lightweight metric checkpoints."""
         # Store original methods
         original_log_batch = self.trainer.log_batch
         original_log_epoch = self.trainer.log_epoch
@@ -116,35 +130,16 @@ class JSONLoggingAccelerateTrainer:
                         metrics=batch_metrics
                     )
             
-            # FIXED: Proper mid-epoch validation with synchronization
-            if (self.val_dataloader and 
-                self.global_batch_count % self.validate_every_n_batches == 0):
-                
-                # CRITICAL: All processes must participate in validation
-                # Use wait_for_everyone() to ensure all processes reach this point
-                self.accelerator.wait_for_everyone()
-                
-                if self.accelerator.is_main_process:
-                    self.logger.info(f"Running validation at batch {self.global_batch_count}...")
-                
-                # All processes run validation (required for gather operations)
-                val_metrics = self.run_validation(
-                    self.trainer.model, 
-                    self.val_dataloader, 
-                    self.accelerator.device
+            # SIMPLE: Save lightweight checkpoint every N batches
+            if self.global_batch_count % self.checkpoint_every_n_batches == 0:
+                self.save_batch_metrics(
+                    epoch=epoch or 0,
+                    batch_idx=batch_idx,
+                    loss=loss,
+                    model_state=True  # Save model state for later validation
                 )
-                
-                # Only main process logs the results
-                if self.accelerator.is_main_process:
-                    self.logger.info(f"Batch {self.global_batch_count} Validation - Loss: {val_metrics['loss']:.4f}, Perplexity: {val_metrics['perplexity']:.2f}")
-                    
-                    if self.json_logger:
-                        self.json_logger.log_validation(f"batch_{self.global_batch_count}", val_metrics)
-                
-                # Wait again to ensure all processes finish validation before continuing
-                self.accelerator.wait_for_everyone()
         
-        # Enhance epoch logging
+        # Enhance epoch logging (keep simple - no mid-epoch validation)
         def enhanced_log_epoch(epoch: int, avg_loss: float, metrics=None):
             # Call original logging
             original_log_epoch(epoch, avg_loss, metrics)
@@ -161,40 +156,8 @@ class JSONLoggingAccelerateTrainer:
                 if metrics:
                     epoch_metrics.update(metrics)
                 
-                # Epoch-end validation with proper synchronization
-                if self.val_dataloader:
-                    # Ensure all processes participate
-                    self.accelerator.wait_for_everyone()
-                    
-                    if self.accelerator.is_main_process:
-                        self.logger.info(f"Running epoch {epoch} validation...")
-                    
-                    val_metrics = self.run_validation(
-                        self.trainer.model,
-                        self.val_dataloader,
-                        self.accelerator.device
-                    )
-                    
-                    if self.accelerator.is_main_process:
-                        epoch_metrics.update({
-                            'val_loss': val_metrics['loss'],
-                            'val_perplexity': val_metrics['perplexity']
-                        })
-                        
-                        self.logger.info(f"Epoch {epoch} - Train Loss: {avg_loss:.4f}, Train PPL: {train_perplexity:.2f}, Val Loss: {val_metrics['loss']:.4f}, Val PPL: {val_metrics['perplexity']:.2f}")
-                        
-                        # Log validation separately too
-                        self.json_logger.log_validation(epoch, val_metrics)
-                        
-                        # Log epoch metrics
-                        self.json_logger.log_epoch_end(epoch, epoch_metrics)
-                    
-                    # Wait for all processes to complete validation
-                    self.accelerator.wait_for_everyone()
-                else:
-                    # No validation case - still log epoch metrics on main process
-                    if self.accelerator.is_main_process:
-                        self.json_logger.log_epoch_end(epoch, epoch_metrics)
+                # Log epoch metrics
+                self.json_logger.log_epoch_end(epoch, epoch_metrics)
         
         # Replace trainer methods
         self.trainer.log_batch = enhanced_log_batch
@@ -210,7 +173,8 @@ class JSONLoggingAccelerateTrainer:
                 final_metrics.update({
                     'total_processes': self.accelerator.num_processes,
                     'final_device': str(self.accelerator.device),
-                    'total_batches': self.global_batch_count
+                    'total_batches': self.global_batch_count,
+                    'metrics_save_dir': self.metrics_save_dir
                 })
                 self.json_logger.log_experiment_end(final_metrics)
             
@@ -228,10 +192,10 @@ class JSONLoggingAccelerateTrainer:
 
 def create_accelerate_trainer_with_json_logging(
     model, dataloader, optimizer, device, json_logger=None, val_dataloader=None, 
-    validate_every_n_batches=50, **trainer_kwargs
+    checkpoint_every_n_batches=100, metrics_save_dir=None, **trainer_kwargs
 ):
     """
-    Create AccelerateTrainer with validation and perplexity logging.
+    Create AccelerateTrainer with lightweight metric checkpoints.
     """
     from trainers import get_trainer
     
@@ -250,7 +214,8 @@ def create_accelerate_trainer_with_json_logging(
         trainer, 
         json_logger=json_logger,
         val_dataloader=val_dataloader,
-        validate_every_n_batches=validate_every_n_batches
+        checkpoint_every_n_batches=checkpoint_every_n_batches,
+        metrics_save_dir=metrics_save_dir
     )
 
 
@@ -258,6 +223,8 @@ def add_json_logging_args(parser):
     """Add JSON logging arguments to existing argument parser."""
     parser.add_argument("--json_log_steps", type=int, default=100,
                        help="Log training metrics every N batches to JSON (default: 100)")
+    parser.add_argument("--checkpoint_every_n_batches", type=int, default=100,
+                       help="Save lightweight checkpoint every N batches (default: 100)")
     parser.add_argument("--disable_json_logging", action="store_true",
                        help="Disable JSON logging")
     return parser
@@ -274,3 +241,44 @@ def create_json_logger_from_args(args, experiment_name="experiment"):
         experiment_name, 
         log_steps
     )
+
+
+# Utility function to analyze saved metrics later
+def analyze_batch_metrics(metrics_dir):
+    """
+    Analyze saved batch metrics to calculate validation and perplexity trends.
+    Run this after training to get insights from the saved checkpoints.
+    """
+    import glob
+    
+    metrics_files = sorted(glob.glob(os.path.join(metrics_dir, 'metrics_batch_*.json')))
+    
+    if not metrics_files:
+        print(f"No metrics files found in {metrics_dir}")
+        return
+    
+    print(f"Found {len(metrics_files)} metric checkpoints")
+    
+    # Load and analyze metrics
+    batch_losses = []
+    batch_perplexities = []
+    
+    for metrics_file in metrics_files:
+        try:
+            with open(metrics_file, 'r') as f:
+                data = json.load(f)
+            
+            batch_losses.append(data['train_loss'])
+            batch_perplexities.append(data['train_perplexity'])
+            
+            print(f"Batch {data['global_batch']:6d}: Loss={data['train_loss']:.4f}, PPL={data['train_perplexity']:.2f}")
+            
+        except Exception as e:
+            print(f"Error reading {metrics_file}: {e}")
+    
+    if batch_losses:
+        print(f"\nSummary:")
+        print(f"  Average Loss: {sum(batch_losses)/len(batch_losses):.4f}")
+        print(f"  Average Perplexity: {sum(batch_perplexities)/len(batch_perplexities):.2f}")
+        print(f"  Final Loss: {batch_losses[-1]:.4f}")
+        print(f"  Final Perplexity: {batch_perplexities[-1]:.2f}")
