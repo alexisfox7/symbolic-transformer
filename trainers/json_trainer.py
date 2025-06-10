@@ -67,7 +67,7 @@ class JSONLoggingAccelerateTrainer:
                 # Forward pass
                 outputs = self.trainer.model(**val_batch_data)
                 loss = outputs.get('loss')
-                
+                print(total_samples)
                 if loss is not None and not torch.isnan(loss):
                     batch_size = val_batch_data.get('input_ids', next(iter(val_batch_data.values()))).size(0)
                     total_loss += loss.item() * batch_size
