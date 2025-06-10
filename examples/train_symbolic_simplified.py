@@ -25,8 +25,8 @@ from inference.generation import run_generation
 from datasets import load_dataset
 
 # Import our simplified JSON logging
-from utils.json_logger import create_json_logger
-from trainers.json_trainer import TrainerWithJSONLogging
+from utils.json_logger2 import create_json_logger
+from trainers.json_trainer2 import TrainerWithJSONLogging
 
 # Suppress output on non-main processes
 if os.environ.get('LOCAL_RANK', '0') != '0': 
