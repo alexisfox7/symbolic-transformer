@@ -56,7 +56,7 @@ class JSONLoggingAccelerateTrainer:
         print(f"🧪 Starting validation at batch {global_batch}...")
         
         # Set model to eval mode
-        self.trainer.model.eval()
+        self.trainer.model.eval()        
         
         total_loss = 0.0
         total_samples = 0
@@ -75,21 +75,6 @@ class JSONLoggingAccelerateTrainer:
                     val_batches += 1
         
         # Set model back to train mode
-        self.trainer.model.train()
-        
-        # Calculate metrics
-        avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
-        perplexity = math.exp(avg_loss) if avg_loss < 20 else float('inf')
-        
-        val_metrics = {
-            'loss': avg_loss,
-            'perplexity': perplexity,
-            'samples': total_samples,
-            'batches': val_batches
-        }
-        
-        print(f"📊 Validation results: loss={avg_loss:.4f}, ppl={perplexity:.2f}, samples={total_samples}")
-        
         # Log to JSON (only on main process)
         if self.json_logger and self.accelerator.is_main_process:
             try:
