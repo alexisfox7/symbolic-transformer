@@ -1,6 +1,7 @@
 # trainers/json_trainer.py
 """
 Simplified integration helpers for JSON logging with lightweight metric checkpoints.
+FIXED VERSION - Debug statements will actually print and checkpoints will save.
 """
 
 import logging
@@ -16,7 +17,7 @@ from utils.json_logger import JSONLogger, create_json_logger_for_training
 class JSONLoggingAccelerateTrainer:
     """
     Enhanced AccelerateTrainer with lightweight metric checkpoints every N batches.
-    Simple approach - no hanging validation, just save metrics for later analysis.
+    FIXED: Removed problematic main process checks and simplified logic.
     """
     
     def __init__(self, accelerate_trainer, json_logger=None, val_dataloader=None, 
@@ -24,8 +25,7 @@ class JSONLoggingAccelerateTrainer:
         self.trainer = accelerate_trainer
         self.json_logger = json_logger
         self.val_dataloader = val_dataloader
-        self.best_val_loss = float('inf')
-        self.best_checkpoint_path = None
+        
         # Handle both parameter names for backward compatibility
         if validate_every_n_batches is not None:
             self.checkpoint_every_n_batches = validate_every_n_batches
@@ -39,127 +39,87 @@ class JSONLoggingAccelerateTrainer:
         self.metrics_save_dir = metrics_save_dir or os.path.join(
             getattr(accelerate_trainer, 'output_dir', './outputs'), 'batch_metrics'
         )
-        if accelerate_trainer.accelerator.is_main_process:
-            os.makedirs(self.metrics_save_dir, exist_ok=True)
+        
+        # Create directory on all processes (avoid race conditions)
+        os.makedirs(self.metrics_save_dir, exist_ok=True)
         
         # Track accelerate-specific info
         self.accelerator = accelerate_trainer.accelerator
+        
+        # FIXED: Print setup info immediately
+        print(f"🚀 JSONLoggingAccelerateTrainer initialized:")
+        print(f"  📋 Checkpoint every: {self.checkpoint_every_n_batches} batches")
+        print(f"  📋 JSON log every: {self.json_logger.log_every_n_steps if self.json_logger else 'N/A'} steps")
+        print(f"  📋 Process rank: {self.accelerator.process_index}/{self.accelerator.num_processes}")
+        print(f"  📋 Main process: {self.accelerator.is_main_process}")
+        print(f"  📋 Metrics dir: {self.metrics_save_dir}")
     
-    def run_validation(self, epoch, batch_idx, global_batch):
-        """
-        Run validation and log results.
-        """
-        if self.val_dataloader is None:
-            print("⚠️  No validation dataloader available")
-            return {}
-        
-        print(f"🧪 Starting validation at batch {global_batch}...")
-        
-        # Set model to eval mode
-        self.trainer.model.eval()        
-        
-        total_loss = 0.0
-        total_samples = 0
-        val_batches = 0
-        
-        with torch.no_grad():
-            for val_batch_data in self.val_dataloader:
-                # Forward pass
-                outputs = self.trainer.model(**val_batch_data)
-                loss = outputs.get('loss')
-                print(total_samples)
-                if loss is not None and not torch.isnan(loss):
-                    batch_size = val_batch_data.get('input_ids', next(iter(val_batch_data.values()))).size(0)
-                    total_loss += loss.item() * batch_size
-                    total_samples += batch_size
-                    val_batches += 1
-        
-        # Set model back to train mode
-        # Log to JSON (only on main process)
-        if self.json_logger and self.accelerator.is_main_process:
-            try:
-                self.json_logger.log_validation(
-                    epoch=epoch,
-                    metrics={
-                        'step': global_batch,
-                        'val_loss': avg_loss,
-                        'val_perplexity': perplexity,
-                        'val_samples': total_samples,
-                        'val_batches': val_batches
-                    }
-                )
-                print(f"✅ Validation logged to JSON")
-            except Exception as e:
-                print(f"❌ Validation JSON logging failed: {e}")
-        
-        return val_metrics
-
     def save_batch_metrics(self, epoch, batch_idx, loss, model_state=None):
         """
         Save lightweight metrics checkpoint with minimal model info.
-        Only saves what's needed to calculate perplexity and validation later.
+        FIXED: Only save on main process but print on all processes.
         """
+        print(f"💾 save_batch_metrics called: epoch={epoch}, batch={batch_idx}, loss={loss:.4f}")
+        
         if not self.accelerator.is_main_process:
+            print(f"⚠️  Not main process (rank {self.accelerator.process_index}), skipping file save")
             return
         
-        # Calculate basic metrics
-        train_perplexity = math.exp(loss) if loss < 20 else float('inf')
-        
-        # Create metrics snapshot
-        metrics_data = {
-            'timestamp': datetime.now().isoformat(),
-            'global_batch': self.global_batch_count,
-            'epoch': epoch,
-            'batch_idx': batch_idx,
-            'train_loss': loss,
-            'train_perplexity': train_perplexity,
-            'model_training_state': {
-                'epoch': epoch,
-                'global_step': self.global_batch_count,
-                'loss': loss,
-            }
-        }
-        
-        # Save metrics only (not full model weights)
-        metrics_file = os.path.join(
-            self.metrics_save_dir, 
-            f'metrics_batch_{self.global_batch_count:06d}.json'
-        )
-        
         try:
+            # Calculate metrics
+            train_perplexity = math.exp(loss) if loss < 20 else float('inf')
+            
+            # Create metrics data
+            metrics_data = {
+                'timestamp': datetime.now().isoformat(),
+                'epoch': epoch,
+                'batch_idx': batch_idx,
+                'global_batch': self.global_batch_count,
+                'train_loss': loss,
+                'train_perplexity': train_perplexity,
+                'process_info': {
+                    'rank': self.accelerator.process_index,
+                    'num_processes': self.accelerator.num_processes,
+                    'device': str(self.accelerator.device)
+                }
+            }
+            
+            # Save to file using the ACTUAL global batch count
+            metrics_file = os.path.join(
+                self.metrics_save_dir, 
+                f'metrics_batch_{self.global_batch_count:06d}.json'
+            )
+            
             with open(metrics_file, 'w') as f:
                 json.dump(metrics_data, f, indent=2)
             
-            self.logger.info(f"Successfully saved batch metrics to {metrics_file}")
+            print(f"✅ Metrics saved to: {metrics_file}")
             
-            # Optionally save minimal model checkpoint for validation later
-            if model_state and self.val_dataloader:
-                checkpoint_file = os.path.join(
+            # Optional: Save model state if requested
+            if model_state and hasattr(self.trainer, 'model'):
+                model_file = os.path.join(
                     self.metrics_save_dir,
                     f'model_batch_{self.global_batch_count:06d}.pt'
                 )
-                # Save minimal checkpoint - just model state dict
-                torch.save({
-                    'model_state_dict': self.accelerator.unwrap_model(self.trainer.model).state_dict(),
-                    'global_batch': self.global_batch_count,
-                    'epoch': epoch,
-                    'train_loss': loss,
-                }, checkpoint_file)
-                
-                self.logger.info(f"Successfully saved model checkpoint to {checkpoint_file}")
+                torch.save(self.trainer.model.state_dict(), model_file)
+                print(f"✅ Model state saved to: {model_file}")
                 
         except Exception as e:
-            self.logger.error(f"Failed to save batch metrics: {e}")
+            print(f"❌ Error saving batch metrics: {e}")
             import traceback
-            self.logger.error(traceback.format_exc())
+            traceback.print_exc()
     
     def train(self):
-        """Training loop with lightweight metric checkpoints."""
+        """
+        FIXED: Enhanced training with proper debug output and checkpoint saving.
+        """
+        print(f"🚀 Starting enhanced training with JSON logging")
+        
         # Store original methods
         original_log_batch = self.trainer.log_batch
         original_log_epoch = self.trainer.log_epoch
         
-        # Enhance batch logging
+        # FIXED: Enhanced batch logging with proper debug output
         def enhanced_log_batch(batch_idx, loss, epoch=None, metrics=None):
             # ALWAYS print this first - no process checks
             print(f"🔥 BATCH {batch_idx}: loss={loss:.4f}, epoch={epoch}")
@@ -177,29 +137,21 @@ class JSONLoggingAccelerateTrainer:
             else:
                 self.global_batch_count += 1
                 print(f"⚠️  No global_batch in metrics, incrementing: {self.global_batch_count}")
-
-            # Print validation check info (use the actual global batch from accelerate trainer)
+            
+            # Print checkpoint check info (use the actual global batch from accelerate trainer)
             current_global_batch = metrics.get('global_batch', self.global_batch_count) if metrics else self.global_batch_count
             remainder = current_global_batch % self.checkpoint_every_n_batches if self.checkpoint_every_n_batches > 0 else -1
-            #print(f"📊 Global batch {current_global_batch}, validation check: {current_global_batch} % {self.checkpoint_every_n_batches} = {remainder}")
+            print(f"📊 Global batch {current_global_batch}, checkpoint check: {current_global_batch} % {self.checkpoint_every_n_batches} = {remainder}")
             
-            # REPLACED: Run validation instead of saving checkpoints
-            if self.checkpoint_every_n_batches > 0 and remainder == 0 and self.val_dataloader is not None:
-                print(f"🧪 VALIDATION TRIGGER: Running validation at global batch {current_global_batch}")
-                
-                try:
-                    # Run validation
-                    val_metrics = self.run_validation(
-                        epoch=epoch or 0,
-                        batch_idx=batch_idx,
-                        global_batch=current_global_batch
-                    )
-                    print(f"✅ Validation complete: loss={val_metrics['loss']:.4f}, ppl={val_metrics['perplexity']:.2f}")
-                    
-                except Exception as e:
-                    print(f"❌ Validation failed: {e}")
-                    import traceback
-                    traceback.print_exc()
+            # FIXED: Use the actual global batch count for checkpoint logic
+            if self.checkpoint_every_n_batches > 0 and remainder == 0:
+                print(f"🎯 CHECKPOINT TRIGGER: Saving at global batch {current_global_batch}")
+                self.save_batch_metrics(
+                    epoch=epoch or 0,
+                    batch_idx=batch_idx,
+                    loss=loss,
+                    model_state=True
+                )
             
             # JSON logging (only on main process to avoid duplicate logs)
             if self.json_logger and self.accelerator.is_main_process:
@@ -227,30 +179,18 @@ class JSONLoggingAccelerateTrainer:
                         print(f"✅ JSON logged successfully")
                     except Exception as e:
                         print(f"❌ JSON logging failed: {e}")
-            
-            # SIMPLE: Save lightweight checkpoint every N batches
-            # Always show when we're close to checkpoints
-            
-            if self.checkpoint_every_n_batches > 0 and remainder == 0:
-                #print(f"🎯 CHECKPOINT: Triggering save at global batch {self.global_batch_count}")
-                if self.accelerator.is_main_process:
-                    print(f"📁 Saving to: {self.metrics_save_dir}")
-                else:
-                    print(f"⚠️  Not main process, skipping save")
-                    
-                self.save_batch_metrics(
-                    epoch=epoch or 0,
-                    batch_idx=batch_idx,
-                    loss=loss,
-                    model_state=True  # Save model state for later validation
-                )
         
-        # Enhance epoch logging (keep simple - no mid-epoch validation)
+        # Enhanced epoch logging
         def enhanced_log_epoch(epoch: int, avg_loss: float, metrics=None):
-            # Call original logging
-            original_log_epoch(epoch, avg_loss, metrics)
+            print(f"🏁 EPOCH {epoch} COMPLETE: avg_loss={avg_loss:.4f}")
             
-            # Only on main process
+            # Call original logging
+            try:
+                original_log_epoch(epoch, avg_loss, metrics)
+            except Exception as e:
+                print(f"⚠️  Original log_epoch failed: {e}")
+            
+            # Only on main process for JSON logging
             if self.json_logger and self.accelerator.is_main_process:
                 # Calculate train perplexity
                 train_perplexity = math.exp(avg_loss) if avg_loss < 20 else float('inf')
@@ -262,16 +202,23 @@ class JSONLoggingAccelerateTrainer:
                 if metrics:
                     epoch_metrics.update(metrics)
                 
-                # Log epoch metrics
-                self.json_logger.log_epoch_end(epoch, epoch_metrics)
+                try:
+                    self.json_logger.log_epoch_end(epoch, epoch_metrics)
+                    print(f"✅ Epoch {epoch} logged to JSON")
+                except Exception as e:
+                    print(f"❌ Epoch JSON logging failed: {e}")
         
-        # Replace trainer methods
+        # FIXED: Replace trainer methods with debug wrapper
+        print(f"🔧 Replacing trainer methods...")
         self.trainer.log_batch = enhanced_log_batch
         self.trainer.log_epoch = enhanced_log_epoch
+        print(f"✅ Methods replaced successfully")
         
         try:
             # Run training
+            print(f"🏃 Starting actual training...")
             result = self.trainer.train()
+            print(f"🏆 Training completed!")
             
             # Log final results (only on main process)
             if self.json_logger and self.accelerator.is_main_process:
@@ -282,14 +229,27 @@ class JSONLoggingAccelerateTrainer:
                     'total_batches': self.global_batch_count,
                     'metrics_save_dir': self.metrics_save_dir
                 })
-                self.json_logger.log_experiment_end(final_metrics)
+                
+                try:
+                    self.json_logger.log_experiment_end(final_metrics)
+                    print(f"✅ Experiment end logged to JSON")
+                except Exception as e:
+                    print(f"❌ Experiment end logging failed: {e}")
             
             return result
             
+        except Exception as e:
+            print(f"💥 Training failed: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
+            
         finally:
             # Restore original methods
+            print(f"🔧 Restoring original trainer methods...")
             self.trainer.log_batch = original_log_batch
             self.trainer.log_epoch = original_log_epoch
+            print(f"✅ Methods restored")
     
     def __getattr__(self, name):
         """Delegate all other attributes to the wrapped trainer."""
@@ -302,8 +262,11 @@ def create_accelerate_trainer_with_json_logging(
 ):
     """
     Create AccelerateTrainer with lightweight metric checkpoints.
+    FIXED: Better error handling and debug output.
     """
     from trainers import get_trainer
+    
+    print(f"🏗️  Creating AccelerateTrainer...")
     
     # Create base AccelerateTrainer
     trainer = get_trainer(
@@ -315,8 +278,10 @@ def create_accelerate_trainer_with_json_logging(
         **trainer_kwargs
     )
     
+    print(f"✅ Base trainer created: {type(trainer)}")
+    
     # Wrap with enhanced JSON logging
-    return JSONLoggingAccelerateTrainer(
+    wrapped_trainer = JSONLoggingAccelerateTrainer(
         trainer, 
         json_logger=json_logger,
         val_dataloader=val_dataloader,
@@ -324,6 +289,9 @@ def create_accelerate_trainer_with_json_logging(
         validate_every_n_batches=validate_every_n_batches,
         metrics_save_dir=metrics_save_dir
     )
+    
+    print(f"✅ Wrapped trainer created: {type(wrapped_trainer)}")
+    return wrapped_trainer
 
 
 def add_json_logging_args(parser):
