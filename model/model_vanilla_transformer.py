@@ -144,7 +144,7 @@ class VanillaTransformerModel(nn.Module):
         
         # Language model head (shared weights with token embeddings)
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
-        self.transformer.wte.weight = self.lm_head.weight
+        self.lm_head.weight = self.transformer.wte.weight
         
         # Initialize weights
         self.apply(self._init_weights)
