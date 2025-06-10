@@ -27,6 +27,7 @@ def load_validation_data(dataset_name, tokenizer, max_samples, block_size, batch
     # Load full dataset
     full_dataloader, tokenizer = load_and_prepare_data(
         dataset_name=dataset_name,
+        dataset_config="",
         tokenizer=tokenizer,
         max_samples=max_samples,
         max_seq_length=block_size,
@@ -250,7 +251,7 @@ def main():
     config = get_preset_config(args.preset)
     
     # Create tokenizer
-    tokenizer = create_tokenizer('simple')
+    tokenizer = create_tokenizer('gpt2')
     
     # Load validation data
     val_dataloader, tokenizer = load_validation_data(
