@@ -92,15 +92,36 @@ def infer_config_from_checkpoint(checkpoint_path, base_config):
             new_key = key.replace('module.', '') if key.startswith('module.') else key
             clean_state_dict[new_key] = value
         
-        # Infer dimensions from key tensor shapes
+        # Create new config from base
         config = base_config
         
-        # Get vocab size and embedding dim from embedding layer
+        # Get vocab size from embedding layer
         if 'transformer.wte.weight' in clean_state_dict:
             vocab_size, d_model = clean_state_dict['transformer.wte.weight'].shape
             config.vocab_size = vocab_size
             config.d_model = d_model
-            print(f"  Inferred: vocab_size={vocab_size}, d_model={d_model}")
+            print(f"  Inferred from embeddings: vocab_size={vocab_size}, d_model={d_model}")
+        
+        # Double-check d_model from attention weights (more reliable)
+        for key, tensor in clean_state_dict.items():
+            if 'attn.c_attn.weight' in key:
+                # c_attn projects to 3 * d_model (q, k, v)
+                out_features, in_features = tensor.shape
+                d_model = in_features  # input features = d_model
+                expected_out = out_features // 3  # output should be 3 * d_model
+                
+                if expected_out == d_model:
+                    config.d_model = d_model
+                    config.vocab_size = clean_state_dict.get('transformer.wte.weight', torch.zeros(50257, d_model)).shape[0]
+                    print(f"  Confirmed from attention: d_model={d_model}")
+                    
+                    # Infer n_head (usually d_model // 64, but check if it divides evenly)
+                    for head_size in [64, 32, 128, 16]:
+                        if d_model % head_size == 0:
+                            config.n_head = d_model // head_size
+                            break
+                    print(f"  Inferred: n_head={config.n_head}")
+                break
         
         # Get number of layers by counting
         layer_count = 0
@@ -113,17 +134,10 @@ def infer_config_from_checkpoint(checkpoint_path, base_config):
             config.n_layer = layer_count
             print(f"  Inferred: n_layer={layer_count}")
         
-        # Get attention heads from attention weight shapes
-        for key, tensor in clean_state_dict.items():
-            if 'attn.c_attn.weight' in key:
-                # c_attn projects to 3 * d_model (q, k, v)
-                out_features = tensor.shape[0]
-                expected_d_model = out_features // 3
-                if expected_d_model == config.d_model:
-                    # Default to d_model // 64 heads (common pattern)
-                    config.n_head = max(1, config.d_model // 64)
-                    print(f"  Inferred: n_head={config.n_head}")
-                break
+        # Update other dimensions based on d_model
+        config.d_ff = 4 * config.d_model  # Standard transformer ratio
+        
+        print(f"  Final config: d_model={config.d_model}, n_layer={config.n_layer}, n_head={config.n_head}, vocab_size={config.vocab_size}")
         
         return config
         
@@ -339,7 +353,7 @@ def create_validation_graphs(output_dir, dataset_name, max_samples, preset, batc
 
 def main():
     parser = argparse.ArgumentParser(description='Create validation performance graphs')
-    parser.add_argument('--output_dir', type=str, default='./outputs/vanilla_4gpu_final/batch_metrics',
+    parser.add_argument('--output_dir', type=str, default='./outputs/sym_4gpu_simple',
                        help='Directory containing checkpoints')
     parser.add_argument('--dataset', type=str, default='roneneldan/TinyStories',
                        help='Dataset for validation')
