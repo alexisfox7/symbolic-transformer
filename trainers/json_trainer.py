@@ -36,7 +36,7 @@ class JSONLoggingAccelerateTrainer:
         
         # Setup metrics save directory
         self.metrics_save_dir = metrics_save_dir or os.path.join(
-            getattr(trainer, 'output_dir', './outputs'), 'batch_metrics'
+            getattr(accelerate_trainer, 'output_dir', './outputs'), 'batch_metrics'
         )
         if accelerate_trainer.accelerator.is_main_process:
             os.makedirs(self.metrics_save_dir, exist_ok=True)
