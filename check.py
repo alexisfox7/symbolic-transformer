@@ -211,7 +211,7 @@ def main():
     config = get_preset_config(args.preset)
     
     # Create tokenizer
-    tokenizer = create_tokenizer('simple')
+    tokenizer = create_tokenizer('gpt2')
     
     # Load validation data
     val_dataloader, tokenizer = load_validation_data(
