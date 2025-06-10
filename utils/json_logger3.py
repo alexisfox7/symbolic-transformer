@@ -57,7 +57,8 @@ class SimpleJSONLogger:
     def log_step(self, epoch: int, batch: int, step: int, loss: float, **extra_metrics):
         """Log training step if at interval."""
         self.step_count = step
-        if step % self.log_every_n_steps == 0:
+        # Use batch_idx for interval checking, not step (matches original behavior)
+        if batch % self.log_every_n_steps == 0:
             self._write_log({
                 "event": "step",
                 "epoch": epoch,
@@ -125,9 +126,13 @@ class SimpleJSONTrainerWrapper:
                 original_log_batch(batch_idx, loss, epoch, metrics)
                 # Only log on main process for distributed training
                 if not hasattr(self.trainer, 'accelerator') or self.trainer.accelerator.is_main_process:
-                    self.step_count += 1
+                    # CRITICAL: Use batch_idx for interval checking like original
+                    # Don't increment step_count every call - let the trainer handle this
                     extra = metrics or {}
-                    self.json_logger.log_step(epoch or 0, batch_idx, self.step_count, loss, **extra)
+                    # Extract global step from metrics if available (for accelerate trainer)
+                    global_step = extra.get('global_batch', batch_idx)
+                    if batch_idx % self.json_logger.log_every_n_steps == 0:
+                        self.json_logger.log_step(epoch or 0, batch_idx, global_step, loss, **extra)
             self.trainer.log_batch = new_log_batch
         
         if original_log_epoch and self.json_logger:
