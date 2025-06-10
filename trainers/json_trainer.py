@@ -80,7 +80,7 @@ class JSONLoggingAccelerateTrainer:
             with open(metrics_file, 'w') as f:
                 json.dump(metrics_data, f, indent=2)
             
-            self.logger.info(f"Saved batch metrics to {metrics_file}")
+            self.logger.info(f"Successfully saved batch metrics to {metrics_file}")
             
             # Optionally save minimal model checkpoint for validation later
             if model_state and self.val_dataloader:
@@ -96,10 +96,12 @@ class JSONLoggingAccelerateTrainer:
                     'train_loss': loss,
                 }, checkpoint_file)
                 
-                self.logger.info(f"Saved model checkpoint to {checkpoint_file}")
+                self.logger.info(f"Successfully saved model checkpoint to {checkpoint_file}")
                 
         except Exception as e:
-            self.logger.warning(f"Failed to save batch metrics: {e}")
+            self.logger.error(f"Failed to save batch metrics: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
     
     def train(self):
         """Training loop with lightweight metric checkpoints."""
@@ -113,6 +115,10 @@ class JSONLoggingAccelerateTrainer:
             original_log_batch(batch_idx, loss, epoch=epoch, metrics=metrics)
             
             self.global_batch_count += 1
+            
+            # DEBUG: Print every batch to see if this is running
+            if self.accelerator.is_main_process and self.global_batch_count <= 5:
+                print(f"DEBUG: Batch {self.global_batch_count}, checkpoint_every_n_batches={self.checkpoint_every_n_batches}")
             
             # Only on main process for JSON logging
             if self.json_logger and self.accelerator.is_main_process:
@@ -137,7 +143,11 @@ class JSONLoggingAccelerateTrainer:
                     )
             
             # SIMPLE: Save lightweight checkpoint every N batches
-            if self.global_batch_count % self.checkpoint_every_n_batches == 0:
+            if self.checkpoint_every_n_batches > 0 and self.global_batch_count % self.checkpoint_every_n_batches == 0:
+                print(f"DEBUG: Triggering checkpoint save at batch {self.global_batch_count}")
+                if self.accelerator.is_main_process:
+                    print(f"DEBUG: Main process saving metrics to {self.metrics_save_dir}")
+                    self.logger.info(f"Saving batch metrics at batch {self.global_batch_count}")
                 self.save_batch_metrics(
                     epoch=epoch or 0,
                     batch_idx=batch_idx,
