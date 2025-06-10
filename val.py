@@ -1,18 +1,21 @@
-#!/usr/bin/env python
+def extract_checkpoint_metrics(checkpoint_path):#!/usr/bin/env python
 """
-Process validation checkpoints and create validation performance graphs.
-Simple implementation based on check.py structure.
+Process .pt validation checkpoints and create validation performance graphs.
+Simple implementation for .pt files only.
 """
 
 import torch
 import matplotlib.pyplot as plt
-import json
 import os
-import glob
 from pathlib import Path
 import argparse
+import math
 
-def extract_checkpoint_metrics(checkpoint_path):
+def is_nan(x):
+    """Simple NaN check."""
+    if isinstance(x, (int, float)):
+        return math.isnan(x) or x != x
+    return False
     """Extract validation metrics from a checkpoint file."""
     try:
         checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
@@ -31,38 +34,14 @@ def extract_checkpoint_metrics(checkpoint_path):
         print(f"Error reading {checkpoint_path}: {e}")
         return None
 
-def extract_jsonl_metrics(jsonl_path):
-    """Extract validation metrics from JSONL log files."""
-    metrics = []
-    
-    try:
-        with open(jsonl_path, 'r') as f:
-            for line in f:
-                data = json.loads(line.strip())
-                
-                # Extract validation events
-                if data.get('event_type') == 'validation':
-                    epoch = data.get('epoch', 0)
-                    val_metrics = data.get('metrics', {})
-                    
-                    metrics.append({
-                        'epoch': epoch,
-                        'global_batch': val_metrics.get('global_batch', 0),
-                        'val_loss': val_metrics.get('val_loss', float('nan')),
-                        'val_perplexity': val_metrics.get('val_perplexity', float('nan'))
-                    })
-        
-        return metrics
-    except Exception as e:
-        print(f"Error reading {jsonl_path}: {e}")
-        return []
+
 
 def create_validation_graphs(output_dir):
-    """Create validation performance graphs from checkpoints and logs."""
+    """Create validation performance graphs from .pt checkpoint files."""
     
-    print(f"📊 Processing validation data from: {output_dir}")
+    print(f"📊 Processing .pt files from: {output_dir}")
     
-    # Find checkpoint files
+    # Find .pt checkpoint files
     checkpoint_patterns = [
         '*.pt',
         'checkpoint_*.pt', 
@@ -73,75 +52,70 @@ def create_validation_graphs(output_dir):
     for pattern in checkpoint_patterns:
         checkpoint_files = list(Path(output_dir).glob(pattern))
         for cp_file in checkpoint_files:
+            print(f"Processing: {cp_file.name}")
             metrics = extract_checkpoint_metrics(str(cp_file))
             if metrics:
                 checkpoint_metrics.append(metrics)
     
-    # Find JSONL log files
-    jsonl_files = list(Path(output_dir).glob('logs/*.jsonl'))
-    jsonl_metrics = []
-    for jsonl_file in jsonl_files:
-        metrics = extract_jsonl_metrics(str(jsonl_file))
-        jsonl_metrics.extend(metrics)
+    print(f"Found {len(checkpoint_metrics)} checkpoint files with validation data")
     
-    print(f"Found {len(checkpoint_metrics)} checkpoint metrics")
-    print(f"Found {len(jsonl_metrics)} JSONL validation records")
+    if not checkpoint_metrics:
+        print("❌ No validation data found in checkpoint files")
+        return
     
     # Create graphs
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     fig.suptitle('Validation Performance Analysis', fontsize=16)
     
-    # Graph 1: Validation Loss over Epochs (from checkpoints)
-    if checkpoint_metrics:
-        epochs = [m['epoch'] for m in checkpoint_metrics if not pd.isna(m['val_loss'])]
-        val_losses = [m['val_loss'] for m in checkpoint_metrics if not pd.isna(m['val_loss'])]
-        
-        if epochs and val_losses:
-            axes[0,0].plot(epochs, val_losses, 'bo-', label='Validation Loss')
-            axes[0,0].set_xlabel('Epoch')
-            axes[0,0].set_ylabel('Validation Loss')
-            axes[0,0].set_title('Validation Loss vs Epoch (Checkpoints)')
-            axes[0,0].grid(True)
-            axes[0,0].legend()
+    # Graph 1: Validation Loss over Epochs
+    epochs = [m['epoch'] for m in checkpoint_metrics if not is_nan(m['val_loss'])]
+    val_losses = [m['val_loss'] for m in checkpoint_metrics if not is_nan(m['val_loss'])]
     
-    # Graph 2: Validation Perplexity over Epochs (from checkpoints)
-    if checkpoint_metrics:
-        epochs = [m['epoch'] for m in checkpoint_metrics if not pd.isna(m['val_perplexity'])]
-        val_ppls = [m['val_perplexity'] for m in checkpoint_metrics if not pd.isna(m['val_perplexity'])]
-        
-        if epochs and val_ppls:
-            axes[0,1].plot(epochs, val_ppls, 'ro-', label='Validation Perplexity')
-            axes[0,1].set_xlabel('Epoch')
-            axes[0,1].set_ylabel('Validation Perplexity')
-            axes[0,1].set_title('Validation Perplexity vs Epoch (Checkpoints)')
-            axes[0,1].grid(True)
-            axes[0,1].legend()
+    if epochs and val_losses:
+        axes[0,0].plot(epochs, val_losses, 'bo-', label='Validation Loss')
+        axes[0,0].set_xlabel('Epoch')
+        axes[0,0].set_ylabel('Validation Loss')
+        axes[0,0].set_title('Validation Loss vs Epoch')
+        axes[0,0].grid(True)
+        axes[0,0].legend()
     
-    # Graph 3: Validation Loss over Global Batches (from JSONL)
-    if jsonl_metrics:
-        batches = [m['global_batch'] for m in jsonl_metrics if not pd.isna(m['val_loss'])]
-        val_losses = [m['val_loss'] for m in jsonl_metrics if not pd.isna(m['val_loss'])]
-        
-        if batches and val_losses:
-            axes[1,0].plot(batches, val_losses, 'go-', label='Validation Loss', alpha=0.7)
-            axes[1,0].set_xlabel('Global Batch')
-            axes[1,0].set_ylabel('Validation Loss')
-            axes[1,0].set_title('Validation Loss vs Global Batch (Training Log)')
-            axes[1,0].grid(True)
-            axes[1,0].legend()
+    # Graph 2: Validation Perplexity over Epochs
+    epochs = [m['epoch'] for m in checkpoint_metrics if not is_nan(m['val_perplexity'])]
+    val_ppls = [m['val_perplexity'] for m in checkpoint_metrics if not is_nan(m['val_perplexity'])]
     
-    # Graph 4: Validation Perplexity over Global Batches (from JSONL)
-    if jsonl_metrics:
-        batches = [m['global_batch'] for m in jsonl_metrics if not pd.isna(m['val_perplexity'])]
-        val_ppls = [m['val_perplexity'] for m in jsonl_metrics if not pd.isna(m['val_perplexity'])]
-        
-        if batches and val_ppls:
-            axes[1,1].plot(batches, val_ppls, 'mo-', label='Validation Perplexity', alpha=0.7)
-            axes[1,1].set_xlabel('Global Batch') 
-            axes[1,1].set_ylabel('Validation Perplexity')
-            axes[1,1].set_title('Validation Perplexity vs Global Batch (Training Log)')
-            axes[1,1].grid(True)
-            axes[1,1].legend()
+    if epochs and val_ppls:
+        axes[0,1].plot(epochs, val_ppls, 'ro-', label='Validation Perplexity')
+        axes[0,1].set_xlabel('Epoch')
+        axes[0,1].set_ylabel('Validation Perplexity')
+        axes[0,1].set_title('Validation Perplexity vs Epoch')
+        axes[0,1].grid(True)
+        axes[0,1].legend()
+    
+    # Graph 3: Validation Loss over Global Batches
+    batches = [m['global_batch'] for m in checkpoint_metrics if not is_nan(m['val_loss'])]
+    val_losses = [m['val_loss'] for m in checkpoint_metrics if not is_nan(m['val_loss'])]
+    
+    if batches and val_losses:
+        axes[1,0].plot(batches, val_losses, 'go-', label='Validation Loss')
+        axes[1,0].set_xlabel('Global Batch')
+        axes[1,0].set_ylabel('Validation Loss')
+        axes[1,0].set_title('Validation Loss vs Global Batch')
+        axes[1,0].grid(True)
+        axes[1,0].legend()
+    
+    # Graph 4: Train vs Validation Loss
+    train_losses = [m['train_loss'] for m in checkpoint_metrics if not is_nan(m['train_loss'])]
+    val_losses = [m['val_loss'] for m in checkpoint_metrics if not is_nan(m['val_loss'])]
+    epochs = [m['epoch'] for m in checkpoint_metrics if not is_nan(m['train_loss']) and not is_nan(m['val_loss'])]
+    
+    if epochs and train_losses and val_losses:
+        axes[1,1].plot(epochs, train_losses, 'b-', label='Train Loss', alpha=0.7)
+        axes[1,1].plot(epochs, val_losses, 'r-', label='Validation Loss', alpha=0.7)
+        axes[1,1].set_xlabel('Epoch')
+        axes[1,1].set_ylabel('Loss')
+        axes[1,1].set_title('Train vs Validation Loss')
+        axes[1,1].grid(True)
+        axes[1,1].legend()
     
     plt.tight_layout()
     
@@ -152,30 +126,25 @@ def create_validation_graphs(output_dir):
     
     # Print summary
     print(f"\n📋 VALIDATION SUMMARY:")
-    if checkpoint_metrics:
-        sorted_checkpoints = sorted(checkpoint_metrics, key=lambda x: x.get('val_loss', float('inf')))
-        best = sorted_checkpoints[0] if sorted_checkpoints else None
-        
-        if best:
-            print(f"🏆 Best checkpoint: {best['checkpoint']}")
-            print(f"   Epoch: {best['epoch']}")
-            print(f"   Val Loss: {best['val_loss']:.4f}")
-            print(f"   Val Perplexity: {best['val_perplexity']:.2f}")
+    sorted_checkpoints = sorted(checkpoint_metrics, key=lambda x: x.get('val_loss', float('inf')))
+    best = sorted_checkpoints[0] if sorted_checkpoints else None
     
-    if jsonl_metrics:
-        final_val = jsonl_metrics[-1] if jsonl_metrics else None
-        if final_val:
-            print(f"📍 Final validation:")
-            print(f"   Epoch: {final_val['epoch']}")
-            print(f"   Global Batch: {final_val['global_batch']}")
-            print(f"   Val Loss: {final_val['val_loss']:.4f}")
-            print(f"   Val Perplexity: {final_val['val_perplexity']:.2f}")
+    if best:
+        print(f"🏆 Best checkpoint: {best['checkpoint']}")
+        print(f"   Epoch: {best['epoch']}")
+        print(f"   Val Loss: {best['val_loss']:.4f}")
+        print(f"   Val Perplexity: {best['val_perplexity']:.2f}")
+    
+    print(f"\n📊 All checkpoints:")
+    for i, cp in enumerate(sorted_checkpoints[:5]):  # Show top 5
+        marker = "🏆" if i == 0 else f"{i+1}."
+        print(f"{marker} {cp['checkpoint']} - Val Loss: {cp['val_loss']:.4f}, PPL: {cp['val_perplexity']:.2f}")
     
     plt.show()
 
 def main():
     parser = argparse.ArgumentParser(description='Create validation performance graphs')
-    parser.add_argument('--output_dir', type=str, default='./outputs/sym_4gpu_final/batch_metrics',
+    parser.add_argument('--output_dir', type=str, default='./outputs/sym_4gpu_simple',
                        help='Directory containing checkpoints and logs')
     
     args = parser.parse_args()
@@ -187,15 +156,4 @@ def main():
     create_validation_graphs(args.output_dir)
 
 if __name__ == "__main__":
-    # Add pandas for nan checking
-    try:
-        import pandas as pd
-    except ImportError:
-        # Simple fallback for nan checking
-        import math
-        class pd:
-            @staticmethod
-            def isna(x):
-                return x != x or math.isnan(x) if isinstance(x, (int, float)) else False
-    
     main()
