@@ -310,24 +310,37 @@ def main():
         weight_decay=config.weight_decay
     )
     
-    # Create trainer
+    # Create trainer - MUST use original method for identical behavior
     logger.info(f"Creating {args.trainer_type} trainer...")
-    trainer = get_trainer(
-        trainer_type=args.trainer_type,
-        model=model,
-        dataloader=dataloader,
-        optimizer=optimizer,
-        device=device,
-        num_epochs=config.num_epochs,
-        log_interval=args.log_interval,
-        val_dataloader=val_dataloader,
-        validate_every=args.validate_every,
-        clip_grad_norm=args.clip_grad_norm
-    )
-    
-    # SIMPLIFIED: Wrap trainer with simple JSON logger
-    if json_logger:
-        trainer = SimpleJSONTrainerWrapper(trainer, json_logger)
+    if args.trainer_type == "accelerate" and json_logger:
+        # Use ORIGINAL trainer creation for accelerate + JSON logging
+        from trainers.json_trainer import create_accelerate_trainer_with_json_logging
+        trainer = create_accelerate_trainer_with_json_logging(
+            model=model,
+            dataloader=dataloader,
+            optimizer=optimizer,
+            device=device,
+            json_logger=json_logger,
+            num_epochs=config.num_epochs,
+            log_interval=args.log_interval,
+            clip_grad_norm=args.clip_grad_norm
+        )
+    else:
+        # Use standard trainer creation
+        trainer = get_trainer(
+            trainer_type=args.trainer_type,
+            model=model,
+            dataloader=dataloader,
+            optimizer=optimizer,
+            device=device,
+            num_epochs=config.num_epochs,
+            log_interval=args.log_interval,
+            clip_grad_norm=args.clip_grad_norm
+        )
+        
+        # Add simple JSON logging for non-accelerate trainers
+        if json_logger:
+            trainer = SimpleJSONTrainerWrapper(trainer, json_logger)
     
     # Train the model
     logger.info("="*60)
