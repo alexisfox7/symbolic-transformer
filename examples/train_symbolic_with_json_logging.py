@@ -261,8 +261,31 @@ class ValidationTrainerWrapper:
     def train(self):
         """Enhanced training with validation."""
         import logging
-        from utils.validation_utils import run_validation
         import math
+        import torch
+        
+        def run_validation(model, val_dataloader, device):
+            """Simple validation function."""
+            model.eval()
+            total_loss = 0.0
+            total_samples = 0
+            
+            with torch.no_grad():
+                for batch_data in val_dataloader:
+                    batch = {k: v.to(device) for k, v in batch_data.items() if isinstance(v, torch.Tensor)}
+                    outputs = model(**batch)
+                    loss = outputs.get('loss')
+                    
+                    if loss is not None and not torch.isnan(loss):
+                        batch_size = batch.get('input_ids', next(iter(batch.values()))).size(0)
+                        total_loss += loss.item() * batch_size
+                        total_samples += batch_size
+            
+            model.train()
+            avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
+            perplexity = math.exp(avg_loss) if avg_loss < 20 else float('inf')
+            
+            return {'loss': avg_loss, 'perplexity': perplexity, 'samples': total_samples}
         
         logger = logging.getLogger(__name__)
         
