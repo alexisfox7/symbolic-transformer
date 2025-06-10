@@ -175,7 +175,7 @@ def create_validation_graphs(output_dir):
 
 def main():
     parser = argparse.ArgumentParser(description='Create validation performance graphs')
-    parser.add_argument('--output_dir', type=str, default='./outputs/sym_4gpu_simple',
+    parser.add_argument('--output_dir', type=str, default='./outputs/sym_4gpu_final/batch_metrics',
                        help='Directory containing checkpoints and logs')
     
     args = parser.parse_args()
