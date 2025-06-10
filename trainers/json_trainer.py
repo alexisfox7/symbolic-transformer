@@ -20,11 +20,17 @@ class JSONLoggingAccelerateTrainer:
     """
     
     def __init__(self, accelerate_trainer, json_logger=None, val_dataloader=None, 
-                 checkpoint_every_n_batches=100, metrics_save_dir=None):
+                 checkpoint_every_n_batches=100, validate_every_n_batches=None, metrics_save_dir=None):
         self.trainer = accelerate_trainer
         self.json_logger = json_logger
         self.val_dataloader = val_dataloader
-        self.checkpoint_every_n_batches = checkpoint_every_n_batches
+        
+        # Handle both parameter names for backward compatibility
+        if validate_every_n_batches is not None:
+            self.checkpoint_every_n_batches = validate_every_n_batches
+        else:
+            self.checkpoint_every_n_batches = checkpoint_every_n_batches
+            
         self.logger = logging.getLogger(__name__)
         self.global_batch_count = 0
         
@@ -192,7 +198,7 @@ class JSONLoggingAccelerateTrainer:
 
 def create_accelerate_trainer_with_json_logging(
     model, dataloader, optimizer, device, json_logger=None, val_dataloader=None, 
-    checkpoint_every_n_batches=100, metrics_save_dir=None, **trainer_kwargs
+    checkpoint_every_n_batches=100, validate_every_n_batches=None, metrics_save_dir=None, **trainer_kwargs
 ):
     """
     Create AccelerateTrainer with lightweight metric checkpoints.
@@ -215,6 +221,7 @@ def create_accelerate_trainer_with_json_logging(
         json_logger=json_logger,
         val_dataloader=val_dataloader,
         checkpoint_every_n_batches=checkpoint_every_n_batches,
+        validate_every_n_batches=validate_every_n_batches,
         metrics_save_dir=metrics_save_dir
     )
 
