@@ -44,6 +44,70 @@ class JSONLoggingAccelerateTrainer:
         # Track accelerate-specific info
         self.accelerator = accelerate_trainer.accelerator
     
+    def run_validation(self, epoch, batch_idx, global_batch):
+        """
+        Run validation and log results.
+        """
+        if self.val_dataloader is None:
+            print("⚠️  No validation dataloader available")
+            return {}
+        
+        print(f"🧪 Starting validation at batch {global_batch}...")
+        
+        # Set model to eval mode
+        self.trainer.model.eval()
+        
+        total_loss = 0.0
+        total_samples = 0
+        val_batches = 0
+        
+        with torch.no_grad():
+            for val_batch_data in self.val_dataloader:
+                # Forward pass
+                outputs = self.trainer.model(**val_batch_data)
+                loss = outputs.get('loss')
+                
+                if loss is not None and not torch.isnan(loss):
+                    batch_size = val_batch_data.get('input_ids', next(iter(val_batch_data.values()))).size(0)
+                    total_loss += loss.item() * batch_size
+                    total_samples += batch_size
+                    val_batches += 1
+        
+        # Set model back to train mode
+        self.trainer.model.train()
+        
+        # Calculate metrics
+        avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
+        perplexity = math.exp(avg_loss) if avg_loss < 20 else float('inf')
+        
+        val_metrics = {
+            'loss': avg_loss,
+            'perplexity': perplexity,
+            'samples': total_samples,
+            'batches': val_batches
+        }
+        
+        print(f"📊 Validation results: loss={avg_loss:.4f}, ppl={perplexity:.2f}, samples={total_samples}")
+        
+        # Log to JSON (only on main process)
+        if self.json_logger and self.accelerator.is_main_process:
+            try:
+                self.json_logger.log_validation(
+                    epoch=epoch,
+                    metrics={
+                        'global_batch': global_batch,
+                        'val_loss': avg_loss,
+                        'val_perplexity': perplexity,
+                        'val_samples': total_samples,
+                        'val_batches': val_batches
+                    }
+                )
+                print(f"✅ Validation logged to JSON")
+            except Exception as e:
+                print(f"❌ Validation JSON logging failed: {e}")
+        
+        return val_metrics
+
     def save_batch_metrics(self, epoch, batch_idx, loss, model_state=None):
         """
         Save lightweight metrics checkpoint with minimal model info.
@@ -111,44 +175,72 @@ class JSONLoggingAccelerateTrainer:
         
         # Enhance batch logging
         def enhanced_log_batch(batch_idx, loss, epoch=None, metrics=None):
-            # ALWAYS print this to confirm function is being called
-            if self.accelerator.is_main_process:
-                print(f"ENHANCED_LOG_BATCH CALLED: batch {batch_idx}, loss {loss:.4f}")
+            # ALWAYS print this first - no process checks
+            print(f"🔥 BATCH {batch_idx}: loss={loss:.4f}, epoch={epoch}")
             
             # Call original logging
-            original_log_batch(batch_idx, loss, epoch=epoch, metrics=metrics)
+            try:
+                original_log_batch(batch_idx, loss, epoch=epoch, metrics=metrics)
+            except Exception as e:
+                print(f"⚠️  Original log_batch failed: {e}")
             
-            # Use metrics from the original trainer if available (contains global step info)
+            # FIXED: Use global_batch from metrics (this is the actual global batch count)
             if metrics and 'global_batch' in metrics:
                 self.global_batch_count = metrics['global_batch']
+                print(f"🎯 Using global_batch from metrics: {self.global_batch_count}")
             else:
                 self.global_batch_count += 1
+                print(f"⚠️  No global_batch in metrics, incrementing: {self.global_batch_count}")
+
+            # Print validation check info (use the actual global batch from accelerate trainer)
+            current_global_batch = metrics.get('global_batch', self.global_batch_count) if metrics else self.global_batch_count
+            remainder = current_global_batch % self.checkpoint_every_n_batches if self.checkpoint_every_n_batches > 0 else -1
+            print(f"📊 Global batch {current_global_batch}, validation check: {current_global_batch} % {self.checkpoint_every_n_batches} = {remainder}")
             
-            # DEBUG: Print every batch to see if this is running
-            if self.accelerator.is_main_process and self.global_batch_count <= 3:
-                print(f"DEBUG: Local batch {batch_idx}, Global batch {self.global_batch_count}, checkpoint_every_n_batches={self.checkpoint_every_n_batches}")
-            
-            # Only on main process for JSON logging
-            if self.json_logger and self.accelerator.is_main_process:
-                # Calculate train perplexity
-                train_perplexity = math.exp(loss) if loss < 20 else float('inf')
+            # REPLACED: Run validation instead of saving checkpoints
+            if self.checkpoint_every_n_batches > 0 and remainder == 0 and self.val_dataloader is not None:
+                print(f"🧪 VALIDATION TRIGGER: Running validation at global batch {current_global_batch}")
                 
-                # Only log every N steps to JSON
-                if self.global_batch_count % self.json_logger.log_every_n_steps == 0:
+                try:
+                    # Run validation
+                    val_metrics = self.run_validation(
+                        epoch=epoch or 0,
+                        batch_idx=batch_idx,
+                        global_batch=current_global_batch
+                    )
+                    print(f"✅ Validation complete: loss={val_metrics['loss']:.4f}, ppl={val_metrics['perplexity']:.2f}")
+                    
+                except Exception as e:
+                    print(f"❌ Validation failed: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            # JSON logging (only on main process to avoid duplicate logs)
+            if self.json_logger and self.accelerator.is_main_process:
+                if current_global_batch % self.json_logger.log_every_n_steps == 0:
+                    print(f"📝 Logging to JSON at batch {current_global_batch}")
+                    
+                    # Calculate train perplexity
+                    train_perplexity = math.exp(loss) if loss < 20 else float('inf')
+                    
                     batch_metrics = {
                         'loss': loss,
                         'perplexity': train_perplexity,
-                        'global_batch': self.global_batch_count
+                        'global_batch': current_global_batch
                     }
                     if metrics:
                         batch_metrics.update(metrics)
                     
-                    self.json_logger.log_batch(
-                        epoch=epoch or 0,
-                        batch=batch_idx,
-                        step=self.global_batch_count,
-                        metrics=batch_metrics
-                    )
+                    try:
+                        self.json_logger.log_batch(
+                            epoch=epoch or 0,
+                            batch=batch_idx,
+                            step=current_global_batch,
+                            metrics=batch_metrics
+                        )
+                        print(f"✅ JSON logged successfully")
+                    except Exception as e:
+                        print(f"❌ JSON logging failed: {e}")
             
             # SIMPLE: Save lightweight checkpoint every N batches
             # Always show when we're close to checkpoints
