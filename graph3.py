@@ -195,10 +195,10 @@ def simple_vocab_analysis(checkpoint_path: str, text: str):
             proj_vec = vocab_projected[0, pos]  # (384,)
             
             # Compute reconstruction metrics
-            mse_loss = F.mse_loss(proj_vec, orig_vec)
-            cosine_sim = F.cosine_similarity(orig_vec.unsqueeze(0), proj_vec.unsqueeze(0))
-            l2_norm_orig = torch.norm(orig_vec)
-            l2_norm_proj = torch.norm(proj_vec)
+            mse_loss = F.mse_loss(proj_vec, orig_vec).item()
+            cosine_sim = F.cosine_similarity(orig_vec.unsqueeze(0), proj_vec.unsqueeze(0)).item()
+            l2_norm_orig = torch.norm(orig_vec).item()
+            l2_norm_proj = torch.norm(proj_vec).item()
             
             print(f"Position {pos} '{token}':")
             print(f"  MSE Loss: {mse_loss:.6f}")
@@ -207,11 +207,11 @@ def simple_vocab_analysis(checkpoint_path: str, text: str):
             print(f"  Norm Ratio: {l2_norm_proj/l2_norm_orig:.6f}")
         
         # Overall reconstruction quality
-        total_mse = F.mse_loss(vocab_projected, original_hidden)
+        total_mse = F.mse_loss(vocab_projected, original_hidden).item()
         total_cosine = F.cosine_similarity(
             original_hidden.view(-1, 384), 
             vocab_projected.view(-1, 384)
-        ).mean()
+        ).mean().item()
         
         print(f"\n=== OVERALL RECONSTRUCTION ===")
         print(f"Total MSE: {total_mse:.6f}")
