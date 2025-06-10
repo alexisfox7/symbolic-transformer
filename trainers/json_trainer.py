@@ -88,7 +88,7 @@ class JSONLoggingAccelerateTrainer:
                 train_perplexity = math.exp(loss) if loss < 20 else float('inf')
                 
                 # Only log every N steps to JSON
-                if self.global_batch_count % self.json_logger.log_interval == 0:
+                if self.global_batch_count % self.json_logger.log_every_n_steps == 0:
                     batch_metrics = {
                         'loss': loss,
                         'perplexity': train_perplexity,
