@@ -13,6 +13,8 @@ import argparse
 import math
 from tqdm import tqdm
 import copy
+import json
+from datetime import datetime
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -226,17 +228,53 @@ def create_validation_graphs(output_dir, dataset_name, max_samples, preset, batc
         '**/*.pt'  # Recursive search
     ]
     
+    # Setup JSON logging
+    start_time = datetime.now()
+    experiment_name = os.path.basename(output_dir.rstrip('/'))
+    if 'batch_metrics' in experiment_name:
+        experiment_name = os.path.basename(os.path.dirname(output_dir.rstrip('/')))
+    
+    # Create JSON log file
+    json_log_path = os.path.join(output_dir, f'validation_{experiment_name}_{start_time.strftime("%Y%m%d_%H%M%S")}.jsonl')
+    
     checkpoint_metrics = []
     for pattern in checkpoint_patterns:
         checkpoint_files = list(Path(output_dir).glob(pattern))
         for cp_file in sorted(checkpoint_files):
             if cp_file.is_file() and cp_file.suffix == '.pt':
                 print(f"Processing: {cp_file}")
+                
+                eval_start = datetime.now()
                 metrics = evaluate_checkpoint(str(cp_file), val_dataloader, config, device)
+                
                 if metrics:
                     checkpoint_metrics.append(metrics)
+                    
+                    # Create JSON log entry
+                    elapsed_time = (datetime.now() - start_time).total_seconds()
+                    
+                    json_entry = {
+                        "timestamp": datetime.now().isoformat(),
+                        "elapsed_time": elapsed_time,
+                        "event_type": "validation",
+                        "experiment_name": experiment_name,
+                        "checkpoint_file": metrics['checkpoint'],
+                        "epoch": metrics['epoch'],
+                        "global_batch": metrics['global_batch'],
+                        "metrics": {
+                            "train_loss": metrics['train_loss'],
+                            "val_loss": metrics['val_loss'],
+                            "val_perplexity": metrics['val_perplexity'],
+                            "val_samples": metrics['val_samples']
+                        }
+                    }
+                    
+                    # Write to JSON log
+                    with open(json_log_path, 'a') as f:
+                        f.write(json.dumps(json_entry) + '\n')
     
     print(f"Found {len(checkpoint_metrics)} checkpoint files with validation data")
+    print(f"📋 JSON log saved: {json_log_path}")
     
     if not checkpoint_metrics:
         print("❌ No validation data found in checkpoint files")
@@ -246,6 +284,28 @@ def create_validation_graphs(output_dir, dataset_name, max_samples, preset, batc
             if f.is_file():
                 print(f"  {f}")
         return
+    
+    # Log validation summary to JSON
+    sorted_checkpoints = sorted(checkpoint_metrics, key=lambda x: x.get('val_loss', float('inf')))
+    best = sorted_checkpoints[0] if sorted_checkpoints else None
+    
+    if best:
+        summary_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "elapsed_time": (datetime.now() - start_time).total_seconds(),
+            "event_type": "validation_summary",
+            "experiment_name": experiment_name,
+            "total_checkpoints": len(checkpoint_metrics),
+            "best_checkpoint": {
+                "file": best['checkpoint'],
+                "epoch": best['epoch'],
+                "val_loss": best['val_loss'],
+                "val_perplexity": best['val_perplexity']
+            }
+        }
+        
+        with open(json_log_path, 'a') as f:
+            f.write(json.dumps(summary_entry) + '\n')
     
     # Create graphs
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
@@ -303,10 +363,10 @@ def create_validation_graphs(output_dir, dataset_name, max_samples, preset, batc
     graph_path = os.path.join(output_dir, 'validation_analysis.png')
     plt.savefig(graph_path, dpi=300, bbox_inches='tight')
     print(f"📈 Saved validation graph: {graph_path}")
+    print(f"📋 Saved validation JSON log: {json_log_path}")
     
     # Print summary
     print(f"\n📋 VALIDATION SUMMARY:")
-    sorted_checkpoints = sorted(checkpoint_metrics, key=lambda x: x.get('val_loss', float('inf')))
     best = sorted_checkpoints[0] if sorted_checkpoints else None
     
     if best:
