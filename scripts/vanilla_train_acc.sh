@@ -5,9 +5,9 @@
 set -e  # Exit on any error
 
 # Configuration - matching symbolic script parameters
-DIR="./outputs/vanilla_4gpu_simple"
+DIR="./outputs/vanilla_4gpu_final"
 N=110000
-EXPERIMENT_NAME="vanilla_4gpu_simple"
+EXPERIMENT_NAME="vanilla_4gpu_final"
 
 # Model configuration - matching symbolic script
 N_EMBD=384
@@ -21,7 +21,7 @@ NUM_GPUS=4
 BATCH_SIZE=4  # Direct batch size per GPU
 
 # JSON logging configuration
-JSON_LOG_STEPS=64
+JSON_LOG_STEPS=50
 
 echo "========================================================"
 echo "SIMPLIFIED VANILLA TRANSFORMER 4-GPU TRAINING (BASELINE)"
@@ -69,9 +69,9 @@ accelerate launch \
     --trainer_type accelerate \
     --json_log_steps $JSON_LOG_STEPS \
     --experiment_name $EXPERIMENT_NAME \
-    --learning_rate 3e-4 \
+    --learning_rate 0.0012 \
     --clip_grad_norm 1.0 \
-    --log_interval 32
+    --log_interval 50
 
 if [ $? -ne 0 ]; then
     echo "Training failed. Exiting."
