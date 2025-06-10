@@ -252,7 +252,7 @@ def main():
     
     # Create model
     logger.info("Creating model...")
-    model = get_model('symbolic', config).to(device)
+    model = get_model('Symbolic', config).to(device)
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model created with {total_params:,} parameters ({trainable_params:,} trainable)")
