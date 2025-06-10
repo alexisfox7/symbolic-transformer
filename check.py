@@ -83,6 +83,30 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='c
             model_state_dict = checkpoint
             print(f"✅ Checkpoint is model state dict directly")
             
+            # DETECT MODEL CONFIG FROM CHECKPOINT
+            print(f"🔧 Auto-detecting model config from checkpoint...")
+            
+            # Get embedding dimension from checkpoint
+            wte_key = None
+            for key in model_state_dict.keys():
+                if 'wte.weight' in key or 'token_embedding' in key:
+                    wte_key = key
+                    break
+            
+            if wte_key:
+                n_embd = model_state_dict[wte_key].shape[1]
+                vocab_size = model_state_dict[wte_key].shape[0]
+                print(f"📊 Detected n_embd: {n_embd}, vocab_size: {vocab_size}")
+                
+                # Update model config to match checkpoint
+                model_config.n_embd = n_embd
+                model_config.vocab_size = vocab_size
+                
+                # Update head dimension if needed
+                if hasattr(model_config, 'n_head') and model_config.n_head > 0:
+                    model_config.head_dim = n_embd // model_config.n_head
+                    print(f"📊 Updated head_dim: {model_config.head_dim}")
+            
             # Extract metadata if available (probably not in this format)
             epoch = 'N/A'
             global_batch = 'N/A' 
@@ -110,7 +134,7 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='c
             global_batch = checkpoint.get('global_batch', 'N/A')
             train_loss = checkpoint.get('loss', 'N/A')
         
-        # Create model
+        # Create model with corrected config
         is_symbolic = ('symbolic' in checkpoint_path.lower() or 
                       getattr(model_config, 'use_symbolic_ffn', False))
         
@@ -135,6 +159,8 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='c
                 print(f"✅ Fixed {len(fixed_state_dict)} keys")
                 model.load_state_dict(fixed_state_dict)
             else:
+                print(f"❌ Model loading error: {e}")
+                print(f"💡 This might be a config mismatch. Check model dimensions.")
                 raise e
         
         model.eval()
