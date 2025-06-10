@@ -161,27 +161,6 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cu
             global_batch = 0
             train_loss = float('nan')
         
-def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cuda'):
-    """Evaluate a single checkpoint on validation data."""
-    print(f"🧪 Evaluating: {os.path.basename(checkpoint_path)}")
-    
-    try:
-        # Load checkpoint
-        checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
-        
-        # Find model state dict
-        if 'model_state_dict' in checkpoint:
-            model_state_dict = checkpoint['model_state_dict']
-            epoch = checkpoint.get('epoch', 0)
-            global_batch = checkpoint.get('global_batch', 0)
-            train_loss = checkpoint.get('loss', float('nan'))
-        else:
-            # Checkpoint IS the model state dict
-            model_state_dict = checkpoint
-            epoch = 0
-            global_batch = 0
-            train_loss = float('nan')
-        
         # Create a proper copy of the config
         import copy
         model_config = copy.deepcopy(base_config)
