@@ -27,7 +27,6 @@ def load_validation_data(dataset_name, tokenizer, max_samples, block_size, batch
     # Load full dataset
     full_dataloader, tokenizer = load_and_prepare_data(
         dataset_name=dataset_name,
-        dataset_config="",
         tokenizer=tokenizer,
         max_samples=max_samples,
         max_seq_length=block_size,
@@ -73,25 +72,44 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='c
         checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
         
         # DEBUG: Check what keys are in checkpoint
-        print(f"🔍 Checkpoint keys: {list(checkpoint.keys())}")
+        print(f"🔍 Checkpoint keys: {len(list(checkpoint.keys()))} total keys")
         
-        # Find model state dict key
-        model_state_key = None
-        possible_keys = ['model_state_dict', 'model', 'state_dict', 'net']
+        # Check if checkpoint IS the model state dict (keys start with 'module.')
+        first_key = list(checkpoint.keys())[0] if checkpoint else ""
         
-        for key in possible_keys:
-            if key in checkpoint:
-                model_state_key = key
-                break
-        
-        if model_state_key is None:
-            print(f"❌ No model state dict found. Available keys: {list(checkpoint.keys())}")
-            return None
-        
-        print(f"✅ Found model state at key: '{model_state_key}'")
+        if first_key.startswith('module.'):
+            # Checkpoint IS the model state dict
+            model_state_dict = checkpoint
+            print(f"✅ Checkpoint is model state dict directly")
+            
+            # Extract metadata if available (probably not in this format)
+            epoch = 'N/A'
+            global_batch = 'N/A' 
+            train_loss = 'N/A'
+            
+        else:
+            # Normal checkpoint format
+            model_state_key = None
+            possible_keys = ['model_state_dict', 'model', 'state_dict', 'net']
+            
+            for key in possible_keys:
+                if key in checkpoint:
+                    model_state_key = key
+                    break
+            
+            if model_state_key is None:
+                print(f"❌ No model state dict found. Available keys: {list(checkpoint.keys())}")
+                return None
+            
+            print(f"✅ Found model state at key: '{model_state_key}'")
+            model_state_dict = checkpoint[model_state_key]
+            
+            # Get checkpoint metadata
+            epoch = checkpoint.get('epoch', 'N/A')
+            global_batch = checkpoint.get('global_batch', 'N/A')
+            train_loss = checkpoint.get('loss', 'N/A')
         
         # Create model
-        # Check if it's a symbolic model (fix for config object)
         is_symbolic = ('symbolic' in checkpoint_path.lower() or 
                       getattr(model_config, 'use_symbolic_ffn', False))
         
@@ -101,15 +119,13 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='c
             model = get_model("Vanilla", config=model_config).to(device)
         
         # Load model weights
-        model.load_state_dict(checkpoint[model_state_key])
+        model.load_state_dict(model_state_dict)
         model.eval()
         
         print(f"✅ Model loaded from checkpoint")
         
-        # Get checkpoint metadata
-        epoch = checkpoint.get('epoch', 'N/A')
-        global_batch = checkpoint.get('global_batch', 'N/A')
-        train_loss = checkpoint.get('loss', 'N/A')
+        # Get checkpoint metadata (moved after model loading)
+        # epoch, global_batch, train_loss already set above
         
         # Run validation
         total_loss = 0.0
@@ -234,7 +250,7 @@ def main():
     config = get_preset_config(args.preset)
     
     # Create tokenizer
-    tokenizer = create_tokenizer('gpt2')
+    tokenizer = create_tokenizer('simple')
     
     # Load validation data
     val_dataloader, tokenizer = load_validation_data(
