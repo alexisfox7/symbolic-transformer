@@ -384,7 +384,7 @@ def create_validation_graphs(output_dir, dataset_name, max_samples, preset, batc
 
 def main():
     parser = argparse.ArgumentParser(description='Create validation performance graphs')
-    parser.add_argument('--output_dir', type=str, default='./outputs/vanilla_4gpu_final/batch_metrics',
+    parser.add_argument('--output_dir', type=str, default='./outputs/sym_4gpu_final/batch_metrics',
                        help='Directory containing checkpoints')
     parser.add_argument('--dataset', type=str, default='roneneldan/TinyStories',
                        help='Dataset for validation')
