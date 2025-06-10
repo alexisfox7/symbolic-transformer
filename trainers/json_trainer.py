@@ -121,7 +121,7 @@ class JSONLoggingAccelerateTrainer:
                 self.global_batch_count += 1
             
             # DEBUG: Print every batch to see if this is running
-            if self.accelerator.is_main_process and self.global_batch_count <= 5:
+            if self.accelerator.is_main_process and self.global_batch_count <= 3:
                 print(f"DEBUG: Local batch {batch_idx}, Global batch {self.global_batch_count}, checkpoint_every_n_batches={self.checkpoint_every_n_batches}")
             
             # Only on main process for JSON logging
@@ -147,15 +147,18 @@ class JSONLoggingAccelerateTrainer:
                     )
             
             # SIMPLE: Save lightweight checkpoint every N batches
-            # DEBUG: Always check the condition around checkpoint intervals
-            if self.accelerator.is_main_process and (self.global_batch_count % 10 == 0 or self.global_batch_count >= 95):
-                print(f"DEBUG: Local batch {batch_idx}, Global batch {self.global_batch_count}, modulo check: {self.global_batch_count} % {self.checkpoint_every_n_batches} = {self.global_batch_count % self.checkpoint_every_n_batches}")
+            # Always show when we're close to checkpoints
+            remainder = self.global_batch_count % self.checkpoint_every_n_batches
+            if self.accelerator.is_main_process and remainder <= 2:
+                print(f"DEBUG: Global batch {self.global_batch_count}, remainder = {remainder}, checkpoint interval = {self.checkpoint_every_n_batches}")
             
-            if self.checkpoint_every_n_batches > 0 and self.global_batch_count % self.checkpoint_every_n_batches == 0:
-                print(f"DEBUG: Triggering checkpoint save at global batch {self.global_batch_count} (local batch {batch_idx})")
+            if self.checkpoint_every_n_batches > 0 and remainder == 0:
+                print(f"🎯 CHECKPOINT: Triggering save at global batch {self.global_batch_count}")
                 if self.accelerator.is_main_process:
-                    print(f"DEBUG: Main process saving metrics to {self.metrics_save_dir}")
-                    self.logger.info(f"Saving batch metrics at batch {self.global_batch_count}")
+                    print(f"📁 Saving to: {self.metrics_save_dir}")
+                else:
+                    print(f"⚠️  Not main process, skipping save")
+                    
                 self.save_batch_metrics(
                     epoch=epoch or 0,
                     batch_idx=batch_idx,
