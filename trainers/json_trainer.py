@@ -141,27 +141,28 @@ class JSONLoggingAccelerateTrainer:
                     epoch_metrics.update(metrics)
                 
                 # Run epoch-level validation - ALL PROCESSES to avoid deadlock
-                if self.val_dataloader:
-                    val_metrics = self.run_validation(
-                        self.trainer.model,
-                        self.val_dataloader,
-                        self.accelerator.device
-                    )
-                    
-                    # Only main process logs and updates metrics
-                    if self.accelerator.is_main_process:
-                        epoch_metrics.update({
-                            'val_loss': val_metrics['loss'],
-                            'val_perplexity': val_metrics['perplexity']
-                        })
-                        
-                        self.logger.info(f"Epoch {epoch} - Train Loss: {avg_loss:.4f}, Train PPL: {train_perplexity:.2f}, Val Loss: {val_metrics['loss']:.4f}, Val PPL: {val_metrics['perplexity']:.2f}")
-                        
-                        # Log validation separately too
-                        self.json_logger.log_validation(epoch, val_metrics)
                 
-                # Log epoch metrics
-                self.json_logger.log_epoch_end(epoch, epoch_metrics)
+                # if self.val_dataloader:
+                #     val_metrics = self.run_validation(
+                #         self.trainer.model,
+                #         self.val_dataloader,
+                #         self.accelerator.device
+                #     )
+                    
+                #     # Only main process logs and updates metrics
+                #     if self.accelerator.is_main_process:
+                #         epoch_metrics.update({
+                #             'val_loss': val_metrics['loss'],
+                #             'val_perplexity': val_metrics['perplexity']
+                #         })
+                        
+                #         self.logger.info(f"Epoch {epoch} - Train Loss: {avg_loss:.4f}, Train PPL: {train_perplexity:.2f}, Val Loss: {val_metrics['loss']:.4f}, Val PPL: {val_metrics['perplexity']:.2f}")
+                        
+                #         # Log validation separately too
+                #         self.json_logger.log_validation(epoch, val_metrics)
+                
+                # # Log epoch metrics
+                # self.json_logger.log_epoch_end(epoch, epoch_metrics)
         
         # Replace trainer methods
         self.trainer.log_batch = enhanced_log_batch
