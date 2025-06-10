@@ -12,16 +12,17 @@ from utils.json_logger import JSONLogger, create_json_logger_for_training
 
 class JSONLoggingAccelerateTrainer:
     """
-    Enhanced AccelerateTrainer with validation every 50 batches and perplexity logging.
-    FIXED VERSION - removes hanging validation issues.
+    Enhanced AccelerateTrainer with epoch-end validation and perplexity logging.
+    SIMPLIFIED VERSION - no mid-epoch validation to prevent hanging.
     """
     
     def __init__(self, accelerate_trainer, json_logger=None, val_dataloader=None, 
-                 validate_every_n_batches=50):
+                 validate_every_n_batches=None):  # Parameter kept for compatibility but ignored
         self.trainer = accelerate_trainer
         self.json_logger = json_logger
         self.val_dataloader = val_dataloader
-        self.validate_every_n_batches = validate_every_n_batches
+        # Mid-epoch validation disabled for stability
+        self.validate_every_n_batches = None
         self.logger = logging.getLogger(__name__)
         self.global_batch_count = 0
         
@@ -104,23 +105,8 @@ class JSONLoggingAccelerateTrainer:
                         metrics=batch_metrics
                     )
                 
-                # FIXED: Simple validation check without distributed sync issues
-                if (self.val_dataloader and 
-                    self.global_batch_count % self.validate_every_n_batches == 0):
-                    
-                    self.logger.info(f"Running validation at batch {self.global_batch_count}...")
-                    
-                    # Run validation only on main process to avoid hanging
-                    val_metrics = self.run_validation(
-                        self.trainer.model, 
-                        self.val_dataloader, 
-                        self.accelerator.device
-                    )
-                    
-                    self.logger.info(f"Batch {self.global_batch_count} Validation - Loss: {val_metrics['loss']:.4f}, Perplexity: {val_metrics['perplexity']:.2f}")
-                    
-                    if self.json_logger:
-                        self.json_logger.log_validation(f"batch_{self.global_batch_count}", val_metrics)
+                # REMOVED: Mid-epoch validation to prevent hanging issues
+                # Validation will only run at epoch end for stability
         
         # Enhance epoch logging
         def enhanced_log_epoch(epoch: int, avg_loss: float, metrics=None):
@@ -139,8 +125,9 @@ class JSONLoggingAccelerateTrainer:
                 if metrics:
                     epoch_metrics.update(metrics)
                 
-                # FIXED: Only run validation on main process
+                # FIXED: Only run validation on main process at epoch end
                 if self.val_dataloader:
+                    self.logger.info(f"Running epoch {epoch} validation...")
                     val_metrics = self.run_validation(
                         self.trainer.model,
                         self.val_dataloader,
