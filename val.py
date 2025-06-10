@@ -75,12 +75,68 @@ def load_validation_data(dataset_name, tokenizer, max_samples, block_size, batch
     print(f"✅ Validation data: {len(val_dataloader)} batches, {len(val_dataset)} samples")
     return val_dataloader, tokenizer
 
-def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='cuda'):
+def infer_config_from_checkpoint(checkpoint_path, base_config):
+    """Infer model configuration from checkpoint dimensions."""
+    try:
+        checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+        
+        # Find model state dict
+        if 'model_state_dict' in checkpoint:
+            state_dict = checkpoint['model_state_dict']
+        else:
+            state_dict = checkpoint
+            
+        # Remove 'module.' prefix if present
+        clean_state_dict = {}
+        for key, value in state_dict.items():
+            new_key = key.replace('module.', '') if key.startswith('module.') else key
+            clean_state_dict[new_key] = value
+        
+        # Infer dimensions from key tensor shapes
+        config = base_config
+        
+        # Get vocab size and embedding dim from embedding layer
+        if 'transformer.wte.weight' in clean_state_dict:
+            vocab_size, d_model = clean_state_dict['transformer.wte.weight'].shape
+            config.vocab_size = vocab_size
+            config.d_model = d_model
+            print(f"  Inferred: vocab_size={vocab_size}, d_model={d_model}")
+        
+        # Get number of layers by counting
+        layer_count = 0
+        for key in clean_state_dict.keys():
+            if 'transformer.h.' in key:
+                layer_num = int(key.split('transformer.h.')[1].split('.')[0])
+                layer_count = max(layer_count, layer_num + 1)
+        
+        if layer_count > 0:
+            config.n_layer = layer_count
+            print(f"  Inferred: n_layer={layer_count}")
+        
+        # Get attention heads from attention weight shapes
+        for key, tensor in clean_state_dict.items():
+            if 'attn.c_attn.weight' in key:
+                # c_attn projects to 3 * d_model (q, k, v)
+                out_features = tensor.shape[0]
+                expected_d_model = out_features // 3
+                if expected_d_model == config.d_model:
+                    # Default to d_model // 64 heads (common pattern)
+                    config.n_head = max(1, config.d_model // 64)
+                    print(f"  Inferred: n_head={config.n_head}")
+                break
+        
+        return config
+        
+    except Exception as e:
+        print(f"  Warning: Could not infer config from checkpoint: {e}")
+        return base_config
+
+def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cuda'):
     """Evaluate a single checkpoint on validation data."""
     print(f"🧪 Evaluating: {os.path.basename(checkpoint_path)}")
     
     try:
-        # Load checkpoint
+        # Load checkpoint and infer correct config
         checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
         
         # Find model state dict
@@ -95,6 +151,9 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='c
             epoch = 0
             global_batch = 0
             train_loss = float('nan')
+        
+        # Infer correct model config from checkpoint
+        model_config = infer_config_from_checkpoint(checkpoint_path, base_config)
         
         # Create model
         is_symbolic = ('symbolic' in checkpoint_path.lower() or 
@@ -116,6 +175,11 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='c
                     new_key = key.replace('module.', '') if key.startswith('module.') else key
                     fixed_state_dict[new_key] = value
                 model.load_state_dict(fixed_state_dict)
+            elif "size mismatch" in str(e):
+                print(f"❌ Model config mismatch: {e}")
+                print(f"💡 Try a different --preset (tiny/small/medium/large)")
+                print(f"💡 Checkpoint vocab_size: {model_config.vocab_size}, d_model: {model_config.d_model}")
+                return None
             else:
                 raise e
         
@@ -275,7 +339,7 @@ def create_validation_graphs(output_dir, dataset_name, max_samples, preset, batc
 
 def main():
     parser = argparse.ArgumentParser(description='Create validation performance graphs')
-    parser.add_argument('--output_dir', type=str, default='./outputs/sym_4gpu_simple',
+    parser.add_argument('--output_dir', type=str, default='./outputs/vanilla_4gpu_final/batch_metrics',
                        help='Directory containing checkpoints')
     parser.add_argument('--dataset', type=str, default='roneneldan/TinyStories',
                        help='Dataset for validation')
