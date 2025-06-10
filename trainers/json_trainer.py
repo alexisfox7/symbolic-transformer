@@ -76,9 +76,9 @@ class JSONLoggingAccelerateTrainer:
         original_log_epoch = self.trainer.log_epoch
         
         # Enhance batch logging
-        def enhanced_log_batch(epoch, batch_idx, loss, metrics=None):
+        def enhanced_log_batch(batch_idx, loss, epoch=None, metrics=None):
             # Call original logging
-            original_log_batch(epoch, batch_idx, loss, metrics)
+            original_log_batch(batch_idx, loss, epoch=epoch, metrics=metrics)
             
             self.global_batch_count += 1
             
