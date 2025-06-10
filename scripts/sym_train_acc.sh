@@ -21,7 +21,7 @@ NUM_GPUS=4
 BATCH_SIZE=4  # Direct batch size per GPU
 
 # JSON logging configuration
-JSON_LOG_STEPS=64
+JSON_LOG_STEPS=50
 
 echo "========================================================"
 echo "SIMPLIFIED SYMBOLIC TRANSFORMER 4-GPU TRAINING"
