@@ -70,7 +70,7 @@ accelerate launch \
     --trainer_type accelerate \
     --json_log_steps $JSON_LOG_STEPS \
     --experiment_name $EXPERIMENT_NAME \
-    --learning_rate 3e-4 \
+    --learning_rate 0.0012 \
     --clip_grad_norm 1.0 \
     --log_interval 32
 
