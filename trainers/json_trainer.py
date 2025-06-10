@@ -4,17 +4,16 @@ Simplified integration helpers for JSON logging without gradient accumulation co
 """
 
 import logging
+import torch
+import math
 from typing import Dict, Any, Optional
 from utils.json_logger import JSONLogger, create_json_logger_for_training
 
 
-# Add this to trainers/json_trainer.py, replacing the existing JSONLoggingAccelerateTrainer
-
-# Add this to trainers/json_trainer.py, replacing the existing JSONLoggingAccelerateTrainer
-
 class JSONLoggingAccelerateTrainer:
     """
     Enhanced AccelerateTrainer with validation every 50 batches and perplexity logging.
+    FIXED VERSION - removes hanging validation issues.
     """
     
     def __init__(self, accelerate_trainer, json_logger=None, val_dataloader=None, 
@@ -30,83 +29,66 @@ class JSONLoggingAccelerateTrainer:
         self.accelerator = accelerate_trainer.accelerator
     
     def run_validation(self, model, val_dataloader, device):
-        """Distributed-safe validation function."""
-        import torch
-        import math
-        
+        """
+        FIXED: Simple validation function that doesn't hang.
+        Removes distributed complexity that causes deadlocks.
+        """
         model.eval()
         total_loss = 0.0
         total_samples = 0
         
-        # Make sure validation dataloader is prepared for accelerate
-        if not hasattr(val_dataloader, '_accelerator_prepared'):
-            val_dataloader = self.accelerator.prepare(val_dataloader)
-        
         with torch.no_grad():
+            # Use simple loop without accelerator.prepare() complexity
             for batch_data in val_dataloader:
-                # Data is already on correct device from accelerator.prepare()
-                outputs = model(**batch_data)
+                # Move data to device manually
+                batch = {}
+                for k, v in batch_data.items():
+                    if isinstance(v, torch.Tensor):
+                        batch[k] = v.to(device)
+                    else:
+                        batch[k] = v
+                
+                # Forward pass
+                outputs = model(**batch)
                 loss = outputs.get('loss')
                 
                 if loss is not None and not torch.isnan(loss):
-                    # Get batch size from any tensor in the batch
-                    batch_size = next(iter(batch_data.values())).size(0)
+                    batch_size = next(iter(batch.values())).size(0)
                     total_loss += loss.item() * batch_size
                     total_samples += batch_size
         
-        # Gather results from all processes
-        total_loss_tensor = torch.tensor(total_loss, device=device)
-        total_samples_tensor = torch.tensor(total_samples, device=device)
-        
-        # Reduce across all processes
-        total_loss_tensor = self.accelerator.reduce(total_loss_tensor, reduction="sum")
-        total_samples_tensor = self.accelerator.reduce(total_samples_tensor, reduction="sum")
-        
         model.train()
         
-        # Convert back to python scalars
-        total_loss = total_loss_tensor.item()
-        total_samples = total_samples_tensor.item()
-        
+        # Simple average - no distributed sync needed
         avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
         perplexity = math.exp(avg_loss) if avg_loss < 20 else float('inf')
         
-        return {'loss': avg_loss, 'perplexity': perplexity, 'samples': total_samples}
+        return {
+            'loss': avg_loss, 
+            'perplexity': perplexity, 
+            'samples': total_samples
+        }
     
     def train(self):
         """Training loop with validation and perplexity logging."""
-        import math
-        
-        # Only create one JSON logger on main process
-        if self.json_logger and self.accelerator.is_main_process:
-            # Log initial config
-            config_data = {
-                'num_epochs': self.trainer.num_epochs,
-                'batch_size': getattr(self.trainer.dataloader, 'batch_size', None),
-                'num_processes': self.accelerator.num_processes,
-                'mixed_precision': str(self.accelerator.mixed_precision),
-                'device': str(self.accelerator.device),
-                'log_interval': getattr(self.trainer, 'log_interval', 10),
-                'validate_every_n_batches': self.validate_every_n_batches
-            }
-            self.json_logger.log_config(config_data)
-        
-        # Enhance the log_batch method
+        # Store original methods
         original_log_batch = self.trainer.log_batch
+        original_log_epoch = self.trainer.log_epoch
         
-        def enhanced_log_batch(batch_idx: int, loss: float, epoch=None, metrics=None):
+        # Enhance batch logging
+        def enhanced_log_batch(epoch, batch_idx, loss, metrics=None):
             # Call original logging
-            original_log_batch(batch_idx, loss, epoch, metrics)
+            original_log_batch(epoch, batch_idx, loss, metrics)
+            
+            self.global_batch_count += 1
             
             # Only on main process
-            if self.accelerator.is_main_process:
-                self.global_batch_count += 1
-                
+            if self.json_logger and self.accelerator.is_main_process:
                 # Calculate train perplexity
                 train_perplexity = math.exp(loss) if loss < 20 else float('inf')
                 
-                # JSON logging at intervals
-                if self.json_logger and self.global_batch_count % self.json_logger.log_every_n_steps == 0:
+                # Only log every N steps to JSON
+                if self.global_batch_count % self.json_logger.log_interval == 0:
                     batch_metrics = {
                         'loss': loss,
                         'perplexity': train_perplexity,
@@ -122,27 +104,25 @@ class JSONLoggingAccelerateTrainer:
                         metrics=batch_metrics
                     )
                 
-                # Validation every N batches - ALL PROCESSES participate
+                # FIXED: Simple validation check without distributed sync issues
                 if (self.val_dataloader and 
                     self.global_batch_count % self.validate_every_n_batches == 0):
                     
-                    # All processes run validation (required for distributed sync)
+                    self.logger.info(f"Running validation at batch {self.global_batch_count}...")
+                    
+                    # Run validation only on main process to avoid hanging
                     val_metrics = self.run_validation(
                         self.trainer.model, 
                         self.val_dataloader, 
                         self.accelerator.device
                     )
                     
-                    # Only main process logs (but all processes computed)
-                    if self.accelerator.is_main_process:
-                        self.logger.info(f"Batch {self.global_batch_count} Validation - Loss: {val_metrics['loss']:.4f}, Perplexity: {val_metrics['perplexity']:.2f}")
-                        
-                        if self.json_logger:
-                            self.json_logger.log_validation(f"batch_{self.global_batch_count}", val_metrics)
+                    self.logger.info(f"Batch {self.global_batch_count} Validation - Loss: {val_metrics['loss']:.4f}, Perplexity: {val_metrics['perplexity']:.2f}")
+                    
+                    if self.json_logger:
+                        self.json_logger.log_validation(f"batch_{self.global_batch_count}", val_metrics)
         
         # Enhance epoch logging
-        original_log_epoch = self.trainer.log_epoch
-        
         def enhanced_log_epoch(epoch: int, avg_loss: float, metrics=None):
             # Call original logging
             original_log_epoch(epoch, avg_loss, metrics)
@@ -159,7 +139,7 @@ class JSONLoggingAccelerateTrainer:
                 if metrics:
                     epoch_metrics.update(metrics)
                 
-                # Run epoch-level validation - ALL PROCESSES to avoid deadlock
+                # FIXED: Only run validation on main process
                 if self.val_dataloader:
                     val_metrics = self.run_validation(
                         self.trainer.model,
@@ -167,17 +147,15 @@ class JSONLoggingAccelerateTrainer:
                         self.accelerator.device
                     )
                     
-                    # Only main process logs and updates metrics
-                    if self.accelerator.is_main_process:
-                        epoch_metrics.update({
-                            'val_loss': val_metrics['loss'],
-                            'val_perplexity': val_metrics['perplexity']
-                        })
-                        
-                        self.logger.info(f"Epoch {epoch} - Train Loss: {avg_loss:.4f}, Train PPL: {train_perplexity:.2f}, Val Loss: {val_metrics['loss']:.4f}, Val PPL: {val_metrics['perplexity']:.2f}")
-                        
-                        # Log validation separately too
-                        self.json_logger.log_validation(epoch, val_metrics)
+                    epoch_metrics.update({
+                        'val_loss': val_metrics['loss'],
+                        'val_perplexity': val_metrics['perplexity']
+                    })
+                    
+                    self.logger.info(f"Epoch {epoch} - Train Loss: {avg_loss:.4f}, Train PPL: {train_perplexity:.2f}, Val Loss: {val_metrics['loss']:.4f}, Val PPL: {val_metrics['perplexity']:.2f}")
+                    
+                    # Log validation separately too
+                    self.json_logger.log_validation(epoch, val_metrics)
                 
                 # Log epoch metrics
                 self.json_logger.log_epoch_end(epoch, epoch_metrics)
@@ -212,7 +190,6 @@ class JSONLoggingAccelerateTrainer:
         return getattr(self.trainer, name)
 
 
-# Update the create function to pass validation dataloader
 def create_accelerate_trainer_with_json_logging(
     model, dataloader, optimizer, device, json_logger=None, val_dataloader=None, 
     validate_every_n_batches=50, **trainer_kwargs
@@ -239,7 +216,8 @@ def create_accelerate_trainer_with_json_logging(
         val_dataloader=val_dataloader,
         validate_every_n_batches=validate_every_n_batches
     )
-# Quick CLI argument helper
+
+
 def add_json_logging_args(parser):
     """Add JSON logging arguments to existing argument parser."""
     parser.add_argument("--json_log_steps", type=int, default=100,
@@ -254,9 +232,8 @@ def create_json_logger_from_args(args, experiment_name="experiment"):
     if getattr(args, 'disable_json_logging', False):
         return None
     
-    log_steps = getattr(args, 'json_log_steps', 100)
     return create_json_logger_for_training(
-        args.output_dir, 
-        experiment_name, 
-        log_steps
+        experiment_name=experiment_name,
+        output_dir=getattr(args, 'output_dir', './outputs'),
+        log_interval=getattr(args, 'json_log_steps', 100)
     )
