@@ -5,9 +5,9 @@
 set -e  # Exit on any error
 
 # Configuration - matching original script
-DIR="./outputs/sym_4gpu_simple"
+DIR="./outputs/sym_4gpu_final"
 N=110000
-EXPERIMENT_NAME="symbolic_4gpu_simple"
+EXPERIMENT_NAME="symbolic_4gpu_final"
 
 # Model configuration - matching original
 N_EMBD=384

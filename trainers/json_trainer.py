@@ -122,7 +122,7 @@ class JSONLoggingAccelerateTrainer:
         # FIXED: Enhanced batch logging with proper debug output
         def enhanced_log_batch(batch_idx, loss, epoch=None, metrics=None):
             # ALWAYS print this first - no process checks
-            print(f"🔥 BATCH {batch_idx}: loss={loss:.4f}, epoch={epoch}")
+            #print(f"🔥 BATCH {batch_idx}: loss={loss:.4f}, epoch={epoch}")
             
             # Call original logging
             try:
@@ -133,7 +133,7 @@ class JSONLoggingAccelerateTrainer:
             # FIXED: Use global_batch from metrics (this is the actual global batch count)
             if metrics and 'global_batch' in metrics:
                 self.global_batch_count = metrics['global_batch']
-                print(f"🎯 Using global_batch from metrics: {self.global_batch_count}")
+                #print(f"🎯 Using global_batch from metrics: {self.global_batch_count}")
             else:
                 self.global_batch_count += 1
                 print(f"⚠️  No global_batch in metrics, incrementing: {self.global_batch_count}")
@@ -141,11 +141,11 @@ class JSONLoggingAccelerateTrainer:
             # Print checkpoint check info (use the actual global batch from accelerate trainer)
             current_global_batch = metrics.get('global_batch', self.global_batch_count) if metrics else self.global_batch_count
             remainder = current_global_batch % self.checkpoint_every_n_batches if self.checkpoint_every_n_batches > 0 else -1
-            print(f"📊 Global batch {current_global_batch}, checkpoint check: {current_global_batch} % {self.checkpoint_every_n_batches} = {remainder}")
+            #print(f"📊 Global batch {current_global_batch}, checkpoint check: {current_global_batch} % {self.checkpoint_every_n_batches} = {remainder}")
             
             # FIXED: Use the actual global batch count for checkpoint logic
             if self.checkpoint_every_n_batches > 0 and remainder == 0:
-                print(f"🎯 CHECKPOINT TRIGGER: Saving at global batch {current_global_batch}")
+                #print(f"🎯 CHECKPOINT TRIGGER: Saving at global batch {current_global_batch}")
                 self.save_batch_metrics(
                     epoch=epoch or 0,
                     batch_idx=batch_idx,
