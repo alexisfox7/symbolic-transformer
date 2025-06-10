@@ -111,6 +111,10 @@ class JSONLoggingAccelerateTrainer:
         
         # Enhance batch logging
         def enhanced_log_batch(batch_idx, loss, epoch=None, metrics=None):
+            # ALWAYS print this to confirm function is being called
+            if self.accelerator.is_main_process:
+                print(f"ENHANCED_LOG_BATCH CALLED: batch {batch_idx}, loss {loss:.4f}")
+            
             # Call original logging
             original_log_batch(batch_idx, loss, epoch=epoch, metrics=metrics)
             
