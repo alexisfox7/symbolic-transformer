@@ -504,7 +504,7 @@ def main():
             clip_grad_norm=args.clip_grad_norm,
             log_interval=args.log_interval,
             val_dataloader=val_dataloader,  # Add this
-            validate_every_n_batches=50    # Add this
+            validate_every_n_batches=32    # Add this
         )
     else:
         # Simple trainer fallback
