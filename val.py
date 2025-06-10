@@ -1,15 +1,31 @@
 #!/usr/bin/env python
 """
 Process .pt validation checkpoints and create validation performance graphs.
-Simple implementation for .pt files only.
+Runs validation on each checkpoint to compute metrics.
 """
 
 import torch
 import matplotlib.pyplot as plt
 import os
+import sys
 from pathlib import Path
 import argparse
 import math
+from tqdm import tqdm
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+try:
+    from config import get_preset_config
+    from mytokenizers import create_tokenizer
+    from model import get_model
+    from utils.data_utils import load_and_prepare_data
+    from torch.utils.data import DataLoader, random_split
+except ImportError as e:
+    print(f"❌ Import error: {e}")
+    print("Make sure you're running from the project root directory")
+    sys.exit(1)
 
 def is_nan(x):
     """Simple NaN check."""
@@ -17,43 +33,158 @@ def is_nan(x):
         return math.isnan(x) or x != x
     return False
 
-def extract_checkpoint_metrics(checkpoint_path):
-    """Extract validation metrics from a checkpoint file."""
+def load_validation_data(dataset_name, tokenizer, max_samples, block_size, batch_size, val_ratio=0.1):
+    """Load and prepare validation data."""
+    print(f"📊 Loading validation data...")
+    
+    # Load full dataset
+    full_dataloader, tokenizer = load_and_prepare_data(
+        dataset_name=dataset_name,
+        dataset_config="",
+        tokenizer=tokenizer,
+        max_samples=max_samples,
+        max_seq_length=block_size,
+        batch_size=batch_size,
+        mlm=False,
+        split='train',
+        shuffle=False
+    )
+    
+    # Create train/val split
+    full_dataset = full_dataloader.dataset
+    generator = torch.Generator().manual_seed(42)
+    
+    total_size = len(full_dataset)
+    val_size = int(total_size * val_ratio)
+    train_size = total_size - val_size
+    
+    train_dataset, val_dataset = random_split(
+        full_dataset, [train_size, val_size], generator=generator
+    )
+    
+    # Create validation dataloader
+    val_dataloader = DataLoader(
+        val_dataset,
+        batch_size=batch_size * 2,  # Larger batch size for validation
+        shuffle=False,
+        collate_fn=full_dataloader.collate_fn,
+        drop_last=False,
+        num_workers=0
+    )
+    
+    print(f"✅ Validation data: {len(val_dataloader)} batches, {len(val_dataset)} samples")
+    return val_dataloader, tokenizer
+
+def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='cuda'):
+    """Evaluate a single checkpoint on validation data."""
+    print(f"🧪 Evaluating: {os.path.basename(checkpoint_path)}")
+    
     try:
+        # Load checkpoint
         checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
         
-        metrics = {
+        # Find model state dict
+        if 'model_state_dict' in checkpoint:
+            model_state_dict = checkpoint['model_state_dict']
+            epoch = checkpoint.get('epoch', 0)
+            global_batch = checkpoint.get('global_batch', 0)
+            train_loss = checkpoint.get('loss', float('nan'))
+        else:
+            # Checkpoint IS the model state dict
+            model_state_dict = checkpoint
+            epoch = 0
+            global_batch = 0
+            train_loss = float('nan')
+        
+        # Create model
+        is_symbolic = ('symbolic' in checkpoint_path.lower() or 
+                      getattr(model_config, 'use_symbolic_ffn', False))
+        
+        if is_symbolic:
+            model = get_model("Symbolic", config=model_config).to(device)
+        else:
+            model = get_model("Vanilla", config=model_config).to(device)
+        
+        # Load model weights with key fixing
+        try:
+            model.load_state_dict(model_state_dict)
+        except RuntimeError as e:
+            if "Missing key(s)" in str(e) or "module." in str(e):
+                # Remove 'module.' prefix from checkpoint keys
+                fixed_state_dict = {}
+                for key, value in model_state_dict.items():
+                    new_key = key.replace('module.', '') if key.startswith('module.') else key
+                    fixed_state_dict[new_key] = value
+                model.load_state_dict(fixed_state_dict)
+            else:
+                raise e
+        
+        model.eval()
+        
+        # Run validation
+        total_loss = 0.0
+        total_samples = 0
+        
+        with torch.no_grad():
+            for val_batch_data in val_dataloader:
+                # Move to device
+                batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v 
+                        for k, v in val_batch_data.items()}
+                
+                # Forward pass
+                outputs = model(**batch)
+                loss = outputs.get('loss')
+                
+                if loss is not None and not torch.isnan(loss):
+                    batch_size = batch.get('input_ids', next(iter(batch.values()))).size(0)
+                    total_loss += loss.item() * batch_size
+                    total_samples += batch_size
+        
+        # Calculate metrics
+        avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
+        perplexity = math.exp(avg_loss) if avg_loss < 20 else float('inf')
+        
+        results = {
             'checkpoint': os.path.basename(checkpoint_path),
-            'epoch': checkpoint.get('epoch', 0),
-            'global_batch': checkpoint.get('global_batch', 0),
-            'train_loss': checkpoint.get('loss', float('nan')),
-            'val_loss': checkpoint.get('val_loss', float('nan')),
-            'val_perplexity': checkpoint.get('val_perplexity', float('nan'))
+            'epoch': epoch,
+            'global_batch': global_batch,
+            'train_loss': train_loss,
+            'val_loss': avg_loss,
+            'val_perplexity': perplexity,
+            'val_samples': total_samples
         }
         
-        return metrics
+        print(f"  Val Loss: {avg_loss:.4f}, Val PPL: {perplexity:.2f}")
+        return results
+        
     except Exception as e:
-        print(f"Error reading {checkpoint_path}: {e}")
+        print(f"❌ Error evaluating checkpoint: {e}")
         return None
 
-def create_validation_graphs(output_dir):
+def create_validation_graphs(output_dir, dataset_name, max_samples, preset, batch_size, device):
     """Create validation performance graphs from .pt checkpoint files."""
     
     print(f"📊 Processing .pt files from: {output_dir}")
     
+    # Setup model config and validation data
+    config = get_preset_config(preset)
+    tokenizer = create_tokenizer('gpt2')
+    config.update_from_tokenizer(tokenizer)
+    
+    val_dataloader, tokenizer = load_validation_data(
+        dataset_name, tokenizer, max_samples, 
+        config.block_size, batch_size
+    )
+    
     # Find .pt checkpoint files
-    checkpoint_patterns = [
-        '*.pt',
-        'checkpoint_*.pt', 
-        'checkpoints/*.pt'
-    ]
+    checkpoint_patterns = ['*.pt', 'checkpoint_*.pt', 'checkpoints/*.pt']
     
     checkpoint_metrics = []
     for pattern in checkpoint_patterns:
         checkpoint_files = list(Path(output_dir).glob(pattern))
-        for cp_file in checkpoint_files:
+        for cp_file in sorted(checkpoint_files):
             print(f"Processing: {cp_file.name}")
-            metrics = extract_checkpoint_metrics(str(cp_file))
+            metrics = evaluate_checkpoint(str(cp_file), val_dataloader, config, device)
             if metrics:
                 checkpoint_metrics.append(metrics)
     
@@ -92,8 +223,8 @@ def create_validation_graphs(output_dir):
         axes[0,1].legend()
     
     # Graph 3: Validation Loss over Global Batches
-    batches = [m['global_batch'] for m in checkpoint_metrics if not is_nan(m['val_loss'])]
-    val_losses = [m['val_loss'] for m in checkpoint_metrics if not is_nan(m['val_loss'])]
+    batches = [m['global_batch'] for m in checkpoint_metrics if not is_nan(m['val_loss']) and m['global_batch'] > 0]
+    val_losses = [m['val_loss'] for m in checkpoint_metrics if not is_nan(m['val_loss']) and m['global_batch'] > 0]
     
     if batches and val_losses:
         axes[1,0].plot(batches, val_losses, 'go-', label='Validation Loss')
@@ -145,14 +276,31 @@ def create_validation_graphs(output_dir):
 def main():
     parser = argparse.ArgumentParser(description='Create validation performance graphs')
     parser.add_argument('--output_dir', type=str, default='./outputs/sym_4gpu_simple',
-                       help='Directory containing checkpoints and logs')
+                       help='Directory containing checkpoints')
+    parser.add_argument('--dataset', type=str, default='roneneldan/TinyStories',
+                       help='Dataset for validation')
+    parser.add_argument('--max_samples', type=int, default=10000,
+                       help='Max samples for validation')
+    parser.add_argument('--preset', type=str, default='small',
+                       help='Model preset')
+    parser.add_argument('--batch_size', type=int, default=4,
+                       help='Validation batch size')
+    parser.add_argument('--device', type=str, default='cuda',
+                       help='Device to use')
     
     args = parser.parse_args()
     
     if not os.path.exists(args.output_dir):
         print(f"❌ Directory not found: {args.output_dir}")
         return
-    create_validation_graphs(args.output_dir)
+    
+    device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
+    print(f"🔧 Using device: {device}")
+    
+    create_validation_graphs(
+        args.output_dir, args.dataset, args.max_samples, 
+        args.preset, args.batch_size, device
+    )
 
 if __name__ == "__main__":
     main()
