@@ -245,22 +245,29 @@ def load_and_prepare_data_with_validation(dataset_name, dataset_config, tokenize
     
     return train_dataloader, val_dataloader, tokenizer
 
-
 class ValidationTrainerWrapper:
     """
-    Wrapper to add validation to existing trainers.
+    Wrapper to add validation to existing trainers with batch-level validation.
     """
-    def __init__(self, trainer, val_dataloader=None, validate_every=1, json_logger=None):
+    def __init__(self, trainer, val_dataloader=None, validate_every=1, 
+                 validate_every_n_batches=50, json_logger=None):
         self.trainer = trainer
         self.val_dataloader = val_dataloader
-        self.validate_every = validate_every
+        self.validate_every = validate_every  # epochs
+        self.validate_every_n_batches = validate_every_n_batches  # batches
         self.json_logger = json_logger
+        self.batch_count = 0
         
     def train(self):
         """Enhanced training with validation."""
+        import logging
+        from utils.validation_utils import run_validation
+        import math
+        
         logger = logging.getLogger(__name__)
         
         # Store original methods
+        original_log_batch = self.trainer.log_batch
         original_log_epoch = self.trainer.log_epoch
         original_trigger_callbacks = self.trainer._trigger_callbacks
         
@@ -269,12 +276,70 @@ class ValidationTrainerWrapper:
             'val_perplexities': []
         }
         
+        def enhanced_log_batch(batch_idx: int, loss: float, epoch=None, metrics=None):
+            """Enhanced batch logging with validation every N batches."""
+            # Call original logging
+            original_log_batch(batch_idx, loss, epoch, metrics)
+            
+            self.batch_count += 1  # Global batch counter across ALL epochs
+            
+            # Calculate train perplexity
+            train_perplexity = math.exp(loss) if loss < 20 else float('inf')
+            
+            # Log to JSON with train perplexity
+            if self.json_logger:
+                is_main_process = True
+                if hasattr(self.trainer, 'accelerator'):
+                    is_main_process = self.trainer.accelerator.is_main_process
+                
+                if is_main_process and self.batch_count % self.json_logger.log_every_n_steps == 0:
+                    batch_metrics = {
+                        'loss': loss,
+                        'perplexity': train_perplexity
+                    }
+                    if metrics:
+                        batch_metrics.update(metrics)
+                    
+                    # Use global batch count instead of per-epoch batch_idx
+                    self.json_logger.log_batch(
+                        epoch=epoch or 0,
+                        batch=batch_idx,
+                        step=self.batch_count,  # Global step counter
+                        metrics=batch_metrics
+                    )
+            
+            # Run validation every N batches
+            if (self.val_dataloader and 
+                self.batch_count % self.validate_every_n_batches == 0 and
+                hasattr(self.trainer, 'model') and 
+                hasattr(self.trainer, 'device')):
+                
+                logger.info(f"Running validation at batch {self.batch_count}...")
+                val_metrics = run_validation(self.trainer.model, self.val_dataloader, self.trainer.device)
+                
+                validation_metrics['val_losses'].append(val_metrics['loss'])
+                validation_metrics['val_perplexities'].append(val_metrics['perplexity'])
+                
+                logger.info(f"Batch {self.batch_count} Validation - Loss: {val_metrics['loss']:.4f}, Perplexity: {val_metrics['perplexity']:.2f}")
+                
+                # Log to JSON
+                if self.json_logger:
+                    is_main_process = True
+                    if hasattr(self.trainer, 'accelerator'):
+                        is_main_process = self.trainer.accelerator.is_main_process
+                    
+                    if is_main_process:
+                        self.json_logger.log_validation(f"batch_{self.batch_count}", val_metrics)
+        
         def enhanced_log_epoch(epoch: int, avg_loss: float, metrics=None):
-            """Enhanced epoch logging with validation."""
+            """Enhanced epoch logging with validation and train perplexity."""
+            # Calculate train perplexity
+            train_perplexity = math.exp(avg_loss) if avg_loss < 20 else float('inf')
+            
             # Call original logging
             original_log_epoch(epoch, avg_loss, metrics)
             
-            # Run validation if needed
+            # Run validation at epoch end
             if (self.val_dataloader and 
                 epoch % self.validate_every == 0 and 
                 hasattr(self.trainer, 'model') and 
@@ -286,48 +351,71 @@ class ValidationTrainerWrapper:
                 validation_metrics['val_losses'].append(val_metrics['loss'])
                 validation_metrics['val_perplexities'].append(val_metrics['perplexity'])
                 
-                logger.info(f"Validation - Loss: {val_metrics['loss']:.4f}, Perplexity: {val_metrics['perplexity']:.2f}")
+                logger.info(f"Epoch {epoch} Validation - Loss: {val_metrics['loss']:.4f}, Perplexity: {val_metrics['perplexity']:.2f}")
+                logger.info(f"Epoch {epoch} Train Perplexity: {train_perplexity:.2f}")
                 
-                # Log to JSON if available
+                # Log to JSON with both train and val perplexity
                 if self.json_logger:
-                    # Check if we're in distributed training
                     is_main_process = True
                     if hasattr(self.trainer, 'accelerator'):
                         is_main_process = self.trainer.accelerator.is_main_process
                     
                     if is_main_process:
+                        epoch_metrics = {
+                            'train_loss': avg_loss,
+                            'train_perplexity': train_perplexity,
+                            'val_loss': val_metrics['loss'],
+                            'val_perplexity': val_metrics['perplexity']
+                        }
+                        if metrics:
+                            epoch_metrics.update(metrics)
+                        
+                        self.json_logger.log_epoch_end(epoch, epoch_metrics)
                         self.json_logger.log_validation(epoch, val_metrics)
                 
                 # Update metrics for callbacks
                 if metrics is None:
                     metrics = {}
                 metrics.update({
+                    'train_perplexity': train_perplexity,
                     'val_loss': val_metrics['loss'],
                     'val_perplexity': val_metrics['perplexity']
                 })
+            else:
+                # No validation, just log train perplexity
+                if self.json_logger:
+                    is_main_process = True
+                    if hasattr(self.trainer, 'accelerator'):
+                        is_main_process = self.trainer.accelerator.is_main_process
+                    
+                    if is_main_process:
+                        epoch_metrics = {
+                            'train_loss': avg_loss,
+                            'train_perplexity': train_perplexity
+                        }
+                        if metrics:
+                            epoch_metrics.update(metrics)
+                        
+                        self.json_logger.log_epoch_end(epoch, epoch_metrics)
         
         def enhanced_trigger_callbacks(event_name: str, *args, **kwargs):
             """Enhanced callbacks with validation metrics."""
-            # For epoch_end events, add validation metrics to logs
+            # Add validation info to callback logs if available
             if event_name == 'on_epoch_end' and len(args) >= 2:
                 epoch = args[0]
                 logs = args[1] if len(args) > 1 else kwargs.get('logs', {})
                 
-                # Add latest validation metrics if available
-                if (validation_metrics['val_losses'] and 
-                    epoch % self.validate_every == 0):
-                    val_idx = (epoch // self.validate_every) - 1
-                    if 0 <= val_idx < len(validation_metrics['val_losses']):
-                        if isinstance(logs, dict):
-                            logs.update({
-                                'val_loss': validation_metrics['val_losses'][val_idx],
-                                'val_perplexity': validation_metrics['val_perplexities'][val_idx]
-                            })
+                if isinstance(logs, dict) and validation_metrics['val_losses']:
+                    logs.update({
+                        'val_loss': validation_metrics['val_losses'][-1],
+                        'val_perplexity': validation_metrics['val_perplexities'][-1]
+                    })
             
             # Call original callbacks
             original_trigger_callbacks(event_name, *args, **kwargs)
         
-        # Replace methods
+        # Replace trainer methods
+        self.trainer.log_batch = enhanced_log_batch
         self.trainer.log_epoch = enhanced_log_epoch
         self.trainer._trigger_callbacks = enhanced_trigger_callbacks
         
@@ -335,17 +423,19 @@ class ValidationTrainerWrapper:
             # Run training
             result = self.trainer.train()
             
-            # Add validation metrics to result
+            # Add validation metrics to final result
             if isinstance(result, dict):
-                result.update(validation_metrics)
-                if validation_metrics['val_losses']:
-                    result['final_val_loss'] = validation_metrics['val_losses'][-1]
-                    result['final_val_perplexity'] = validation_metrics['val_perplexities'][-1]
+                result.update({
+                    'validation_metrics': validation_metrics,
+                    'final_val_loss': validation_metrics['val_losses'][-1] if validation_metrics['val_losses'] else None,
+                    'final_val_perplexity': validation_metrics['val_perplexities'][-1] if validation_metrics['val_perplexities'] else None
+                })
             
             return result
             
         finally:
             # Restore original methods
+            self.trainer.log_batch = original_log_batch
             self.trainer.log_epoch = original_log_epoch
             self.trainer._trigger_callbacks = original_trigger_callbacks
     
