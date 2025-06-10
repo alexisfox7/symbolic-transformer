@@ -145,7 +145,7 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cu
     print(f"🧪 Evaluating: {os.path.basename(checkpoint_path)}")
     
     try:
-        # Load checkpoint and infer correct config
+        # Load checkpoint
         checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
         
         # Find model state dict
@@ -161,21 +161,31 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cu
             global_batch = 0
             train_loss = float('nan')
         
-        # Infer correct model config from checkpoint
-        model_config = infer_config_from_checkpoint(checkpoint_path, base_config)
+        # Simple dimension detection from embedding weights
+        model_config = base_config
+        if 'transformer.wte.weight' in model_state_dict:
+            vocab_size, d_model = model_state_dict['transformer.wte.weight'].shape
+            model_config.vocab_size = vocab_size
+            model_config.d_model = d_model
+            model_config.d_ff = 4 * d_model
+            model_config.n_head = max(1, d_model // 64)
+            print(f"  Using d_model={d_model} from checkpoint")
+        elif 'module.transformer.wte.weight' in model_state_dict:
+            vocab_size, d_model = model_state_dict['module.transformer.wte.weight'].shape
+            model_config.vocab_size = vocab_size
+            model_config.d_model = d_model
+            model_config.d_ff = 4 * d_model
+            model_config.n_head = max(1, d_model // 64)
+            print(f"  Using d_model={d_model} from checkpoint")
         
         # Create model
         is_symbolic = ('symbolic' in checkpoint_path.lower() or 
                       getattr(model_config, 'use_symbolic_ffn', False))
         
-        print(f"  Creating model with d_model={model_config.d_model}, n_layer={model_config.n_layer}")
-        
         if is_symbolic:
             model = get_model("Symbolic", config=model_config).to(device)
         else:
             model = get_model("Vanilla", config=model_config).to(device)
-        
-        print(f"  Created model successfully")
         
         # Load model weights with key fixing
         try:
@@ -188,13 +198,9 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cu
                     new_key = key.replace('module.', '') if key.startswith('module.') else key
                     fixed_state_dict[new_key] = value
                 model.load_state_dict(fixed_state_dict)
-            elif "size mismatch" in str(e):
-                print(f"❌ Model config mismatch: {e}")
-                print(f"💡 Try a different --preset (tiny/small/medium/large)")
-                print(f"💡 Checkpoint vocab_size: {model_config.vocab_size}, d_model: {model_config.d_model}")
-                return None
             else:
-                raise e
+                print(f"❌ Error loading model: {e}")
+                return None
         
         model.eval()
         

@@ -174,12 +174,85 @@ def simple_vocab_analysis(checkpoint_path: str, text: str):
         weight_sum = pos_weights.sum()
         print(f"Weight sum: {weight_sum:.6f} (should be ~1.0)")
         
-        # Check max weight
-        max_weight = pos_weights.max()
-        print(f"Max weight: {max_weight:.6f}")
+        # Now let's check reconstruction quality
+        print(f"\n=== RECONSTRUCTION CHECK ===")
+        print("Comparing ln(ffn(x)) with vocab projected version")
         
-        if max_weight > 0.5:
-            print("⚠️  One token dominates - this might be the issue!")
+        # Get the hidden states just before vocab grounding
+        original_hidden = hidden_states.clone()  # (1, 6, 384)
+        
+        # Apply vocab grounding
+        vocab_projected = model.vocab_grounding(hidden_states)  # (1, 6, 384)
+        
+        print(f"Original hidden shape: {original_hidden.shape}")
+        print(f"Vocab projected shape: {vocab_projected.shape}")
+        
+        # Compare reconstruction quality token by token
+        for pos in range(len(tokens)):
+            token = tokens[pos]
+            
+            orig_vec = original_hidden[0, pos]  # (384,)
+            proj_vec = vocab_projected[0, pos]  # (384,)
+            
+            # Compute reconstruction metrics
+            mse_loss = F.mse_loss(proj_vec, orig_vec)
+            cosine_sim = F.cosine_similarity(orig_vec.unsqueeze(0), proj_vec.unsqueeze(0))
+            l2_norm_orig = torch.norm(orig_vec)
+            l2_norm_proj = torch.norm(proj_vec)
+            
+            print(f"Position {pos} '{token}':")
+            print(f"  MSE Loss: {mse_loss:.6f}")
+            print(f"  Cosine Similarity: {cosine_sim:.6f}")
+            print(f"  L2 Norm - Original: {l2_norm_orig:.6f}, Projected: {l2_norm_proj:.6f}")
+            print(f"  Norm Ratio: {l2_norm_proj/l2_norm_orig:.6f}")
+        
+        # Overall reconstruction quality
+        total_mse = F.mse_loss(vocab_projected, original_hidden)
+        total_cosine = F.cosine_similarity(
+            original_hidden.view(-1, 384), 
+            vocab_projected.view(-1, 384)
+        ).mean()
+        
+        print(f"\n=== OVERALL RECONSTRUCTION ===")
+        print(f"Total MSE: {total_mse:.6f}")
+        print(f"Average Cosine Similarity: {total_cosine:.6f}")
+        
+        # Check if reconstruction is meaningful
+        if total_mse > 1.0:
+            print("⚠️  HIGH MSE: Vocab projection changes representations significantly")
+            print("   This suggests vocab projection might not be preserving semantics")
+        
+        if total_cosine < 0.8:
+            print("⚠️  LOW COSINE SIMILARITY: Projected vectors point in different directions")
+            print("   This suggests vocab projection is not a good reconstruction")
+        
+        if total_cosine > 0.95 and total_mse < 0.1:
+            print("✅ GOOD RECONSTRUCTION: Vocab projection preserves original semantics")
+            print("   The vocabulary decompositions should be meaningful")
+        
+        # Check if vocab projection is just identity
+        identity_check = torch.allclose(original_hidden, vocab_projected, atol=1e-3)
+        if identity_check:
+            print("⚠️  IDENTITY MAPPING: Vocab projection barely changes the input")
+            print("   This suggests the vocab constraint isn't being enforced")
+        
+        # Let's also check what happens if we bypass vocab grounding
+        print(f"\n=== BYPASS CHECK ===")
+        
+        # Get final layer output WITHOUT vocab grounding
+        lm_logits_original = model.lm_head(original_hidden)
+        lm_logits_projected = model.lm_head(vocab_projected)
+        
+        # Compare predictions
+        orig_preds = torch.argmax(lm_logits_original, dim=-1)
+        proj_preds = torch.argmax(lm_logits_projected, dim=-1)
+        
+        print("Predictions - Original vs Vocab Projected:")
+        for pos in range(len(tokens)):
+            orig_pred = tokenizer.decode([orig_preds[0, pos].item()])
+            proj_pred = tokenizer.decode([proj_preds[0, pos].item()])
+            same = "✓" if orig_pred == proj_pred else "✗"
+            print(f"  Position {pos}: '{orig_pred}' vs '{proj_pred}' {same}")
 
 def main():
     simple_vocab_analysis(
