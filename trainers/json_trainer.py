@@ -143,6 +143,10 @@ class JSONLoggingAccelerateTrainer:
                     )
             
             # SIMPLE: Save lightweight checkpoint every N batches
+            # DEBUG: Always check the condition
+            if self.accelerator.is_main_process and self.global_batch_count >= 95:
+                print(f"DEBUG: Batch {self.global_batch_count}, modulo check: {self.global_batch_count} % {self.checkpoint_every_n_batches} = {self.global_batch_count % self.checkpoint_every_n_batches}")
+            
             if self.checkpoint_every_n_batches > 0 and self.global_batch_count % self.checkpoint_every_n_batches == 0:
                 print(f"DEBUG: Triggering checkpoint save at batch {self.global_batch_count}")
                 if self.accelerator.is_main_process:
@@ -288,7 +292,7 @@ def analyze_batch_metrics(metrics_dir):
             batch_losses.append(data['train_loss'])
             batch_perplexities.append(data['train_perplexity'])
             
-            print(f"Batch {data['global_batch']:6d}: Loss={data['train_loss']:.4f}, PPL={data['train_perplexity']:.2f}")
+            print(f"Batch {data['global_batch']:6d}: Loss=s{data['train_loss']:.4f}, PPL={data['train_perplexity']:.2f}")
             
         except Exception as e:
             print(f"Error reading {metrics_file}: {e}")
