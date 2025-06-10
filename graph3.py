@@ -2,17 +2,12 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import networkx as nx
-from collections import defaultdict
-from pathlib import Path
+from collections import defaultdict, Counter
+import matplotlib.pyplot as plt
 
-class SymbolicKnowledgeGraphExtractor:
+class ImprovedSymbolicKGExtractor:
     """
-    Extract knowledge graphs from Symbolic Transformer internal representations.
-    
-    The key insight: Every hidden state x can be written as:
-    x = Σ_{h=1}^H Σ_{i=1}^{|V|} w_{h,i} E_{i,h}
-    
-    The vocab projection FFN gives us these weights w_{h,i} directly!
+    Improved version with better analysis and visualization.
     """
     
     def __init__(self, model, tokenizer=None):
@@ -21,321 +16,244 @@ class SymbolicKnowledgeGraphExtractor:
         self.vocab_size = model.config.vocab_size
         self.n_head = model.config.n_head
         self.n_layer = model.config.n_layer
-        
-        # Storage for extracted weights
-        self.vocab_weights = []  # List of [layer][head] -> (B, T, vocab_size)
-        self.attention_weights = []  # List of attention patterns
-        
-    def extract_vocab_weights(self, input_ids, return_attention=True):
-        """
-        Extract vocabulary mixture weights from all layers.
-        These weights show which vocab tokens are 'active' at each position.
-        """
         self.vocab_weights = []
         self.attention_weights = []
         
-        # Hook to capture vocabulary attention weights from VocabularyProjectionFFN
+        # Create a simple token mapping for display
+        self.token_map = {i: f"tok_{i}" for i in range(self.vocab_size)}
+        
+    def extract_detailed_vocab_weights(self, input_ids):
+        """Extract vocabulary weights with detailed analysis."""
+        self.vocab_weights = []
+        layer_stats = []
+        
         def vocab_hook(module, input, output):
             if hasattr(module, 'channel_vocab_attentions'):
-                # Extract the vocab weights computed during forward pass
-                x = input[0]  # (B, T, n_embd)
+                x = input[0]
                 B, T, C = x.shape
                 x_channels = x.view(B, T, module.n_head, module.head_dim)
                 
                 layer_weights = []
+                layer_entropies = []
+                layer_top_tokens = []
+                
                 for h in range(module.n_head):
                     x_h = x_channels[:, :, h, :]
                     ffn_h = module.channel_ffns[h](x_h)
                     vocab_logits_h = module.channel_vocab_attentions[h](ffn_h)
                     temp_h = torch.clamp(module.channel_temperatures[h], min=0.1)
                     vocab_weights_h = F.softmax(vocab_logits_h / temp_h, dim=-1)
+                    
                     layer_weights.append(vocab_weights_h.detach())
+                    
+                    # Calculate entropy (measure of distribution sharpness)
+                    entropy = -torch.sum(vocab_weights_h * torch.log(vocab_weights_h + 1e-10), dim=-1)
+                    layer_entropies.append(entropy.mean().item())
+                    
+                    # Find most active tokens
+                    top_weights, top_indices = torch.topk(vocab_weights_h.mean(dim=(0,1)), k=10)
+                    layer_top_tokens.append(list(zip(top_indices.tolist(), top_weights.tolist())))
                 
                 self.vocab_weights.append(layer_weights)
-        
-        # Hook to capture attention patterns
-        def attention_hook(module, input, output):
-            if hasattr(module, 'attn_weights') and module.attn_weights is not None:
-                self.attention_weights.append(module.attn_weights.detach())
+                layer_stats.append({
+                    'entropies': layer_entropies,
+                    'top_tokens': layer_top_tokens,
+                    'temp_values': [module.channel_temperatures[h].item() for h in range(module.n_head)]
+                })
         
         # Register hooks
-        vocab_handles = []
-        attn_handles = []
-        
-        for layer_idx, layer in enumerate(self.model.transformer.h):
+        handles = []
+        for layer in self.model.transformer.h:
             if hasattr(layer, 'ffn'):
                 handle = layer.ffn.register_forward_hook(vocab_hook)
-                vocab_handles.append(handle)
-            
-            if return_attention and hasattr(layer, 'attn'):
-                handle = layer.attn.register_forward_hook(attention_hook)
-                attn_handles.append(handle)
+                handles.append(handle)
         
-        # Forward pass
         with torch.no_grad():
             output = self.model(input_ids)
         
-        # Remove hooks
-        for handle in vocab_handles + attn_handles:
+        for handle in handles:
             handle.remove()
         
-        return self.vocab_weights, self.attention_weights
+        return layer_stats
     
-    def build_token_cooccurrence_graph(self, threshold=0.1, layer=None):
-        """
-        Build graph where edges connect tokens that co-occur with high weights
-        at the same positions. This captures conceptual relationships.
-        """
+    def analyze_layer_evolution(self):
+        """Analyze how token representations evolve across layers."""
         if not self.vocab_weights:
-            raise ValueError("Must call extract_vocab_weights first")
+            raise ValueError("Must extract weights first")
+        
+        print("\n=== LAYER-BY-LAYER EVOLUTION ===")
+        
+        for layer_idx, layer_weights in enumerate(self.vocab_weights):
+            print(f"\nLayer {layer_idx}:")
+            
+            for head_idx, head_weights in enumerate(layer_weights):
+                B, T, V = head_weights.shape
+                
+                # Calculate statistics
+                mean_weights = head_weights.mean(dim=(0,1))  # Average across batch and time
+                max_weight = mean_weights.max().item()
+                entropy = -torch.sum(mean_weights * torch.log(mean_weights + 1e-10)).item()
+                
+                # Find top tokens
+                top_k = 5
+                top_values, top_indices = torch.topk(mean_weights, top_k)
+                
+                print(f"  Head {head_idx}: max_weight={max_weight:.3f}, entropy={entropy:.2f}")
+                print(f"    Top tokens: {[(idx.item(), val.item()) for idx, val in zip(top_indices, top_values)]}")
+    
+    def build_semantic_graph(self, threshold=0.05, min_weight=0.01):
+        """Build graph with better semantic analysis."""
+        if not self.vocab_weights:
+            raise ValueError("Must extract weights first")
         
         G = nx.Graph()
+        token_activations = defaultdict(float)  # Track how often each token is active
         
-        # Select layers to analyze
-        layers_to_analyze = [layer] if layer is not None else range(len(self.vocab_weights))
-        
-        for layer_idx in layers_to_analyze:
-            layer_weights = self.vocab_weights[layer_idx]  # List of head weights
-            
+        for layer_idx, layer_weights in enumerate(self.vocab_weights):
             for head_idx, head_weights in enumerate(layer_weights):
-                B, T, V = head_weights.shape
-                
-                for batch in range(B):
-                    for pos in range(T):
-                        # Get active tokens at this position (above threshold)
-                        weights = head_weights[batch, pos]  # (vocab_size,)
-                        active_tokens = torch.where(weights > threshold)[0]
-                        
-                        # Add edges between co-occurring tokens
-                        for i, token_i in enumerate(active_tokens):
-                            for token_j in active_tokens[i+1:]:
-                                weight = min(weights[token_i], weights[token_j]).item()
-                                
-                                if G.has_edge(token_i.item(), token_j.item()):
-                                    G[token_i.item()][token_j.item()]['weight'] += weight
-                                else:
-                                    G.add_edge(token_i.item(), token_j.item(), 
-                                             weight=weight, 
-                                             layer=layer_idx, 
-                                             head=head_idx)
-        
-        return G
-    
-    def build_attention_flow_graph(self, threshold=0.1):
-        """
-        Build graph where edges represent attention flow between tokens.
-        This captures which tokens the model thinks are related.
-        """
-        if not self.attention_weights:
-            raise ValueError("Must call extract_vocab_weights with return_attention=True first")
-        
-        G = nx.DiGraph()  # Directed graph for attention flow
-        
-        for layer_idx, attn_weights in enumerate(self.attention_weights):
-            B, H, T, T_key = attn_weights.shape
-            
-            # For each head
-            for head in range(H):
-                for batch in range(B):
-                    attn_matrix = attn_weights[batch, head]  # (T, T)
-                    
-                    # Find high-attention connections
-                    high_attn = torch.where(attn_matrix > threshold)
-                    
-                    for i, j in zip(high_attn[0], high_attn[1]):
-                        if i != j:  # Skip self-attention
-                            weight = attn_matrix[i, j].item()
-                            
-                            # Note: In real implementation, you'd want to map positions back to tokens
-                            # For now, using position indices
-                            if G.has_edge(i.item(), j.item()):
-                                G[i.item()][j.item()]['weight'] += weight
-                            else:
-                                G.add_edge(i.item(), j.item(), 
-                                         weight=weight, 
-                                         layer=layer_idx, 
-                                         head=head)
-        
-        return G
-    
-    def extract_layer_abstractions(self, text_input, top_k=10):
-        """
-        Show how token representations evolve across layers.
-        Higher layers should show more abstract relationships.
-        """
-        # Tokenize input (you'll need to implement this with your tokenizer)
-        if isinstance(text_input, str):
-            # For demo, using random tokens - replace with actual tokenization
-            input_ids = torch.randint(0, self.vocab_size, (1, len(text_input.split())))
-        else:
-            input_ids = text_input
-        
-        vocab_weights, _ = self.extract_vocab_weights(input_ids, return_attention=False)
-        
-        abstractions = {}
-        
-        for layer_idx, layer_weights in enumerate(vocab_weights):
-            layer_abstractions = []
-            
-            for head_idx, head_weights in enumerate(layer_weights):
-                B, T, V = head_weights.shape
-                
-                # For each position, find top-k active tokens
-                for pos in range(T):
-                    weights = head_weights[0, pos]  # Assuming batch size 1
-                    top_indices = torch.topk(weights, top_k).indices
-                    top_weights = weights[top_indices]
-                    
-                    active_tokens = [(idx.item(), weight.item()) 
-                                   for idx, weight in zip(top_indices, top_weights)]
-                    
-                    layer_abstractions.append({
-                        'position': pos,
-                        'head': head_idx,
-                        'active_tokens': active_tokens
-                    })
-            
-            abstractions[f'layer_{layer_idx}'] = layer_abstractions
-        
-        return abstractions
-    
-    def find_semantic_clusters(self, threshold=0.15, min_cluster_size=3):
-        """
-        Find clusters of tokens that frequently co-occur across positions.
-        These likely represent semantic concepts.
-        """
-        if not self.vocab_weights:
-            raise ValueError("Must call extract_vocab_weights first")
-        
-        # Count co-occurrences across all positions and layers
-        cooccurrence_counts = defaultdict(int)
-        
-        for layer_weights in self.vocab_weights:
-            for head_weights in layer_weights:
                 B, T, V = head_weights.shape
                 
                 for batch in range(B):
                     for pos in range(T):
                         weights = head_weights[batch, pos]
+                        
+                        # Track token activations
+                        for token_id, weight in enumerate(weights):
+                            if weight > min_weight:
+                                token_activations[token_id] += weight.item()
+                        
+                        # Find co-occurring tokens
                         active_tokens = torch.where(weights > threshold)[0]
                         
-                        # Count pairs
-                        for i, token_i in enumerate(active_tokens):
-                            for token_j in active_tokens[i+1:]:
-                                pair = tuple(sorted([token_i.item(), token_j.item()]))
-                                cooccurrence_counts[pair] += 1
+                        if len(active_tokens) > 1:
+                            for i, token_i in enumerate(active_tokens):
+                                for token_j in active_tokens[i+1:]:
+                                    weight_i = weights[token_i].item()
+                                    weight_j = weights[token_j].item()
+                                    edge_weight = min(weight_i, weight_j)
+                                    
+                                    if G.has_edge(token_i.item(), token_j.item()):
+                                        G[token_i.item()][token_j.item()]['weight'] += edge_weight
+                                        G[token_i.item()][token_j.item()]['count'] += 1
+                                    else:
+                                        G.add_edge(token_i.item(), token_j.item(), 
+                                                 weight=edge_weight, count=1,
+                                                 layer=layer_idx, head=head_idx)
         
-        # Build similarity matrix
-        all_tokens = set()
-        for pair in cooccurrence_counts:
-            all_tokens.update(pair)
+        # Add node attributes
+        for node in G.nodes():
+            G.nodes[node]['activation'] = token_activations[node]
+            G.nodes[node]['token_name'] = self.token_map[node]
         
-        token_list = sorted(all_tokens)
-        n_tokens = len(token_list)
-        similarity_matrix = np.zeros((n_tokens, n_tokens))
+        return G, token_activations
+    
+    def find_token_clusters(self, G, min_cluster_size=3):
+        """Find clusters using graph community detection."""
+        if G.number_of_edges() == 0:
+            return []
         
-        for (token_i, token_j), count in cooccurrence_counts.items():
-            i = token_list.index(token_i)
-            j = token_list.index(token_j)
-            similarity_matrix[i, j] = count
-            similarity_matrix[j, i] = count
-        
-        # Simple clustering (in practice, you'd use more sophisticated methods)
+        # Use simple connected components as clusters
         clusters = []
-        visited = set()
+        for component in nx.connected_components(G):
+            if len(component) >= min_cluster_size:
+                # Calculate cluster strength
+                subgraph = G.subgraph(component)
+                total_weight = sum([data['weight'] for _, _, data in subgraph.edges(data=True)])
+                clusters.append({
+                    'tokens': list(component),
+                    'size': len(component),
+                    'weight': total_weight,
+                    'density': subgraph.number_of_edges() / (len(component) * (len(component) - 1) / 2)
+                })
         
-        for i, token in enumerate(token_list):
-            if token in visited:
-                continue
-            
-            # Find connected tokens
-            cluster = [token]
-            to_visit = [i]
-            
-            while to_visit:
-                current_idx = to_visit.pop()
-                current_token = token_list[current_idx]
-                
-                if current_token in visited:
-                    continue
-                visited.add(current_token)
-                
-                # Find similar tokens
-                similarities = similarity_matrix[current_idx]
-                similar_indices = np.where(similarities > min_cluster_size)[0]
-                
-                for sim_idx in similar_indices:
-                    sim_token = token_list[sim_idx]
-                    if sim_token not in visited and sim_token not in cluster:
-                        cluster.append(sim_token)
-                        to_visit.append(sim_idx)
-            
-            if len(cluster) >= min_cluster_size:
-                clusters.append(cluster)
-        
+        # Sort by cluster strength
+        clusters.sort(key=lambda x: x['weight'], reverse=True)
         return clusters
+    
+    def visualize_top_relationships(self, G, top_k=20):
+        """Show the strongest token relationships."""
+        if G.number_of_edges() == 0:
+            print("No edges in graph to visualize")
+            return
+        
+        # Get top edges by weight
+        edges_by_weight = [(u, v, data['weight']) for u, v, data in G.edges(data=True)]
+        edges_by_weight.sort(key=lambda x: x[2], reverse=True)
+        
+        print(f"\n=== TOP {top_k} TOKEN RELATIONSHIPS ===")
+        for i, (token1, token2, weight) in enumerate(edges_by_weight[:top_k]):
+            count = G[token1][token2]['count']
+            print(f"{i+1:2d}. Token {token1} <-> Token {token2}: weight={weight:.4f}, count={count}")
+    
+    def analyze_token_importance(self, token_activations, top_k=20):
+        """Analyze which tokens are most important overall."""
+        sorted_tokens = sorted(token_activations.items(), key=lambda x: x[1], reverse=True)
+        
+        print(f"\n=== TOP {top_k} MOST ACTIVE TOKENS ===")
+        for i, (token_id, activation) in enumerate(sorted_tokens[:top_k]):
+            print(f"{i+1:2d}. Token {token_id}: activation={activation:.4f}")
+    
+    def comprehensive_analysis(self, input_ids):
+        """Run complete analysis."""
+        print("🔍 COMPREHENSIVE SYMBOLIC TRANSFORMER ANALYSIS")
+        print("=" * 60)
+        
+        # Extract weights with detailed stats
+        layer_stats = self.extract_detailed_vocab_weights(input_ids)
+        
+        # Analyze layer evolution
+        self.analyze_layer_evolution()
+        
+        # Build semantic graph
+        G, token_activations = self.build_semantic_graph(threshold=0.05)
+        
+        print(f"\n=== GRAPH STATISTICS ===")
+        print(f"Nodes: {G.number_of_nodes()}")
+        print(f"Edges: {G.number_of_edges()}")
+        print(f"Avg degree: {2 * G.number_of_edges() / G.number_of_nodes():.2f}")
+        
+        # Find clusters
+        clusters = self.find_token_clusters(G)
+        print(f"\n=== FOUND {len(clusters)} CLUSTERS ===")
+        for i, cluster in enumerate(clusters[:5]):  # Show top 5
+            print(f"Cluster {i+1}: {cluster['size']} tokens, weight={cluster['weight']:.3f}, density={cluster['density']:.3f}")
+            print(f"  Tokens: {cluster['tokens'][:10]}...")  # Show first 10 tokens
+        
+        # Show top relationships
+        self.visualize_top_relationships(G)
+        
+        # Show most important tokens
+        self.analyze_token_importance(token_activations)
+        
+        return {
+            'graph': G,
+            'clusters': clusters,
+            'token_activations': token_activations,
+            'layer_stats': layer_stats
+        }
 
-def analyze_symbolic_transformer(model, text_samples=None):
-    """
-    Complete analysis of Symbolic Transformer knowledge representation.
-    """
-    extractor = SymbolicKnowledgeGraphExtractor(model)
+def run_improved_analysis(model):
+    """Run the improved analysis."""
+    extractor = ImprovedSymbolicKGExtractor(model)
     
-    print("=== SYMBOLIC TRANSFORMER KNOWLEDGE GRAPH ANALYSIS ===\n")
+    # Create sample inputs
+    sample_inputs = [torch.randint(0, model.config.vocab_size, (1, 15)) for _ in range(2)]
     
-    # Sample inputs for analysis
-    if text_samples is None:
-        # Use random token sequences for demo
-        sample_inputs = [torch.randint(0, model.config.vocab_size, (1, 10)) for _ in range(3)]
-    else:
-        # Convert text to token ids (implement tokenization)
-        sample_inputs = [torch.randint(0, model.config.vocab_size, (1, len(text.split()))) 
-                        for text in text_samples]
-    
-    all_graphs = []
+    all_results = []
     
     for i, input_ids in enumerate(sample_inputs):
-        print(f"--- Analyzing Sample {i+1} ---")
+        print(f"\n{'='*60}")
+        print(f"ANALYZING SAMPLE {i+1}")
+        print(f"{'='*60}")
         
-        # Extract vocabulary weights
-        vocab_weights, attention_weights = extractor.extract_vocab_weights(input_ids)
-        
-        print(f"Extracted weights from {len(vocab_weights)} layers")
-        print(f"Captured {len(attention_weights)} attention patterns")
-        
-        # Build co-occurrence graph
-        cooccur_graph = extractor.build_token_cooccurrence_graph(threshold=0.1)
-        print(f"Co-occurrence graph: {cooccur_graph.number_of_nodes()} nodes, {cooccur_graph.number_of_edges()} edges")
-        
-        # Build attention flow graph  
-        if attention_weights:
-            attention_graph = extractor.build_attention_flow_graph(threshold=0.1)
-            print(f"Attention flow graph: {attention_graph.number_of_nodes()} nodes, {attention_graph.number_of_edges()} edges")
-        
-        # Extract layer abstractions
-        abstractions = extractor.extract_layer_abstractions(input_ids)
-        print(f"Layer abstractions extracted for {len(abstractions)} layers")
-        
-        all_graphs.append({
-            'cooccurrence': cooccur_graph,
-            'attention': attention_graph if attention_weights else None,
-            'abstractions': abstractions
-        })
-        
-        print()
+        results = extractor.comprehensive_analysis(input_ids)
+        all_results.append(results)
     
-    # Find semantic clusters across all samples
-    print("--- Finding Semantic Clusters ---")
-    clusters = extractor.find_semantic_clusters(threshold=0.1)
-    print(f"Found {len(clusters)} semantic clusters:")
-    for i, cluster in enumerate(clusters):
-        print(f"  Cluster {i+1}: {cluster[:10]}...")  # Show first 10 tokens
-    
-    return extractor, all_graphs
+    return extractor, all_results
 
-# Usage example
+# Usage
 if __name__ == "__main__":
-    # Load your model using check.py logic
+    # Load your model (using the same loading code as before)
     import sys
     import os
     
@@ -350,119 +268,50 @@ if __name__ == "__main__":
     checkpoint_path = "outputs/sym_4gpu_final/checkpoint_epoch_4.pt"
     
     print(f"Loading checkpoint: {checkpoint_path}")
-    
-    # Load checkpoint
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     
-    print(f"Checkpoint keys: {list(checkpoint.keys())}")
-    
-    # Check checkpoint structure like check.py does
+    # Same loading logic as before...
     first_key = list(checkpoint.keys())[0] if checkpoint else ""
     
     if first_key.startswith('module.'):
-        # Checkpoint IS the model state dict
-        print("✅ Checkpoint is model state dict (starts with 'module.')")
         model_state_dict = checkpoint
         
-        # Auto-detect config from checkpoint weights
         if 'module.transformer.wte.weight' in model_state_dict:
             n_embd = model_state_dict['module.transformer.wte.weight'].shape[1]
             vocab_size = model_state_dict['module.transformer.wte.weight'].shape[0]
         elif 'transformer.wte.weight' in model_state_dict:
             n_embd = model_state_dict['transformer.wte.weight'].shape[1] 
             vocab_size = model_state_dict['transformer.wte.weight'].shape[0]
-        else:
-            print("❌ Could not find embedding weights to infer config")
-            sys.exit(1)
         
-        print(f"📊 Detected n_embd: {n_embd}, vocab_size: {vocab_size}")
-        
-        # Map to preset config
-        if n_embd == 128:
-            preset = 'tiny'
+        if n_embd == 384:
+            preset = 'medium'
         elif n_embd == 192:
             preset = 'small'
-        elif n_embd == 384:
-            preset = 'medium'
-        elif n_embd == 768:
-            preset = 'large'
         else:
-            print(f"Unknown embedding size {n_embd}, using medium as fallback")
             preset = 'medium'
         
         config = get_preset_config(preset)
         config.vocab_size = vocab_size
         config.n_embd = n_embd
         
-        # Remove 'module.' prefix
         fixed_state_dict = {}
         for key, value in model_state_dict.items():
             new_key = key.replace('module.', '') if key.startswith('module.') else key
             fixed_state_dict[new_key] = value
         
         model_state_dict = fixed_state_dict
-        
-    else:
-        # Normal checkpoint format
-        model_state_key = None
-        for key in ['model_state_dict', 'model', 'state_dict']:
-            if key in checkpoint:
-                model_state_key = key
-                break
-        
-        if model_state_key is None:
-            print(f"❌ No model state dict found. Available keys: {list(checkpoint.keys())}")
-            sys.exit(1)
-        
-        print(f"✅ Found model state at key: '{model_state_key}'")
-        model_state_dict = checkpoint[model_state_key]
-        
-        # Get config from checkpoint if available
-        if 'config' in checkpoint:
-            config = checkpoint['config']
-        else:
-            # Infer config from weights
-            if 'transformer.wte.weight' in model_state_dict:
-                n_embd = model_state_dict['transformer.wte.weight'].shape[1]
-                vocab_size = model_state_dict['transformer.wte.weight'].shape[0]
-                
-                # Map to preset
-                if n_embd == 384:
-                    config = get_preset_config('medium')
-                elif n_embd == 192:
-                    config = get_preset_config('small')
-                else:
-                    config = get_preset_config('medium')
-                
-                config.vocab_size = vocab_size
-                config.n_embd = n_embd
-            else:
-                print("❌ Could not infer config")
-                sys.exit(1)
     
-    # Create model
-    is_symbolic = getattr(config, 'use_symbolic_ffn', True)
-    if is_symbolic:
-        model = get_model("Symbolic", config=config)
-    else:
-        model = get_model("Vanilla", config=config)
-    
-    # Load weights
-    try:
-        model.load_state_dict(model_state_dict)
-        print("✅ Model loaded successfully")
-    except RuntimeError as e:
-        print(f"❌ Model loading error: {e}")
-        sys.exit(1)
-    
+    model = get_model("Symbolic", config=config)
+    model.load_state_dict(model_state_dict)
     model.eval()
     
-    # Run analysis
-    extractor, graphs = analyze_symbolic_transformer(model)
+    print("✅ Model loaded successfully")
     
-    print("\n=== KNOWLEDGE GRAPH EXTRACTION COMPLETE ===")
-    print("✓ Vocabulary mixture weights extracted")
-    print("✓ Token co-occurrence graphs built")
-    print("✓ Attention flow patterns captured")
-    print("✓ Layer-wise abstractions analyzed")
-    print("✓ Semantic clusters identified")
+    # Run improved analysis
+    extractor, results = run_improved_analysis(model)
+    
+    print("\n" + "="*60)
+    print("✅ ANALYSIS COMPLETE!")
+    print("✅ Vocabulary mixture weights extracted and analyzed")
+    print("✅ Token relationships and clusters identified")
+    print("✅ Layer evolution patterns analyzed")

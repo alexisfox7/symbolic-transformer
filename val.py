@@ -12,6 +12,7 @@ from pathlib import Path
 import argparse
 import math
 from tqdm import tqdm
+import copy
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -75,71 +76,6 @@ def load_validation_data(dataset_name, tokenizer, max_samples, block_size, batch
     print(f"✅ Validation data: {len(val_dataloader)} batches, {len(val_dataset)} samples")
     return val_dataloader, tokenizer
 
-def infer_config_from_checkpoint(checkpoint_path, base_config):
-    """Infer model configuration from checkpoint dimensions."""
-    try:
-        checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
-        
-        # Find model state dict
-        if 'model_state_dict' in checkpoint:
-            state_dict = checkpoint['model_state_dict']
-        else:
-            state_dict = checkpoint
-            
-        # Remove 'module.' prefix if present
-        clean_state_dict = {}
-        for key, value in state_dict.items():
-            new_key = key.replace('module.', '') if key.startswith('module.') else key
-            clean_state_dict[new_key] = value
-        
-        # Create a copy of the base config to avoid modifying the original
-        import copy
-        config = copy.deepcopy(base_config)
-        
-        # Get dimensions from attention weights (most reliable)
-        for key, tensor in clean_state_dict.items():
-            if 'attn.c_attn.weight' in key:
-                # c_attn projects to 3 * d_model (q, k, v)
-                out_features, in_features = tensor.shape
-                d_model = in_features  # input features = d_model
-                
-                config.d_model = d_model
-                config.d_ff = 4 * d_model  # Standard transformer ratio
-                
-                # Infer n_head (usually d_model // 64, but check if it divides evenly)
-                for head_size in [64, 32, 128, 16]:
-                    if d_model % head_size == 0:
-                        config.n_head = d_model // head_size
-                        break
-                
-                print(f"  Detected d_model={d_model}, n_head={config.n_head}")
-                break
-        
-        # Get vocab size from embedding layer
-        if 'transformer.wte.weight' in clean_state_dict:
-            vocab_size, _ = clean_state_dict['transformer.wte.weight'].shape
-            config.vocab_size = vocab_size
-            print(f"  Detected vocab_size={vocab_size}")
-        
-        # Get number of layers by counting
-        layer_count = 0
-        for key in clean_state_dict.keys():
-            if 'transformer.h.' in key:
-                layer_num = int(key.split('transformer.h.')[1].split('.')[0])
-                layer_count = max(layer_count, layer_num + 1)
-        
-        if layer_count > 0:
-            config.n_layer = layer_count
-            print(f"  Detected n_layer={layer_count}")
-        
-        print(f"  Final config: d_model={config.d_model}, n_layer={config.n_layer}, n_head={config.n_head}, vocab_size={config.vocab_size}")
-        
-        return config
-        
-    except Exception as e:
-        print(f"  Warning: Could not infer config from checkpoint: {e}")
-        return base_config
-
 def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cuda'):
     """Evaluate a single checkpoint on validation data."""
     print(f"🧪 Evaluating: {os.path.basename(checkpoint_path)}")
@@ -160,32 +96,51 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cu
             global_batch = 0
             train_loss = float('nan')
         
-        # Simple fix: detect dimensions directly from weights
-        import copy
-        model_config = copy.deepcopy(base_config)
-        
-        # Clean up module prefix if present
+        # Clean up module prefix if present FIRST
         clean_state_dict = {}
         for key, value in model_state_dict.items():
             new_key = key.replace('module.', '') if key.startswith('module.') else key
             clean_state_dict[new_key] = value
         
-        # Get dimensions from embedding layer
+        # Create fresh config and detect ALL dimensions from checkpoint
+        model_config = copy.deepcopy(base_config)
+        
+        # CRITICAL: Get actual dimensions from checkpoint weights
         if 'transformer.wte.weight' in clean_state_dict:
             vocab_size, d_model = clean_state_dict['transformer.wte.weight'].shape
-            model_config.vocab_size = vocab_size
-            model_config.d_model = d_model
-            model_config.d_ff = 4 * d_model
-            model_config.n_head = d_model // 64  # Standard 64-dim heads
-            print(f"  Detected: d_model={d_model}, vocab_size={vocab_size}")
+            print(f"  Found embedding: vocab_size={vocab_size}, d_model={d_model}")
+        else:
+            raise ValueError("No transformer.wte.weight found in checkpoint")
         
-        # Count layers
-        max_layer = 0
+        # Count layers by finding highest layer number
+        max_layer = -1
         for key in clean_state_dict.keys():
             if 'transformer.h.' in key:
                 layer_num = int(key.split('transformer.h.')[1].split('.')[0])
                 max_layer = max(max_layer, layer_num)
-        model_config.n_layer = max_layer + 1
+        n_layer = max_layer + 1
+        
+        # Get head count from attention weights
+        n_head = d_model // 64  # Default
+        for key in clean_state_dict.keys():
+            if 'attn.c_attn.weight' in key:
+                out_features, in_features = clean_state_dict[key].shape
+                # c_attn projects to 3*d_model for q,k,v
+                if out_features == 3 * d_model:
+                    n_head = d_model // 64
+                    break
+        
+        # FORCE the config to use detected dimensions
+        # Set BOTH d_model and n_embd since different models might use either
+        model_config.vocab_size = vocab_size
+        model_config.d_model = d_model
+        model_config.n_embd = d_model  # This is the key fix!
+        model_config.d_ff = 4 * d_model
+        model_config.n_head = n_head
+        model_config.n_layer = n_layer
+        model_config.block_size = getattr(model_config, 'block_size', 1024)
+        
+        print(f"  Using config: d_model={model_config.d_model}, n_embd={model_config.n_embd}, n_layer={model_config.n_layer}, n_head={model_config.n_head}")
         
         # Create model (check if symbolic or vanilla)
         is_symbolic = any('symbolic' in key.lower() for key in clean_state_dict.keys()) or \
@@ -196,9 +151,19 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cu
         else:
             model = get_model("Vanilla", config=model_config).to(device)
         
+        print(f"  Created {type(model).__name__} model")
+        
+        # Verify dimensions before loading
+        model_wte_shape = model.transformer.wte.weight.shape
+        checkpoint_wte_shape = clean_state_dict['transformer.wte.weight'].shape
+        
+        if model_wte_shape != checkpoint_wte_shape:
+            raise ValueError(f"Dimension mismatch: model {model_wte_shape} vs checkpoint {checkpoint_wte_shape}")
+        
         # Load weights
-        model.load_state_dict(clean_state_dict)
+        model.load_state_dict(clean_state_dict, strict=True)
         model.eval()
+        print(f"  ✅ Weights loaded successfully")
         
         # Run validation
         total_loss = 0.0
@@ -240,7 +205,6 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cu
 
 def create_validation_graphs(output_dir, dataset_name, max_samples, preset, batch_size, device):
     """Create validation performance graphs from .pt checkpoint files."""
-    
     print(f"📊 Processing .pt files from: {output_dir}")
     
     # Setup model config and validation data
@@ -253,22 +217,34 @@ def create_validation_graphs(output_dir, dataset_name, max_samples, preset, batc
         config.block_size, batch_size
     )
     
-    # Find .pt checkpoint files
-    checkpoint_patterns = ['*.pt', 'checkpoint_*.pt', 'checkpoints/*.pt']
+    # Find .pt checkpoint files in multiple possible locations
+    checkpoint_patterns = [
+        '*.pt', 
+        'checkpoint_*.pt', 
+        'checkpoints/*.pt',
+        'batch_metrics/*.pt',
+        '**/*.pt'  # Recursive search
+    ]
     
     checkpoint_metrics = []
     for pattern in checkpoint_patterns:
         checkpoint_files = list(Path(output_dir).glob(pattern))
         for cp_file in sorted(checkpoint_files):
-            print(f"Processing: {cp_file.name}")
-            metrics = evaluate_checkpoint(str(cp_file), val_dataloader, config, device)
-            if metrics:
-                checkpoint_metrics.append(metrics)
+            if cp_file.is_file() and cp_file.suffix == '.pt':
+                print(f"Processing: {cp_file}")
+                metrics = evaluate_checkpoint(str(cp_file), val_dataloader, config, device)
+                if metrics:
+                    checkpoint_metrics.append(metrics)
     
     print(f"Found {len(checkpoint_metrics)} checkpoint files with validation data")
     
     if not checkpoint_metrics:
         print("❌ No validation data found in checkpoint files")
+        print(f"Searched in: {output_dir}")
+        print("Available files:")
+        for f in Path(output_dir).rglob('*'):
+            if f.is_file():
+                print(f"  {f}")
         return
     
     # Create graphs
@@ -280,45 +256,41 @@ def create_validation_graphs(output_dir, dataset_name, max_samples, preset, batc
     val_losses = [m['val_loss'] for m in checkpoint_metrics if not is_nan(m['val_loss'])]
     
     if epochs and val_losses:
-        axes[0,0].plot(epochs, val_losses, 'bo-', label='Validation Loss')
+        axes[0,0].plot(epochs, val_losses, 'b-o', alpha=0.7)
         axes[0,0].set_xlabel('Epoch')
         axes[0,0].set_ylabel('Validation Loss')
-        axes[0,0].set_title('Validation Loss vs Epoch')
+        axes[0,0].set_title('Validation Loss over Epochs')
         axes[0,0].grid(True)
-        axes[0,0].legend()
     
     # Graph 2: Validation Perplexity over Epochs
-    epochs = [m['epoch'] for m in checkpoint_metrics if not is_nan(m['val_perplexity'])]
-    val_ppls = [m['val_perplexity'] for m in checkpoint_metrics if not is_nan(m['val_perplexity'])]
+    val_ppls = [m['val_perplexity'] for m in checkpoint_metrics if not is_nan(m['val_perplexity']) and m['val_perplexity'] != float('inf')]
     
-    if epochs and val_ppls:
-        axes[0,1].plot(epochs, val_ppls, 'ro-', label='Validation Perplexity')
+    if epochs and val_ppls and len(epochs) == len(val_ppls):
+        axes[0,1].plot(epochs, val_ppls, 'g-o', alpha=0.7)
         axes[0,1].set_xlabel('Epoch')
         axes[0,1].set_ylabel('Validation Perplexity')
-        axes[0,1].set_title('Validation Perplexity vs Epoch')
+        axes[0,1].set_title('Validation Perplexity over Epochs')
         axes[0,1].grid(True)
-        axes[0,1].legend()
     
-    # Graph 3: Validation Loss over Global Batches
-    batches = [m['global_batch'] for m in checkpoint_metrics if not is_nan(m['val_loss']) and m['global_batch'] > 0]
-    val_losses = [m['val_loss'] for m in checkpoint_metrics if not is_nan(m['val_loss']) and m['global_batch'] > 0]
+    # Graph 3: Loss vs Global Batch
+    global_batches = [m['global_batch'] for m in checkpoint_metrics if not is_nan(m['val_loss'])]
     
-    if batches and val_losses:
-        axes[1,0].plot(batches, val_losses, 'go-', label='Validation Loss')
+    if global_batches and val_losses and len(global_batches) == len(val_losses):
+        axes[1,0].plot(global_batches, val_losses, 'r-o', alpha=0.7)
         axes[1,0].set_xlabel('Global Batch')
         axes[1,0].set_ylabel('Validation Loss')
-        axes[1,0].set_title('Validation Loss vs Global Batch')
+        axes[1,0].set_title('Validation Loss vs Training Steps')
         axes[1,0].grid(True)
-        axes[1,0].legend()
     
     # Graph 4: Train vs Validation Loss
     train_losses = [m['train_loss'] for m in checkpoint_metrics if not is_nan(m['train_loss'])]
-    val_losses = [m['val_loss'] for m in checkpoint_metrics if not is_nan(m['val_loss'])]
-    epochs = [m['epoch'] for m in checkpoint_metrics if not is_nan(m['train_loss']) and not is_nan(m['val_loss'])]
+    train_val_epochs = [m['epoch'] for m in checkpoint_metrics if not is_nan(m['train_loss']) and not is_nan(m['val_loss'])]
+    train_val_train_losses = [m['train_loss'] for m in checkpoint_metrics if not is_nan(m['train_loss']) and not is_nan(m['val_loss'])]
+    train_val_val_losses = [m['val_loss'] for m in checkpoint_metrics if not is_nan(m['train_loss']) and not is_nan(m['val_loss'])]
     
-    if epochs and train_losses and val_losses:
-        axes[1,1].plot(epochs, train_losses, 'b-', label='Train Loss', alpha=0.7)
-        axes[1,1].plot(epochs, val_losses, 'r-', label='Validation Loss', alpha=0.7)
+    if train_val_epochs and train_val_train_losses and train_val_val_losses:
+        axes[1,1].plot(train_val_epochs, train_val_train_losses, 'b-', label='Train Loss', alpha=0.7)
+        axes[1,1].plot(train_val_epochs, train_val_val_losses, 'r-', label='Validation Loss', alpha=0.7)
         axes[1,1].set_xlabel('Epoch')
         axes[1,1].set_ylabel('Loss')
         axes[1,1].set_title('Train vs Validation Loss')
