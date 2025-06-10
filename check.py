@@ -73,11 +73,15 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, model_config, device='c
         checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
         
         # Create model
-        if 'symbolic' in checkpoint_path.lower() or model_config.get('use_symbolic_ffn', False):
+        # CHANGE THIS
+        # TO THIS:
+        is_symbolic = ('symbolic' in checkpoint_path.lower() or getattr(model_config, 'use_symbolic_ffn', False))
+
+        if is_symbolic:
             model = get_model("Symbolic", config=model_config).to(device)
         else:
             model = get_model("Vanilla", config=model_config).to(device)
-        
+                
         # Load model weights
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
