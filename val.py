@@ -148,10 +148,11 @@ def evaluate_checkpoint(checkpoint_path, val_dataloader, base_config, device='cu
         is_symbolic = any('symbolic' in key.lower() for key in clean_state_dict.keys()) or \
                      'symbolic' in checkpoint_path.lower()
         
-        if is_symbolic:
-            model = get_model("Symbolic", config=model_config).to(device)
-        else:
-            model = get_model("Vanilla", config=model_config).to(device)
+        model = get_model("Symbolic", config=model_config).to(device)
+        # if is_symbolic:
+        #     model = get_model("Symbolic", config=model_config).to(device)
+        # else:
+        #     model = get_model("Vanilla", config=model_config).to(device)
         
         print(f"  Created {type(model).__name__} model")
         
