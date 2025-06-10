@@ -95,7 +95,7 @@ class JSONLoggingAccelerateTrainer:
                 self.json_logger.log_validation(
                     epoch=epoch,
                     metrics={
-                        'global_batch': global_batch,
+                        'step': global_batch,
                         'val_loss': avg_loss,
                         'val_perplexity': perplexity,
                         'val_samples': total_samples,
@@ -195,7 +195,7 @@ class JSONLoggingAccelerateTrainer:
             # Print validation check info (use the actual global batch from accelerate trainer)
             current_global_batch = metrics.get('global_batch', self.global_batch_count) if metrics else self.global_batch_count
             remainder = current_global_batch % self.checkpoint_every_n_batches if self.checkpoint_every_n_batches > 0 else -1
-            print(f"📊 Global batch {current_global_batch}, validation check: {current_global_batch} % {self.checkpoint_every_n_batches} = {remainder}")
+            #print(f"📊 Global batch {current_global_batch}, validation check: {current_global_batch} % {self.checkpoint_every_n_batches} = {remainder}")
             
             # REPLACED: Run validation instead of saving checkpoints
             if self.checkpoint_every_n_batches > 0 and remainder == 0 and self.val_dataloader is not None:
@@ -244,12 +244,9 @@ class JSONLoggingAccelerateTrainer:
             
             # SIMPLE: Save lightweight checkpoint every N batches
             # Always show when we're close to checkpoints
-            remainder = self.global_batch_count % self.checkpoint_every_n_batches
-            if self.accelerator.is_main_process and remainder <= 2:
-                print(f"DEBUG: Global batch {self.global_batch_count}, remainder = {remainder}, checkpoint interval = {self.checkpoint_every_n_batches}")
             
             if self.checkpoint_every_n_batches > 0 and remainder == 0:
-                print(f"🎯 CHECKPOINT: Triggering save at global batch {self.global_batch_count}")
+                #print(f"🎯 CHECKPOINT: Triggering save at global batch {self.global_batch_count}")
                 if self.accelerator.is_main_process:
                     print(f"📁 Saving to: {self.metrics_save_dir}")
                 else:
