@@ -1,4 +1,4 @@
-def extract_checkpoint_metrics(checkpoint_path):#!/usr/bin/env python
+#!/usr/bin/env python
 """
 Process .pt validation checkpoints and create validation performance graphs.
 Simple implementation for .pt files only.
@@ -16,6 +16,8 @@ def is_nan(x):
     if isinstance(x, (int, float)):
         return math.isnan(x) or x != x
     return False
+
+def extract_checkpoint_metrics(checkpoint_path):
     """Extract validation metrics from a checkpoint file."""
     try:
         checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
@@ -33,8 +35,6 @@ def is_nan(x):
     except Exception as e:
         print(f"Error reading {checkpoint_path}: {e}")
         return None
-
-
 
 def create_validation_graphs(output_dir):
     """Create validation performance graphs from .pt checkpoint files."""
@@ -152,7 +152,6 @@ def main():
     if not os.path.exists(args.output_dir):
         print(f"❌ Directory not found: {args.output_dir}")
         return
-    
     create_validation_graphs(args.output_dir)
 
 if __name__ == "__main__":
