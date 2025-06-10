@@ -319,8 +319,9 @@ def load_checkpoint_for_resumption(checkpoint_path, model, optimizer, device, lo
                 logger.info("Optimizer state loaded successfully")
             
             if 'epoch' in checkpoint:
-                start_epoch = checkpoint['epoch'] + 1
-                logger.info(f"Resuming from epoch {start_epoch}")
+                # FIX: Don't add 1 here, the training script will handle it
+                start_epoch = checkpoint['epoch']
+                logger.info(f"Loaded checkpoint from epoch {start_epoch}")
                 
             if 'loss' in checkpoint:
                 logger.info(f"Checkpoint loss: {checkpoint['loss']:.6f}")
@@ -334,7 +335,6 @@ def load_checkpoint_for_resumption(checkpoint_path, model, optimizer, device, lo
             logger.warning(f"Checkpoint file not found. Starting from scratch.")
     
     return start_epoch
-
 
 def main():
     """Main training function with JSON logging and validation."""
@@ -486,9 +486,10 @@ def main():
     )
     
     # Load checkpoint if resuming
-    start_epoch = load_checkpoint_for_resumption(
+    completed_epochs = load_checkpoint_for_resumption(
         args.resume_from_checkpoint, model, optimizer, device, logger
     )
+    
     
     # Create trainer with JSON logging
     logger.info(f"Setting up {args.trainer_type} trainer...")
@@ -504,7 +505,8 @@ def main():
             clip_grad_norm=args.clip_grad_norm,
             log_interval=args.log_interval,
             val_dataloader=val_dataloader,  # Add this
-            validate_every_n_batches=100   # Add this
+            validate_every_n_batches=100,   # Add this
+            start_epoch=completed_epochs + 1 
         )
     else:
         # Simple trainer fallback
@@ -520,19 +522,9 @@ def main():
             log_interval=args.log_interval
         )
     
-   
-    # Adjust for resumption if needed
-    if start_epoch > 0:
-        remaining_epochs = config.num_epochs - start_epoch
-        if remaining_epochs <= 0:
-            logger.warning(f"No epochs remaining. Already completed {start_epoch} epochs.")
-            return
-        trainer.num_epochs = remaining_epochs
-        logger.info(f"Adjusted training to {remaining_epochs} remaining epochs")
-    
     # Train the model
     logger.info("="*60)
-    logger.info(f"STARTING TRAINING from epoch {start_epoch}")
+    logger.info(f"STARTING TRAINING from epoch {completed_epochs + 1} to {config.num_epochs}")
     logger.info("="*60)
     
     training_result = trainer.train()

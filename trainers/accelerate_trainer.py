@@ -29,7 +29,8 @@ class AccelerateTrainer(BaseTrainer):
                  output_dir: Optional[str] = None,
                  clip_grad_norm: Optional[float] = None,
                  log_interval: int = 10,
-                 callbacks: Optional[List[Callback]] = None):
+                 callbacks: Optional[List[Callback]] = None, 
+                 start_epoch=1):
         
         # Initialize accelerator (no gradient accumulation)
         self.accelerator = Accelerator(
@@ -39,7 +40,7 @@ class AccelerateTrainer(BaseTrainer):
         
         # Use accelerator's device instead of passed device
         super().__init__(model, dataloader, optimizer, self.accelerator.device, output_dir, callbacks)
-        
+        self.start_epoch = start_epoch
         self.num_epochs = num_epochs
         self.clip_grad_norm = clip_grad_norm
         self.log_interval = log_interval
@@ -75,7 +76,7 @@ class AccelerateTrainer(BaseTrainer):
         # Track total batches processed
         global_batch = 0
 
-        for epoch in range(1, self.num_epochs + 1):
+        for epoch in range(self.start_epoch, self.num_epochs + 1):
             self.trainer_state['current_epoch'] = epoch
             self._trigger_callbacks('on_epoch_begin', epoch, logs=self.trainer_state)
             epoch_start_time = time.time()
