@@ -1,317 +1,196 @@
+#!/usr/bin/env python3
+"""
+Quick script to check if V*W_O ≈ Identity in your vanilla transformer.
+Run this first to get a quick answer!
+"""
+
 import torch
-import torch.nn.functional as F
 import numpy as np
-import networkx as nx
-from collections import defaultdict, Counter
-import matplotlib.pyplot as plt
+import os
+import glob
+import sys
 
-class ImprovedSymbolicKGExtractor:
-    """
-    Improved version with better analysis and visualization.
-    """
+def quick_identity_check(checkpoint_path):
+    """Quick check without visualizations - using check.py loading method."""
+    print(f"Loading: {checkpoint_path}")
     
-    def __init__(self, model, tokenizer=None):
-        self.model = model
-        self.tokenizer = tokenizer
-        self.vocab_size = model.config.vocab_size
-        self.n_head = model.config.n_head
-        self.n_layer = model.config.n_layer
-        self.vocab_weights = []
-        self.attention_weights = []
-        
-        # Create a simple token mapping for display
-        self.token_map = {i: f"tok_{i}" for i in range(self.vocab_size)}
-        
-    def extract_detailed_vocab_weights(self, input_ids):
-        """Extract vocabulary weights with detailed analysis."""
-        self.vocab_weights = []
-        layer_stats = []
-        
-        def vocab_hook(module, input, output):
-            if hasattr(module, 'channel_vocab_attentions'):
-                x = input[0]
-                B, T, C = x.shape
-                x_channels = x.view(B, T, module.n_head, module.head_dim)
-                
-                layer_weights = []
-                layer_entropies = []
-                layer_top_tokens = []
-                
-                for h in range(module.n_head):
-                    x_h = x_channels[:, :, h, :]
-                    ffn_h = module.channel_ffns[h](x_h)
-                    vocab_logits_h = module.channel_vocab_attentions[h](ffn_h)
-                    temp_h = torch.clamp(module.channel_temperatures[h], min=0.1)
-                    vocab_weights_h = F.softmax(vocab_logits_h / temp_h, dim=-1)
-                    
-                    layer_weights.append(vocab_weights_h.detach())
-                    
-                    # Calculate entropy (measure of distribution sharpness)
-                    entropy = -torch.sum(vocab_weights_h * torch.log(vocab_weights_h + 1e-10), dim=-1)
-                    layer_entropies.append(entropy.mean().item())
-                    
-                    # Find most active tokens
-                    top_weights, top_indices = torch.topk(vocab_weights_h.mean(dim=(0,1)), k=10)
-                    layer_top_tokens.append(list(zip(top_indices.tolist(), top_weights.tolist())))
-                
-                self.vocab_weights.append(layer_weights)
-                layer_stats.append({
-                    'entropies': layer_entropies,
-                    'top_tokens': layer_top_tokens,
-                    'temp_values': [module.channel_temperatures[h].item() for h in range(module.n_head)]
-                })
-        
-        # Register hooks
-        handles = []
-        for layer in self.model.transformer.h:
-            if hasattr(layer, 'ffn'):
-                handle = layer.ffn.register_forward_hook(vocab_hook)
-                handles.append(handle)
-        
-        with torch.no_grad():
-            output = self.model(input_ids)
-        
-        for handle in handles:
-            handle.remove()
-        
-        return layer_stats
-    
-    def analyze_layer_evolution(self):
-        """Analyze how token representations evolve across layers."""
-        if not self.vocab_weights:
-            raise ValueError("Must extract weights first")
-        
-        print("\n=== LAYER-BY-LAYER EVOLUTION ===")
-        
-        for layer_idx, layer_weights in enumerate(self.vocab_weights):
-            print(f"\nLayer {layer_idx}:")
-            
-            for head_idx, head_weights in enumerate(layer_weights):
-                B, T, V = head_weights.shape
-                
-                # Calculate statistics
-                mean_weights = head_weights.mean(dim=(0,1))  # Average across batch and time
-                max_weight = mean_weights.max().item()
-                entropy = -torch.sum(mean_weights * torch.log(mean_weights + 1e-10)).item()
-                
-                # Find top tokens
-                top_k = 5
-                top_values, top_indices = torch.topk(mean_weights, top_k)
-                
-                print(f"  Head {head_idx}: max_weight={max_weight:.3f}, entropy={entropy:.2f}")
-                print(f"    Top tokens: {[(idx.item(), val.item()) for idx, val in zip(top_indices, top_values)]}")
-    
-    def build_semantic_graph(self, threshold=0.05, min_weight=0.01):
-        """Build graph with better semantic analysis."""
-        if not self.vocab_weights:
-            raise ValueError("Must extract weights first")
-        
-        G = nx.Graph()
-        token_activations = defaultdict(float)  # Track how often each token is active
-        
-        for layer_idx, layer_weights in enumerate(self.vocab_weights):
-            for head_idx, head_weights in enumerate(layer_weights):
-                B, T, V = head_weights.shape
-                
-                for batch in range(B):
-                    for pos in range(T):
-                        weights = head_weights[batch, pos]
-                        
-                        # Track token activations
-                        for token_id, weight in enumerate(weights):
-                            if weight > min_weight:
-                                token_activations[token_id] += weight.item()
-                        
-                        # Find co-occurring tokens
-                        active_tokens = torch.where(weights > threshold)[0]
-                        
-                        if len(active_tokens) > 1:
-                            for i, token_i in enumerate(active_tokens):
-                                for token_j in active_tokens[i+1:]:
-                                    weight_i = weights[token_i].item()
-                                    weight_j = weights[token_j].item()
-                                    edge_weight = min(weight_i, weight_j)
-                                    
-                                    if G.has_edge(token_i.item(), token_j.item()):
-                                        G[token_i.item()][token_j.item()]['weight'] += edge_weight
-                                        G[token_i.item()][token_j.item()]['count'] += 1
-                                    else:
-                                        G.add_edge(token_i.item(), token_j.item(), 
-                                                 weight=edge_weight, count=1,
-                                                 layer=layer_idx, head=head_idx)
-        
-        # Add node attributes
-        for node in G.nodes():
-            G.nodes[node]['activation'] = token_activations[node]
-            G.nodes[node]['token_name'] = self.token_map[node]
-        
-        return G, token_activations
-    
-    def find_token_clusters(self, G, min_cluster_size=3):
-        """Find clusters using graph community detection."""
-        if G.number_of_edges() == 0:
-            return []
-        
-        # Use simple connected components as clusters
-        clusters = []
-        for component in nx.connected_components(G):
-            if len(component) >= min_cluster_size:
-                # Calculate cluster strength
-                subgraph = G.subgraph(component)
-                total_weight = sum([data['weight'] for _, _, data in subgraph.edges(data=True)])
-                clusters.append({
-                    'tokens': list(component),
-                    'size': len(component),
-                    'weight': total_weight,
-                    'density': subgraph.number_of_edges() / (len(component) * (len(component) - 1) / 2)
-                })
-        
-        # Sort by cluster strength
-        clusters.sort(key=lambda x: x['weight'], reverse=True)
-        return clusters
-    
-    def visualize_top_relationships(self, G, top_k=20):
-        """Show the strongest token relationships."""
-        if G.number_of_edges() == 0:
-            print("No edges in graph to visualize")
-            return
-        
-        # Get top edges by weight
-        edges_by_weight = [(u, v, data['weight']) for u, v, data in G.edges(data=True)]
-        edges_by_weight.sort(key=lambda x: x[2], reverse=True)
-        
-        print(f"\n=== TOP {top_k} TOKEN RELATIONSHIPS ===")
-        for i, (token1, token2, weight) in enumerate(edges_by_weight[:top_k]):
-            count = G[token1][token2]['count']
-            print(f"{i+1:2d}. Token {token1} <-> Token {token2}: weight={weight:.4f}, count={count}")
-    
-    def analyze_token_importance(self, token_activations, top_k=20):
-        """Analyze which tokens are most important overall."""
-        sorted_tokens = sorted(token_activations.items(), key=lambda x: x[1], reverse=True)
-        
-        print(f"\n=== TOP {top_k} MOST ACTIVE TOKENS ===")
-        for i, (token_id, activation) in enumerate(sorted_tokens[:top_k]):
-            print(f"{i+1:2d}. Token {token_id}: activation={activation:.4f}")
-    
-    def comprehensive_analysis(self, input_ids):
-        """Run complete analysis."""
-        print("🔍 COMPREHENSIVE SYMBOLIC TRANSFORMER ANALYSIS")
-        print("=" * 60)
-        
-        # Extract weights with detailed stats
-        layer_stats = self.extract_detailed_vocab_weights(input_ids)
-        
-        # Analyze layer evolution
-        self.analyze_layer_evolution()
-        
-        # Build semantic graph
-        G, token_activations = self.build_semantic_graph(threshold=0.05)
-        
-        print(f"\n=== GRAPH STATISTICS ===")
-        print(f"Nodes: {G.number_of_nodes()}")
-        print(f"Edges: {G.number_of_edges()}")
-        print(f"Avg degree: {2 * G.number_of_edges() / G.number_of_nodes():.2f}")
-        
-        # Find clusters
-        clusters = self.find_token_clusters(G)
-        print(f"\n=== FOUND {len(clusters)} CLUSTERS ===")
-        for i, cluster in enumerate(clusters[:5]):  # Show top 5
-            print(f"Cluster {i+1}: {cluster['size']} tokens, weight={cluster['weight']:.3f}, density={cluster['density']:.3f}")
-            print(f"  Tokens: {cluster['tokens'][:10]}...")  # Show first 10 tokens
-        
-        # Show top relationships
-        self.visualize_top_relationships(G)
-        
-        # Show most important tokens
-        self.analyze_token_importance(token_activations)
-        
-        return {
-            'graph': G,
-            'clusters': clusters,
-            'token_activations': token_activations,
-            'layer_stats': layer_stats
-        }
-
-def run_improved_analysis(model):
-    """Run the improved analysis."""
-    extractor = ImprovedSymbolicKGExtractor(model)
-    
-    # Create sample inputs
-    sample_inputs = [torch.randint(0, model.config.vocab_size, (1, 15)) for _ in range(2)]
-    
-    all_results = []
-    
-    for i, input_ids in enumerate(sample_inputs):
-        print(f"\n{'='*60}")
-        print(f"ANALYZING SAMPLE {i+1}")
-        print(f"{'='*60}")
-        
-        results = extractor.comprehensive_analysis(input_ids)
-        all_results.append(results)
-    
-    return extractor, all_results
-
-# Usage
-if __name__ == "__main__":
-    # Load your model (using the same loading code as before)
-    import sys
-    import os
-    
-    # Add parent directory for imports
-    parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
-    
-    from config import get_preset_config
-    from model import get_model
-    
-    checkpoint_path = "outputs/sym_4gpu_final/checkpoint_epoch_4.pt"
-    
-    print(f"Loading checkpoint: {checkpoint_path}")
+    # Load checkpoint using check.py method
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     
-    # Same loading logic as before...
+    # Check if checkpoint IS the model state dict (keys start with 'module.')
     first_key = list(checkpoint.keys())[0] if checkpoint else ""
     
     if first_key.startswith('module.'):
+        # Checkpoint IS the model state dict
+        print("✅ Checkpoint is model state dict directly")
         model_state_dict = checkpoint
+    else:
+        # Normal checkpoint format - find model state dict
+        model_state_key = None
+        possible_keys = ['model_state_dict', 'model', 'state_dict', 'net']
         
-        if 'module.transformer.wte.weight' in model_state_dict:
-            n_embd = model_state_dict['module.transformer.wte.weight'].shape[1]
-            vocab_size = model_state_dict['module.transformer.wte.weight'].shape[0]
-        elif 'transformer.wte.weight' in model_state_dict:
-            n_embd = model_state_dict['transformer.wte.weight'].shape[1] 
-            vocab_size = model_state_dict['transformer.wte.weight'].shape[0]
+        for key in possible_keys:
+            if key in checkpoint:
+                model_state_key = key
+                break
         
-        if n_embd == 384:
-            preset = 'medium'
-        elif n_embd == 192:
-            preset = 'small'
+        if model_state_key is None:
+            print(f"❌ No model state dict found. Available keys: {list(checkpoint.keys())}")
+            return
+        
+        print(f"✅ Found model state at key: '{model_state_key}'")
+        model_state_dict = checkpoint[model_state_key]
+    
+    # Clean keys (remove 'module.' prefix if present)
+    clean_state_dict = {}
+    for key, value in model_state_dict.items():
+        new_key = key.replace('module.', '') if key.startswith('module.') else key
+        clean_state_dict[new_key] = value
+    
+    print(f"🔧 Cleaned {len(clean_state_dict)} parameter keys")
+    
+    # Find model dimensions using check.py method
+    wte_key = None
+    for key in clean_state_dict.keys():
+        if 'wte.weight' in key or 'token_embedding' in key:
+            wte_key = key
+            break
+    
+    if wte_key is None:
+        print("❌ Could not find embedding weights!")
+        return
+    
+    n_embd = clean_state_dict[wte_key].shape[1]
+    vocab_size = clean_state_dict[wte_key].shape[0]
+    
+    # Detect number of heads (check.py style)
+    n_head = 8  # default
+    for head_size in [64, 32, 128, 16]:
+        if n_embd % head_size == 0:
+            n_head = n_embd // head_size
+            break
+    
+    # Count layers
+    layer_count = 0
+    for key in clean_state_dict.keys():
+        if 'transformer.h.' in key:
+            layer_num = int(key.split('transformer.h.')[1].split('.')[0])
+            layer_count = max(layer_count, layer_num + 1)
+    
+    print(f"Model: {layer_count} layers, {n_embd} embedding dim")
+    
+    # Quick analysis of a few layers
+    distances = []
+    diagonal_ratios = []
+    
+    for layer_idx in [0, layer_count//2, layer_count-1]:  # First, middle, last
+        try:
+            # Extract matrices
+            c_attn_weight = clean_state_dict[f'transformer.h.{layer_idx}.attn.c_attn.weight']
+            c_proj_weight = clean_state_dict[f'transformer.h.{layer_idx}.attn.c_proj.weight']
+            
+            # Get V and W_O
+            W_V = c_attn_weight[2*n_embd:3*n_embd, :].T  # V projection
+            W_O = c_proj_weight.T  # Output projection
+            
+            # Compute V * W_O
+            V_W_O = W_V @ W_O
+            
+            # Quick metrics
+            identity = torch.eye(n_embd)
+            frobenius_dist = torch.norm(V_W_O - identity, p='fro').item()
+            normalized_dist = frobenius_dist / torch.norm(identity, p='fro').item()
+            
+            # Diagonal dominance
+            diagonal = torch.diag(V_W_O)
+            off_diagonal = V_W_O[~torch.eye(n_embd, dtype=bool)]
+            diagonal_ratio = torch.abs(diagonal).mean() / (torch.abs(off_diagonal).mean() + 1e-8)
+            
+            distances.append(normalized_dist)
+            diagonal_ratios.append(diagonal_ratio.item())
+            
+            print(f"Layer {layer_idx}: distance={normalized_dist:.3f}, diagonal_ratio={diagonal_ratio:.2f}")
+            
+        except Exception as e:
+            print(f"Error on layer {layer_idx}: {e}")
+    
+    if distances:
+        avg_distance = np.mean(distances)
+        avg_ratio = np.mean(diagonal_ratios)
+        
+        print(f"\\n{'='*50}")
+        print(f"QUICK RESULT:")
+        print(f"Average distance from identity: {avg_distance:.3f}")
+        print(f"Average diagonal dominance: {avg_ratio:.2f}")
+        
+        if avg_distance < 0.5 and avg_ratio > 2.0:
+            print("✅ YES! V*W_O appears close to identity")
+            print("   Your transformer does mostly routing!")
+        elif avg_distance < 1.0:
+            print("⚠️  PARTIALLY - some identity-like behavior")
+            print("   Mixed routing and transformation")
         else:
-            preset = 'medium'
-        
-        config = get_preset_config(preset)
-        config.vocab_size = vocab_size
-        config.n_embd = n_embd
-        
-        fixed_state_dict = {}
-        for key, value in model_state_dict.items():
-            new_key = key.replace('module.', '') if key.startswith('module.') else key
-            fixed_state_dict[new_key] = value
-        
-        model_state_dict = fixed_state_dict
+            print("❌ NO - V*W_O is not identity-like")
+            print("   Your transformer does significant transformation")
+
+def find_checkpoints():
+    """Find potential checkpoint files using check.py patterns."""
+    patterns = [
+        "outputs/*.pt",
+        "outputs/*/*.pt", 
+        "outputs/*/*/*.pt",
+        "checkpoints/*.pt",
+        "*.pt"
+    ]
     
-    model = get_model("Symbolic", config=config)
-    model.load_state_dict(model_state_dict)
-    model.eval()
+    all_checkpoints = []
+    for pattern in patterns:
+        all_checkpoints.extend(glob.glob(pattern))
     
-    print("✅ Model loaded successfully")
+    # Filter out obviously non-model files
+    model_checkpoints = []
+    for cp in all_checkpoints:
+        filename = os.path.basename(cp).lower()
+        # Skip if it looks like optimizer or config files
+        if any(skip in filename for skip in ['optimizer', 'config', 'metadata']):
+            continue
+        model_checkpoints.append(cp)
     
-    # Run improved analysis
-    extractor, results = run_improved_analysis(model)
+    return model_checkpoints
+
+if __name__ == "__main__":
+    print("🔍 Looking for transformer checkpoints...")
     
-    print("\n" + "="*60)
-    print("✅ ANALYSIS COMPLETE!")
-    print("✅ Vocabulary mixture weights extracted and analyzed")
-    print("✅ Token relationships and clusters identified")
-    print("✅ Layer evolution patterns analyzed")
+    # Use command line argument if provided
+    if len(sys.argv) > 1:
+        checkpoint_path = sys.argv[1]
+        if os.path.exists(checkpoint_path):
+            print(f"🎯 Using provided checkpoint: {checkpoint_path}")
+            quick_identity_check(checkpoint_path)
+        else:
+            print(f"❌ Checkpoint not found: {checkpoint_path}")
+        exit()
+    
+    # Otherwise search for checkpoints
+    checkpoints = find_checkpoints()
+    
+    if not checkpoints:
+        print("❌ No .pt files found!")
+        print("Please make sure you have a trained transformer checkpoint.")
+        print("Usage: python quick_check_identity.py <checkpoint_path>")
+        exit(1)
+    
+    print(f"Found {len(checkpoints)} checkpoint(s):")
+    for i, cp in enumerate(checkpoints):
+        print(f"  {i+1}. {cp}")
+    
+    # Try to find vanilla transformer checkpoint
+    vanilla_checkpoints = [cp for cp in checkpoints if 'vanilla' in cp.lower()]
+    
+    if vanilla_checkpoints:
+        print(f"\\n🎯 Found vanilla checkpoint: {vanilla_checkpoints[0]}")
+        quick_identity_check(vanilla_checkpoints[0])
+    else:
+        print(f"\\n🤔 No obvious vanilla checkpoint found.")
+        print(f"Trying first checkpoint: {checkpoints[0]}")
+        quick_identity_check(checkpoints[0])

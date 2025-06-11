@@ -391,7 +391,7 @@ class SymbolicCausalSelfAttentionALiBi(nn.Module):
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         
         # Apply output projection
-        if self.use_proj:
+        if self.use_proj: 
             # Use structured Kronecker-lifted projection
             proj_matrix = self._get_kronecker_lifted_tensor(self.proj_tmp)
             y_flat = y.view(-1, C)
