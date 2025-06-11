@@ -1,18 +1,150 @@
 #!/usr/bin/env python3
 """
-Quick script to check if V*W_O ≈ Identity in your vanilla transformer.
-Run this first to get a quick answer!
+Script to analyze whether V*W_O ≈ Identity in trained vanilla transformer checkpoints.
+
+This script loads a vanilla transformer checkpoint and analyzes the composition
+of V (value projection) and W_O (output projection) matrices to see if their
+product is close to the identity matrix, as suggested by recent research.
 """
 
 import torch
+import torch.nn.functional as F
 import numpy as np
+import matplotlib.pyplot as plt
 import os
-import glob
 import sys
+from pathlib import Path
 
-def quick_identity_check(checkpoint_path):
-    """Quick check without visualizations - using check.py loading method."""
-    print(f"Loading: {checkpoint_path}")
+def extract_v_wo_matrices(model_state_dict, layer_idx, n_head, head_dim):
+    """
+    Extract V and W_O matrices for a specific layer from the checkpoint.
+    
+    In the vanilla transformer:
+    - c_attn contains concatenated Q, K, V projections
+    - c_proj is the output projection W_O
+    """
+    # Get the attention weights for this layer
+    c_attn_weight = model_state_dict[f'transformer.h.{layer_idx}.attn.c_attn.weight']
+    c_proj_weight = model_state_dict[f'transformer.h.{layer_idx}.attn.c_proj.weight']
+    
+    n_embd = c_attn_weight.shape[1]
+    
+    # Extract V from the concatenated QKV matrix
+    # c_attn shape: (3*n_embd, n_embd) - projects to [Q, K, V]
+    # We want the V part: indices [2*n_embd:3*n_embd, :]
+    W_V = c_attn_weight[2*n_embd:3*n_embd, :].T  # Shape: (n_embd, n_embd)
+    
+    # W_O is the output projection
+    W_O = c_proj_weight.T  # Shape: (n_embd, n_embd)
+    
+    return W_V, W_O
+
+def analyze_identity_similarity(V_W_O, layer_idx):
+    """
+    Analyze how close V*W_O is to the identity matrix.
+    """
+    n_embd = V_W_O.shape[0]
+    identity = torch.eye(n_embd, device=V_W_O.device, dtype=V_W_O.dtype)
+    
+    # Compute various similarity metrics
+    results = {}
+    
+    # 1. Frobenius norm distance to identity
+    diff = V_W_O - identity
+    frobenius_dist = torch.norm(diff, p='fro').item()
+    results['frobenius_distance'] = frobenius_dist
+    
+    # 2. Normalized Frobenius distance
+    frobenius_norm_V_W_O = torch.norm(V_W_O, p='fro').item()
+    frobenius_norm_identity = torch.norm(identity, p='fro').item()
+    results['normalized_frobenius'] = frobenius_dist / frobenius_norm_identity
+    
+    # 3. Diagonal dominance - how much larger are diagonal elements
+    diagonal_values = torch.diag(V_W_O)
+    off_diagonal_mask = ~torch.eye(n_embd, dtype=bool)
+    off_diagonal_values = V_W_O[off_diagonal_mask]
+    
+    results['mean_diagonal'] = diagonal_values.mean().item()
+    results['std_diagonal'] = diagonal_values.std().item()
+    results['mean_off_diagonal'] = off_diagonal_values.mean().item()
+    results['std_off_diagonal'] = off_diagonal_values.std().item()
+    
+    # 4. Ratio of diagonal to off-diagonal magnitudes
+    diagonal_magnitude = torch.abs(diagonal_values).mean().item()
+    off_diagonal_magnitude = torch.abs(off_diagonal_values).mean().item()
+    results['diagonal_to_off_diagonal_ratio'] = diagonal_magnitude / (off_diagonal_magnitude + 1e-8)
+    
+    # 5. Spectral properties
+    eigenvalues = torch.linalg.eigvals(V_W_O)
+    eigenvalues_real = eigenvalues.real
+    results['largest_eigenvalue'] = eigenvalues_real.max().item()
+    results['smallest_eigenvalue'] = eigenvalues_real.min().item()
+    results['eigenvalue_mean'] = eigenvalues_real.mean().item()
+    results['eigenvalue_std'] = eigenvalues_real.std().item()
+    
+    # 6. How many eigenvalues are close to 1 (identity has all eigenvalues = 1)
+    close_to_one = torch.abs(eigenvalues_real - 1.0) < 0.1
+    results['eigenvalues_close_to_one'] = close_to_one.sum().item() / len(eigenvalues_real)
+    
+    return results
+
+def visualize_matrix(matrix, title, save_path=None):
+    """Create visualization of the matrix."""
+    plt.figure(figsize=(10, 8))
+    
+    # Plot the matrix
+    plt.subplot(2, 2, 1)
+    plt.imshow(matrix.cpu().numpy(), cmap='RdBu_r', aspect='auto')
+    plt.colorbar()
+    plt.title(f'{title} - Full Matrix')
+    
+    # Plot diagonal elements
+    plt.subplot(2, 2, 2)
+    diagonal = torch.diag(matrix).cpu().numpy()
+    plt.plot(diagonal, 'b-', alpha=0.7, label='Diagonal elements')
+    plt.axhline(y=1.0, color='r', linestyle='--', alpha=0.7, label='y=1 (identity)')
+    plt.xlabel('Position')
+    plt.ylabel('Value')
+    plt.title('Diagonal Elements')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Plot eigenvalue distribution
+    plt.subplot(2, 2, 3)
+    eigenvals = torch.linalg.eigvals(matrix).real.cpu().numpy()
+    plt.hist(eigenvals, bins=30, alpha=0.7, color='green')
+    plt.axvline(x=1.0, color='r', linestyle='--', alpha=0.7, label='λ=1 (identity)')
+    plt.xlabel('Eigenvalue')
+    plt.ylabel('Count')
+    plt.title('Eigenvalue Distribution')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Plot difference from identity
+    plt.subplot(2, 2, 4)
+    n_embd = matrix.shape[0]
+    identity = torch.eye(n_embd, device=matrix.device, dtype=matrix.dtype)
+    diff = (matrix - identity).cpu().numpy()
+    plt.imshow(diff, cmap='RdBu_r', aspect='auto')
+    plt.colorbar()
+    plt.title('Difference from Identity')
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"Saved visualization to {save_path}")
+    
+    plt.show()
+
+def analyze_checkpoint(checkpoint_path, output_dir="analysis_output"):
+    """
+    Main analysis function for a checkpoint - using check.py loading method.
+    """
+    print(f"Analyzing checkpoint: {checkpoint_path}")
+    
+    # Create output directory
+    Path(output_dir).mkdir(exist_ok=True)
     
     # Load checkpoint using check.py method
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
@@ -49,7 +181,7 @@ def quick_identity_check(checkpoint_path):
     
     print(f"🔧 Cleaned {len(clean_state_dict)} parameter keys")
     
-    # Find model dimensions using check.py method
+    # Detect model dimensions using check.py method
     wte_key = None
     for key in clean_state_dict.keys():
         if 'wte.weight' in key or 'token_embedding' in key:
@@ -57,18 +189,22 @@ def quick_identity_check(checkpoint_path):
             break
     
     if wte_key is None:
-        print("❌ Could not find embedding weights!")
+        print("Error: Could not find embedding weights in checkpoint!")
         return
     
     n_embd = clean_state_dict[wte_key].shape[1]
     vocab_size = clean_state_dict[wte_key].shape[0]
     
-    # Detect number of heads (check.py style)
-    n_head = 8  # default
+    # Infer number of heads (common sizes)
     for head_size in [64, 32, 128, 16]:
         if n_embd % head_size == 0:
             n_head = n_embd // head_size
+            head_dim = head_size
             break
+    else:
+        # Default fallback
+        n_head = 8
+        head_dim = n_embd // n_head
     
     # Count layers
     layer_count = 0
@@ -77,120 +213,111 @@ def quick_identity_check(checkpoint_path):
             layer_num = int(key.split('transformer.h.')[1].split('.')[0])
             layer_count = max(layer_count, layer_num + 1)
     
-    print(f"Model: {layer_count} layers, {n_embd} embedding dim")
+    print(f"Detected: {layer_count} layers, n_embd={n_embd}, n_head={n_head}, head_dim={head_dim}")
     
-    # Quick analysis of a few layers
-    distances = []
-    diagonal_ratios = []
+    # Analyze each layer
+    all_results = []
     
-    for layer_idx in [0, layer_count//2, layer_count-1]:  # First, middle, last
+    for layer_idx in range(layer_count):
+        print(f"\\nAnalyzing layer {layer_idx}...")
+        
         try:
-            # Extract matrices
-            c_attn_weight = clean_state_dict[f'transformer.h.{layer_idx}.attn.c_attn.weight']
-            c_proj_weight = clean_state_dict[f'transformer.h.{layer_idx}.attn.c_proj.weight']
-            
-            # Get V and W_O
-            W_V = c_attn_weight[2*n_embd:3*n_embd, :].T  # V projection
-            W_O = c_proj_weight.T  # Output projection
+            # Extract V and W_O matrices
+            W_V, W_O = extract_v_wo_matrices(clean_state_dict, layer_idx, n_head, head_dim)
             
             # Compute V * W_O
             V_W_O = W_V @ W_O
             
-            # Quick metrics
-            identity = torch.eye(n_embd)
-            frobenius_dist = torch.norm(V_W_O - identity, p='fro').item()
-            normalized_dist = frobenius_dist / torch.norm(identity, p='fro').item()
+            # Analyze similarity to identity
+            results = analyze_identity_similarity(V_W_O, layer_idx)
+            results['layer'] = layer_idx
+            all_results.append(results)
             
-            # Diagonal dominance
-            diagonal = torch.diag(V_W_O)
-            off_diagonal = V_W_O[~torch.eye(n_embd, dtype=bool)]
-            diagonal_ratio = torch.abs(diagonal).mean() / (torch.abs(off_diagonal).mean() + 1e-8)
+            print(f"  Frobenius distance to identity: {results['frobenius_distance']:.4f}")
+            print(f"  Normalized Frobenius distance: {results['normalized_frobenius']:.4f}")
+            print(f"  Diagonal dominance ratio: {results['diagonal_to_off_diagonal_ratio']:.4f}")
+            print(f"  Eigenvalues close to 1: {results['eigenvalues_close_to_one']:.2%}")
             
-            distances.append(normalized_dist)
-            diagonal_ratios.append(diagonal_ratio.item())
-            
-            print(f"Layer {layer_idx}: distance={normalized_dist:.3f}, diagonal_ratio={diagonal_ratio:.2f}")
+            # Create visualization for first and last layers
+            if layer_idx == 0 or layer_idx == layer_count - 1:
+                save_path = f"{output_dir}/layer_{layer_idx}_V_W_O_analysis.png"
+                visualize_matrix(V_W_O, f"Layer {layer_idx}: V*W_O", save_path)
             
         except Exception as e:
-            print(f"Error on layer {layer_idx}: {e}")
+            print(f"  Error analyzing layer {layer_idx}: {e}")
     
-    if distances:
-        avg_distance = np.mean(distances)
-        avg_ratio = np.mean(diagonal_ratios)
+    # Summary analysis
+    print(f"\\n{'='*50}")
+    print("SUMMARY ANALYSIS")
+    print(f"{'='*50}")
+    
+    if all_results:
+        # Compute statistics across layers
+        frobenius_distances = [r['frobenius_distance'] for r in all_results]
+        normalized_distances = [r['normalized_frobenius'] for r in all_results]
+        diagonal_ratios = [r['diagonal_to_off_diagonal_ratio'] for r in all_results]
+        eigenvalue_ratios = [r['eigenvalues_close_to_one'] for r in all_results]
+        
+        print(f"Frobenius distance to identity:")
+        print(f"  Mean: {np.mean(frobenius_distances):.4f} ± {np.std(frobenius_distances):.4f}")
+        print(f"  Range: [{np.min(frobenius_distances):.4f}, {np.max(frobenius_distances):.4f}]")
+        
+        print(f"\\nNormalized Frobenius distance:")
+        print(f"  Mean: {np.mean(normalized_distances):.4f} ± {np.std(normalized_distances):.4f}")
+        
+        print(f"\\nDiagonal dominance ratio:")
+        print(f"  Mean: {np.mean(diagonal_ratios):.4f} ± {np.std(diagonal_ratios):.4f}")
+        
+        print(f"\\nEigenvalues close to 1:")
+        print(f"  Mean: {np.mean(eigenvalue_ratios):.2%} ± {np.std(eigenvalue_ratios):.2%}")
+        
+        # Determine if V*W_O is close to identity
+        avg_normalized_distance = np.mean(normalized_distances)
+        avg_diagonal_ratio = np.mean(diagonal_ratios)
+        avg_eigenvalue_ratio = np.mean(eigenvalue_ratios)
         
         print(f"\\n{'='*50}")
-        print(f"QUICK RESULT:")
-        print(f"Average distance from identity: {avg_distance:.3f}")
-        print(f"Average diagonal dominance: {avg_ratio:.2f}")
+        print("CONCLUSION")
+        print(f"{'='*50}")
         
-        if avg_distance < 0.5 and avg_ratio > 2.0:
-            print("✅ YES! V*W_O appears close to identity")
-            print("   Your transformer does mostly routing!")
-        elif avg_distance < 1.0:
-            print("⚠️  PARTIALLY - some identity-like behavior")
-            print("   Mixed routing and transformation")
+        if avg_normalized_distance < 0.5 and avg_diagonal_ratio > 2.0 and avg_eigenvalue_ratio > 0.5:
+            print("✅ V*W_O appears to be CLOSE TO IDENTITY!")
+            print("   This supports the research finding that attention is primarily routing.")
+        elif avg_normalized_distance < 1.0 and avg_diagonal_ratio > 1.5:
+            print("⚠️  V*W_O shows SOME identity-like behavior.")
+            print("   Attention may be partially routing-based.")
         else:
-            print("❌ NO - V*W_O is not identity-like")
-            print("   Your transformer does significant transformation")
-
-def find_checkpoints():
-    """Find potential checkpoint files using check.py patterns."""
-    patterns = [
-        "outputs/*.pt",
-        "outputs/*/*.pt", 
-        "outputs/*/*/*.pt",
-        "checkpoints/*.pt",
-        "*.pt"
-    ]
-    
-    all_checkpoints = []
-    for pattern in patterns:
-        all_checkpoints.extend(glob.glob(pattern))
-    
-    # Filter out obviously non-model files
-    model_checkpoints = []
-    for cp in all_checkpoints:
-        filename = os.path.basename(cp).lower()
-        # Skip if it looks like optimizer or config files
-        if any(skip in filename for skip in ['optimizer', 'config', 'metadata']):
-            continue
-        model_checkpoints.append(cp)
-    
-    return model_checkpoints
+            print("❌ V*W_O does NOT appear close to identity.")
+            print("   Attention performs significant transformation, not just routing.")
+        
+        # Save summary results
+        summary_path = f"{output_dir}/summary_results.txt"
+        with open(summary_path, 'w') as f:
+            f.write("V*W_O Identity Analysis Summary\\n")
+            f.write("="*50 + "\\n")
+            f.write(f"Checkpoint: {checkpoint_path}\\n")
+            f.write(f"Model: {layer_count} layers, {n_embd} embedding dim, {n_head} heads\\n\\n")
+            
+            for result in all_results:
+                f.write(f"Layer {result['layer']}:\\n")
+                f.write(f"  Frobenius distance: {result['frobenius_distance']:.4f}\\n")
+                f.write(f"  Normalized distance: {result['normalized_frobenius']:.4f}\\n")
+                f.write(f"  Diagonal ratio: {result['diagonal_to_off_diagonal_ratio']:.4f}\\n")
+                f.write(f"  Eigenvalues near 1: {result['eigenvalues_close_to_one']:.2%}\\n\\n")
+        
+        print(f"\\nDetailed results saved to: {summary_path}")
 
 if __name__ == "__main__":
-    print("🔍 Looking for transformer checkpoints...")
+    # Example usage - modify checkpoint path as needed
+    checkpoint_path = "outputs/vanilla_model.pt"  # Adjust this path
     
-    # Use command line argument if provided
     if len(sys.argv) > 1:
         checkpoint_path = sys.argv[1]
-        if os.path.exists(checkpoint_path):
-            print(f"🎯 Using provided checkpoint: {checkpoint_path}")
-            quick_identity_check(checkpoint_path)
-        else:
-            print(f"❌ Checkpoint not found: {checkpoint_path}")
-        exit()
     
-    # Otherwise search for checkpoints
-    checkpoints = find_checkpoints()
+    if not os.path.exists(checkpoint_path):
+        print(f"Checkpoint not found: {checkpoint_path}")
+        print("Please provide the correct path to your vanilla transformer checkpoint.")
+        print("Usage: python analyze_v_wo_identity.py <checkpoint_path>")
+        sys.exit(1)
     
-    if not checkpoints:
-        print("❌ No .pt files found!")
-        print("Please make sure you have a trained transformer checkpoint.")
-        print("Usage: python quick_check_identity.py <checkpoint_path>")
-        exit(1)
-    
-    print(f"Found {len(checkpoints)} checkpoint(s):")
-    for i, cp in enumerate(checkpoints):
-        print(f"  {i+1}. {cp}")
-    
-    # Try to find vanilla transformer checkpoint
-    vanilla_checkpoints = [cp for cp in checkpoints if 'vanilla' in cp.lower()]
-    
-    if vanilla_checkpoints:
-        print(f"\\n🎯 Found vanilla checkpoint: {vanilla_checkpoints[0]}")
-        quick_identity_check(vanilla_checkpoints[0])
-    else:
-        print(f"\\n🤔 No obvious vanilla checkpoint found.")
-        print(f"Trying first checkpoint: {checkpoints[0]}")
-        quick_identity_check(checkpoints[0])
+    analyze_checkpoint(checkpoint_path)
