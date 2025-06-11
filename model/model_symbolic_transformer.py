@@ -249,18 +249,24 @@ class VocabularyProjectionFFN(nn.Module):
 #        return self.dropout(vocab_output)
 
 
+
 class SymbolicCausalSelfAttentionALiBi(nn.Module):
     """
-    Causal self-attention mechanism for the Symbolic Transformer with ALiBi positional encoding.
-    Operates on symbolic representations without vocabulary projection - attention is a 
-    symbolic operation that routes and combines existing symbolic information.
+    Symbolic self-attention with ALiBi positional encoding and optional Kronecker-lifted V matrix.
     """
     def __init__(self, config):
         super().__init__()
         assert config.n_embd % config.n_head == 0
 
-        # Standard Q, K, V projections
-        self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias)
+        # Standard Q, K projections (V handled separately if use_v=True)
+        if getattr(config, 'use_v', False):
+            # Only Q and K projections when using Kronecker-lifted V
+            self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias)
+            # Kronecker-lifted V matrix parameter
+            self.v_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
+        else:
+            # Standard Q, K, V projections
+            self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias)
         
         # Optional structured output projection using Kronecker lifting
         self.use_proj = getattr(config, 'use_proj', False)
@@ -269,6 +275,9 @@ class SymbolicCausalSelfAttentionALiBi(nn.Module):
         else:
             # Standard output projection
             self.c_proj = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
+
+        # Store config flags
+        self.use_v = getattr(config, 'use_v', False)
 
         # Regularization
         self.attn_dropout = nn.Dropout(config.dropout)
@@ -355,16 +364,26 @@ class SymbolicCausalSelfAttentionALiBi(nn.Module):
 
     def forward(self, x):
         """
-        Forward pass for symbolic attention.
+        Forward pass with optional Kronecker-lifted V matrix.
         
         Args:
             x: Input symbolic state (B, T, n_embd)
         """
         B, T, C = x.size()
 
-        # Calculate query, key, and value from input
-        qkv = self.c_attn(x)
-        q, k, v = qkv.split(self.n_embd, dim=2)
+        if self.use_v:
+            # Separate Q, K from input and compute V using Kronecker lifting
+            qk = self.c_attn(x)
+            q, k = qk.split(self.n_embd, dim=2)
+            
+            # Apply Kronecker-lifted V transformation
+            v_matrix = self._get_kronecker_lifted_tensor(self.v_tmp)
+            x_flat = x.view(-1, C)
+            v = torch.matmul(x_flat, v_matrix.t()).view(B, T, C)
+        else:
+            # Standard Q, K, V projections
+            qkv = self.c_attn(x)
+            q, k, v = qkv.split(self.n_embd, dim=2)
 
         # Reshape for multi-head attention
         q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
@@ -391,7 +410,7 @@ class SymbolicCausalSelfAttentionALiBi(nn.Module):
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         
         # Apply output projection
-        if self.use_proj: 
+        if self.use_proj:
             # Use structured Kronecker-lifted projection
             proj_matrix = self._get_kronecker_lifted_tensor(self.proj_tmp)
             y_flat = y.view(-1, C)
