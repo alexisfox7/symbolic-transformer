@@ -23,3 +23,9 @@ def get_model(model_type, config):
         raise ValueError(f"Unknown model type '{model_type}'. Available: {available}")
     
     return models[model_type](config)
+
+__all__ = [
+    'get_model',
+    'SymbolicTransformer', 
+    'VanillaTransformer'
+]

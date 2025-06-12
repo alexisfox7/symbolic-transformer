@@ -3,21 +3,24 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-class VanillaLayerNorm(nn.Module):
+class VanillaNorm(nn.Module):
     """Standard layer normalization."""
+    #TODO: old code
     def __init__(self, n_embd, bias=True):
         super().__init__()
         self.weight = nn.Parameter(torch.ones(n_embd))
         self.bias = nn.Parameter(torch.zeros(n_embd)) if bias else None
 
+    #TODO: old code
     def forward(self, x):
         return F.layer_norm(x, self.weight.shape, self.weight, self.bias, eps=1e-5)
     
-class ChannelLayerNorm(nn.Module):
+class ChannelNorm(nn.Module):
     """
     LayerNorm that preserves symbolic structure by operating on each head channel independently.
     This maintains the structured token space properties required for symbolic reasoning.
     """
+    #TODO: old code
     def __init__(self, n_embd, n_head, bias=True):
         super().__init__()
         assert n_embd > 0, "n_embd must be positive"
@@ -32,6 +35,7 @@ class ChannelLayerNorm(nn.Module):
         self.channel_weights = nn.Parameter(torch.ones(n_head))
         self.channel_biases = nn.Parameter(torch.zeros(n_head)) if bias else None
         
+    #TODO: old code
     def forward(self, x):
         """Apply channel-wise layer normalization preserving head structure."""
         B, T, C = x.shape

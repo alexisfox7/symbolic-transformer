@@ -15,7 +15,7 @@ class TransformerBase(nn.Module):
         super().__init__()
         self.config = config
     
-    #? what are good default values for these?
+    #REVIEW what are good default values for these?
     def _init_weights(self, module):
         """Standard transformer weight initialization."""
         if isinstance(module, nn.Linear):
@@ -28,8 +28,7 @@ class TransformerBase(nn.Module):
                 with torch.no_grad():
                     module.weight[module.padding_idx].fill_(0)
     
-
-     #? what are good default values for these?
+    #REVIEW - what are good default values for these?
     def configure_optimizer(self, weight_decay=0.1, learning_rate=1e-3, betas=(0.9, 0.95)):
         """Create optimizer with weight decay for appropriate parameters."""
         decay_params = set()
@@ -64,31 +63,37 @@ class TransformerBase(nn.Module):
      
     # INFERENCE #
 
+    #TODO implement
     @torch.no_grad()
     def generate(self):
         # generate new tokens autoregressively
         pass
 
+    #TODO implement
     def get_embeddings(self, input_ids):
         # way to access embeddings easily
         return 
     
     # UTILITY #
 
-    #? check that it doesn't count the shared embeddings
+    #TODO implement
+    #REVIEW check that it doesn't count the shared embeddings
     def get_num_params(self, non_embedding=True):
         """Count model parameters."""
         n_params = sum(p.numel() for p in self.parameters())
         return n_params
     
+    #TODO implement
     def save_model(self, path):
         # save model weights and config
         pass
     
+    #TODO implement
     def load_model(self, path):
         # load model weights and config / resume checkpoint
         pass
     
+    #TODO implement
     def get_model_info(self):
         # print comprehensive model info
         pass

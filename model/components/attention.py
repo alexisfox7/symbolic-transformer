@@ -4,8 +4,10 @@ import torch.nn as nn
 from torch.nn import functional as F
 import math
 
+#NOTE pretty sure this works, similar to karpathys
 class VanillaAttention(nn.Module):
     """Standard causal self-attention mechanism."""
+
     def __init__(self, config):
         super().__init__()
         assert config.n_embd % config.n_head == 0
@@ -53,4 +55,181 @@ class VanillaAttention(nn.Module):
         
         return y
 
-# alibi
+class SymbolicAttention(nn.Module):
+    """
+    Symbolic self-attention with ALiBi positional encoding and optional Kronecker-lifted matrices.
+    """
+    #TODO: old code
+    def __init__(self, config):
+        super().__init__()
+        assert config.n_embd % config.n_head == 0
+
+        # Standard Q, K projections (V handled separately if use_v=True)
+        if getattr(config, 'use_v', False):
+            # Only Q and K projections when using Kronecker-lifted V
+            self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias)
+            # Kronecker-lifted V matrix parameter
+            self.v_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
+        else:
+            # Standard Q, K, V projections
+            self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias)
+        
+        # Optional structured output projection using Kronecker lifting
+        self.use_proj = getattr(config, 'use_proj', False)
+        if self.use_proj:
+            self.proj_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
+        else:
+            # Standard output projection
+            self.c_proj = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
+
+        # Store config flags
+        self.use_v = getattr(config, 'use_v', False)
+ 
+        # Regularization
+        self.attn_dropout = nn.Dropout(config.dropout)
+        self.resid_dropout = nn.Dropout(config.dropout)
+
+        self.n_head = config.n_head
+        self.n_embd = config.n_embd
+        self.head_dim = config.n_embd // config.n_head
+
+        # ALiBi slopes - computed once and cached
+        slopes = self._get_alibi_slopes(config.n_head)
+        self.register_buffer("alibi_slopes", slopes, persistent=False)
+
+    #! try torch.kron
+    #TODO: old code
+    def _get_kronecker_lifted_tensor(self, v):
+        """
+        Lift head-to-head matrix to full embedding dimension using Kronecker product structure.
+        Creates block-diagonal structure preserving head channels.
+        """
+        n_heads = v.shape[0]
+        head_dim = self.n_embd // n_heads
+        
+        # Create the lifted tensor
+        v_out = torch.zeros(self.n_embd, self.n_embd, device=v.device, dtype=v.dtype)
+        
+        for i in range(n_heads):
+            for j in range(n_heads):
+                # Create identity matrix scaled by v[i,j]
+                start_i, end_i = i * head_dim, (i + 1) * head_dim
+                start_j, end_j = j * head_dim, (j + 1) * head_dim
+                v_out[start_i:end_i, start_j:end_j] = v[i, j] * torch.eye(head_dim, device=v.device, dtype=v.dtype)
+        
+        return v_out
+
+    #TODO: old code
+    def _get_alibi_slopes(self, n_heads):
+        """Compute ALiBi slopes for each attention head."""
+        def get_slopes_power_of_2(n_heads):
+            start = 2**(-(2**-(math.log2(n_heads)-3)))
+            ratio = start
+            return [start*ratio**i for i in range(n_heads)]
+
+        def get_slopes(n_heads):
+            if n_heads <= 0:
+                return []
+            
+            # Check if n_heads is a power of 2
+            if (n_heads & (n_heads - 1)) == 0:
+                return get_slopes_power_of_2(n_heads)
+            else:
+                # Handle non-power-of-2 case
+                closest_power_of_2 = 2**math.floor(math.log2(n_heads))
+                slopes = get_slopes_power_of_2(closest_power_of_2)
+                
+                # Get additional slopes for remaining heads
+                if n_heads > closest_power_of_2:
+                    extra_base = 2**(-(2**-(math.log2(2*closest_power_of_2)-3)))
+                    num_remaining = n_heads - closest_power_of_2
+                    extra_slopes = [extra_base * (extra_base**i) for i in range(num_remaining)]
+                    slopes.extend(extra_slopes)
+                
+                return slopes[:n_heads]
+
+        slopes = get_slopes(n_heads)
+        return torch.tensor(slopes, dtype=torch.float32)
+
+    #TODO: old code
+    def _get_alibi_bias(self, seq_len, device):
+        """Generate ALiBi bias matrix for the given sequence length."""
+        # Create position indices
+        context_position = torch.arange(seq_len, device=device, dtype=torch.float32)
+        memory_position = torch.arange(seq_len, device=device, dtype=torch.float32)
+        
+        # Compute relative distances (memory - context)
+        relative_position = memory_position[None, :] - context_position[:, None]
+        
+        # For causal attention, future positions should have large negative bias
+        causal_mask = torch.tril(torch.ones(seq_len, seq_len, device=device, dtype=torch.bool))
+        
+        # Apply slopes to relative positions
+        alibi_bias = self.alibi_slopes[:, None, None] * relative_position[None, :, :]
+        
+        # Apply causal masking
+        alibi_bias = alibi_bias.masked_fill(~causal_mask[None, :, :], float('-inf'))
+        
+        return alibi_bias
+
+    #TODO: old code
+    def forward(self, x):
+        """
+        Forward pass with optional Kronecker-lifted V matrix.
+        
+        Args:
+            x: Input symbolic state (B, T, n_embd)
+        """
+        B, T, C = x.size()
+
+        if self.use_v:
+            # Separate Q, K from input and compute V using Kronecker lifting
+            qk = self.c_attn(x)
+            q, k = qk.split(self.n_embd, dim=2)
+            
+            # Apply Kronecker-lifted V transformation
+            v_matrix = self._get_kronecker_lifted_tensor(self.v_tmp)
+            x_flat = x.view(-1, C)
+            v = torch.matmul(x_flat, v_matrix.t()).view(B, T, C)
+        else:
+            # Standard Q, K, V projections
+            qkv = self.c_attn(x)
+            q, k, v = qkv.split(self.n_embd, dim=2)
+
+        # Reshape for multi-head attention
+        q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
+        k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
+        v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
+
+        # Compute attention scores with proper scaling
+        scale = 1.0 / math.sqrt(self.head_dim)
+        att_scores = (q @ k.transpose(-2, -1)) * scale
+
+        # Add ALiBi bias
+        if T > 1:
+            alibi_bias = self._get_alibi_bias(T, x.device)
+            att_scores = att_scores + alibi_bias[None, :, :, :]
+
+        # Apply softmax and dropout
+        att_weights = F.softmax(att_scores, dim=-1)
+        att_weights = self.attn_dropout(att_weights)
+
+        # Apply attention to values
+        y = att_weights @ v  # (B, nh, T, hs)
+
+        # Concatenate heads
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+        
+        # Apply output projection
+        if self.use_proj:
+            # Use structured Kronecker-lifted projection
+            proj_matrix = self._get_kronecker_lifted_tensor(self.proj_tmp)
+            y_flat = y.view(-1, C)
+            y = torch.matmul(y_flat, proj_matrix.t()).view(B, T, C)
+        else:
+            # Standard linear projection
+            y = self.c_proj(y)
+        
+        y = self.resid_dropout(y)
+        
+        return y
