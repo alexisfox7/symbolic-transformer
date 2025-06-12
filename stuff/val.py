@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 try:
     from config import get_preset_config
     from mytokenizers import create_tokenizer
-    from model import get_model
+    from modelold import get_model
     from utils.data_utils import load_and_prepare_data
     from torch.utils.data import DataLoader, random_split
 except ImportError as e:

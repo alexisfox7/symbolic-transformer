@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from config import SymbolicConfig, get_preset_config, print_config
 from mytokenizers import create_tokenizer
-from model import get_model
+from modelold import get_model
 from utils.data_utils import load_and_prepare_data
 from trainers import get_trainer
 from inference.generation import run_generation

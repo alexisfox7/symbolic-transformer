@@ -1,44 +1,25 @@
-# ./model/__init__.py
 """
-Model factory for cleanGPT models.
+Model factory.
 """
 
-from .model_symbolic_transformer import SymbolicTransformerModel
-from .model_vanilla_transformer import VanillaTransformerModel
-from .model_symbolic_reconstruct import SymbolicTransformerModelWithReconstruction
-from .model_symbolic_norm import SymbolicTransformerStandardNorm
+from .architectures.symbolic import SymbolicTransformer
+from .architectures.vanilla import VanillaTransformer
 
-def get_model(model_type, config=None, **kwargs):
+def get_model(model_type, config):
     """
     Factory function to create model instances.
+    Returns: Model instance
     """
-    model_registry = {
-        'Symbolic': SymbolicTransformerModel,
-        'SymbolicTransformer': SymbolicTransformerModel,
-        'SymbolicReconstruct': SymbolicTransformerModelWithReconstruction,
-        'SymbolicRecon': SymbolicTransformerModelWithReconstruction,
-        'SymbolicStandardNorm': SymbolicTransformerStandardNorm,  # NEW test version
-        'SymbolicStdNorm': SymbolicTransformerStandardNorm,       # NEW alias
-        'Vanilla': VanillaTransformerModel,
-        'VanillaTransformer': VanillaTransformerModel,
-        'Standard': VanillaTransformerModel,
+
+    models = {
+        'symbolic': SymbolicTransformer,
+        'vanilla': VanillaTransformer,
+        'SymbolicTransformer': SymbolicTransformer, # alias
+        'VanillaTransformer': VanillaTransformer,
     }
     
-    if model_type not in model_registry:
-        available_types = ', '.join(model_registry.keys())
-        raise ValueError(f"Unknown model type '{model_type}'. Available types: {available_types}")
+    if model_type not in models:
+        available = ', '.join(models.keys())
+        raise ValueError(f"Unknown model type '{model_type}'. Available: {available}")
     
-    model_class = model_registry[model_type]
-    
-    if config is None:
-        raise ValueError("Config must be provided")
-    
-    return model_class(config, **kwargs)
-
-__all__ = [
-    'get_model', 
-    'SymbolicTransformerModel', 
-    'SymbolicTransformerModelWithReconstruction',  
-    'SymbolicTransformerStandardNorm',  
-    'VanillaTransformerModel'
-]
+    return models[model_type](config)

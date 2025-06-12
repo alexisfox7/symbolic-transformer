@@ -14,7 +14,7 @@ def simple_vocab_analysis(checkpoint_path: str, text: str):
     
     from config import get_preset_config
     from mytokenizers import create_tokenizer
-    from model import get_model
+    from modelold import get_model
     
     print(f"Loading checkpoint: {checkpoint_path}")
     

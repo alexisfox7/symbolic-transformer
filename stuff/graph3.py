@@ -98,6 +98,13 @@ def visualize_matrix(matrix, title, save_path=None):
     plt.colorbar()
     plt.title(f'{title} - Full Matrix')
     
+    random_matrix = torch.randn(50, 50) 
+
+    plt.subplot(2, 2, 1)
+    plt.imshow(matrix.cpu().numpy(), cmap='RdBu_r', aspect='auto')
+    plt.colorbar()
+    plt.title(f'{title} - Full Matrix')
+    
     # Plot diagonal elements
     plt.subplot(2, 2, 2)
     diagonal = torch.diag(matrix).cpu().numpy()

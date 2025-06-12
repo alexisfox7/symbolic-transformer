@@ -106,17 +106,6 @@ class VocabularyProjectionFFN(nn.Module):
         # Per-channel learnable temperature for attention sharpness
         self.channel_temperatures = nn.Parameter(torch.ones(self.n_head))
 
-        # Optional refinement layers per channel
-        self.use_refinement = getattr(config, 'use_vocab_refinement', False)
-        if self.use_refinement:
-            self.channel_refinements = nn.ModuleList([
-                nn.Linear(self.head_dim, self.head_dim, bias=config.bias)
-                for _ in range(self.n_head)
-            ])
-            self.channel_refinement_gates = nn.ModuleList([
-                nn.Linear(self.head_dim, self.head_dim, bias=config.bias)
-                for _ in range(self.n_head)
-            ])
 
     def _get_vocab_channel(self, channel_idx):
         """

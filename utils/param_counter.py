@@ -239,7 +239,7 @@ def analyze_from_checkpoint(checkpoint_path):
         # Try to create model for full analysis
         if 'config' in checkpoint and 'model_state_dict' in checkpoint:
             try:
-                from model import get_model
+                from modelold import get_model
                 
                 model = get_model("Symbolic", config=checkpoint['config'])
                 model.load_state_dict(checkpoint['model_state_dict'])
@@ -297,7 +297,7 @@ def analyze_from_config(preset, vocab_size, **kwargs):
     
     try:
         from config import get_preset_config
-        from model import get_model
+        from modelold import get_model
         
         config = get_preset_config(preset)
         config.vocab_size = vocab_size
