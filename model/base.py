@@ -9,16 +9,13 @@ import math
 class TransformerBase(nn.Module):
     """Shared foundation for all transformer variants."""
     
+    # INITIALIZATION #
+
     def __init__(self, config):
         super().__init__()
         self.config = config
     
-    #? Check that it doesn't count the shared embeddings
-    def get_num_params(self, non_embedding=True):
-        """Count model parameters."""
-        n_params = sum(p.numel() for p in self.parameters())
-        return n_params
-    
+    #? what are good default values for these?
     def _init_weights(self, module):
         """Standard transformer weight initialization."""
         if isinstance(module, nn.Linear):
@@ -31,24 +28,15 @@ class TransformerBase(nn.Module):
                 with torch.no_grad():
                     module.weight[module.padding_idx].fill_(0)
     
-    def get_embeddings(self, input_ids):
-        # way to access embeddings easily
-        return 
-    
-    def save_model(self, path):
-        # save model weights and config
-        pass
-    
-    def load_model(self, path):
-        # load model weights and config / resume checkpoint
-        pass
-    
+
+     #? what are good default values for these?
     def configure_optimizer(self, weight_decay=0.1, learning_rate=1e-3, betas=(0.9, 0.95)):
         """Create optimizer with weight decay for appropriate parameters."""
         decay_params = set()
         no_decay_params = set()
         
         # common practice to not apply weight decay to biases and norm parameters
+        #! make sure compatible with custom modules
         for mn, m in self.named_modules():
             for pn, p in m.named_parameters():
                 fpn = f'{mn}.{pn}' if mn else pn
@@ -73,3 +61,37 @@ class TransformerBase(nn.Module):
         ]
         
         return torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas)
+     
+    # INFERENCE #
+
+    @torch.no_grad()
+    def generate(self):
+        # generate new tokens autoregressively
+        pass
+
+    def get_embeddings(self, input_ids):
+        # way to access embeddings easily
+        return 
+    
+    # UTILITY #
+
+    #? check that it doesn't count the shared embeddings
+    def get_num_params(self, non_embedding=True):
+        """Count model parameters."""
+        n_params = sum(p.numel() for p in self.parameters())
+        return n_params
+    
+    def save_model(self, path):
+        # save model weights and config
+        pass
+    
+    def load_model(self, path):
+        # load model weights and config / resume checkpoint
+        pass
+    
+    def get_model_info(self):
+        # print comprehensive model info
+        pass
+
+
+    
