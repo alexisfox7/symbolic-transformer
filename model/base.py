@@ -13,14 +13,12 @@ class TransformerBase(nn.Module):
         super().__init__()
         self.config = config
     
-    
     #? Check that it doesn't count the shared embeddings
     def get_num_params(self, non_embedding=True):
         """Count model parameters."""
         n_params = sum(p.numel() for p in self.parameters())
         return n_params
     
-
     def _init_weights(self, module):
         """Standard transformer weight initialization."""
         if isinstance(module, nn.Linear):
@@ -33,8 +31,19 @@ class TransformerBase(nn.Module):
                 with torch.no_grad():
                     module.weight[module.padding_idx].fill_(0)
     
-
-    def configure_optimizers(self, weight_decay=0.1, learning_rate=1e-3, betas=(0.9, 0.95)):
+    def get_embeddings(self, input_ids):
+        # way to access embeddings easily
+        return 
+    
+    def save_model(self, path):
+        # save model weights and config
+        pass
+    
+    def load_model(self, path):
+        # load model weights and config / resume checkpoint
+        pass
+    
+    def configure_optimizer(self, weight_decay=0.1, learning_rate=1e-3, betas=(0.9, 0.95)):
         """Create optimizer with weight decay for appropriate parameters."""
         decay_params = set()
         no_decay_params = set()
