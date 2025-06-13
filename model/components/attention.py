@@ -59,67 +59,46 @@ class SymbolicAttention(nn.Module):
     """
     Symbolic self-attention with ALiBi positional encoding and optional Kronecker-lifted matrices.
     """
-    #TODO: old code
+ 
     def __init__(self, config):
         super().__init__()
         assert config.n_embd % config.n_head == 0
-
-        # Standard Q, K projections (V handled separately if use_v=True)
-        if getattr(config, 'use_v', False):
-            # Only Q and K projections when using Kronecker-lifted V
-            self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias)
-            # Kronecker-lifted V matrix parameter
-            self.v_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
-        else:
-            # Standard Q, K, V projections
-            self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias)
-        
-        # Optional structured output projection using Kronecker lifting
-        self.use_proj = getattr(config, 'use_proj', False)
-        if self.use_proj:
-            self.proj_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
-        else:
-            # Standard output projection
-            self.c_proj = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
-
-        # Store config flags
-        self.use_v = getattr(config, 'use_v', False)
- 
-        # Regularization
-        self.attn_dropout = nn.Dropout(config.dropout)
-        self.resid_dropout = nn.Dropout(config.dropout)
 
         self.n_head = config.n_head
         self.n_embd = config.n_embd
         self.head_dim = config.n_embd // config.n_head
 
+        self.use_v = getattr(config, 'use_v', False)
+        self.use_proj = getattr(config, 'use_proj', False)
+
+        if self.use_v:
+            self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias) # only Q and K projections 
+            self.v_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02) # kronecker-lifted V matrix parameter
+        else:
+            self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias) # standard Q, K, V projections
+        
+        if self.use_proj:
+            self.proj_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
+        else:
+            self.c_proj = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
+ 
+        self.attn_dropout = nn.Dropout(config.dropout)
+        self.resid_dropout = nn.Dropout(config.dropout)
+
         # ALiBi slopes - computed once and cached
         slopes = self._get_alibi_slopes(config.n_head)
         self.register_buffer("alibi_slopes", slopes, persistent=False)
 
-    #! try torch.kron
-    #TODO: old code
+    #TODO: check if same as old function
     def _get_kronecker_lifted_tensor(self, v):
         """
-        Lift head-to-head matrix to full embedding dimension using Kronecker product structure.
+        Lift head-to-head matrix to full embedding dimension using Kronecker product.
         Creates block-diagonal structure preserving head channels.
         """
-        n_heads = v.shape[0]
-        head_dim = self.n_embd // n_heads
-        
-        # Create the lifted tensor
-        v_out = torch.zeros(self.n_embd, self.n_embd, device=v.device, dtype=v.dtype)
-        
-        for i in range(n_heads):
-            for j in range(n_heads):
-                # Create identity matrix scaled by v[i,j]
-                start_i, end_i = i * head_dim, (i + 1) * head_dim
-                start_j, end_j = j * head_dim, (j + 1) * head_dim
-                v_out[start_i:end_i, start_j:end_j] = v[i, j] * torch.eye(head_dim, device=v.device, dtype=v.dtype)
-        
-        return v_out
+        identity = torch.eye(self.head_dim, device=v.device, dtype=v.dtype)
+        return torch.kron(v, identity)
 
-    #TODO: old code
+    # havent tested but prob works
     def _get_alibi_slopes(self, n_heads):
         """Compute ALiBi slopes for each attention head."""
         def get_slopes_power_of_2(n_heads):
@@ -151,7 +130,6 @@ class SymbolicAttention(nn.Module):
         slopes = get_slopes(n_heads)
         return torch.tensor(slopes, dtype=torch.float32)
 
-    #TODO: old code
     def _get_alibi_bias(self, seq_len, device):
         """Generate ALiBi bias matrix for the given sequence length."""
         # Create position indices
@@ -172,7 +150,6 @@ class SymbolicAttention(nn.Module):
         
         return alibi_bias
 
-    #TODO: old code
     def forward(self, x):
         """
         Forward pass with optional Kronecker-lifted V matrix.
@@ -190,7 +167,7 @@ class SymbolicAttention(nn.Module):
             # Apply Kronecker-lifted V transformation
             v_matrix = self._get_kronecker_lifted_tensor(self.v_tmp)
             x_flat = x.view(-1, C)
-            v = torch.matmul(x_flat, v_matrix.t()).view(B, T, C)
+            v = torch.matmul(x_flat, v_matrix).view(B, T, C) #REVIEW check if i need transpose
         else:
             # Standard Q, K, V projections
             qkv = self.c_attn(x)
@@ -205,29 +182,24 @@ class SymbolicAttention(nn.Module):
         scale = 1.0 / math.sqrt(self.head_dim)
         att_scores = (q @ k.transpose(-2, -1)) * scale
 
-        # Add ALiBi bias
+        # add ALiBi bias
         if T > 1:
             alibi_bias = self._get_alibi_bias(T, x.device)
             att_scores = att_scores + alibi_bias[None, :, :, :]
 
-        # Apply softmax and dropout
+        # softmax, dropout, value
         att_weights = F.softmax(att_scores, dim=-1)
         att_weights = self.attn_dropout(att_weights)
-
-        # Apply attention to values
         y = att_weights @ v  # (B, nh, T, hs)
 
         # Concatenate heads
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         
-        # Apply output projection
         if self.use_proj:
-            # Use structured Kronecker-lifted projection
             proj_matrix = self._get_kronecker_lifted_tensor(self.proj_tmp)
             y_flat = y.view(-1, C)
             y = torch.matmul(y_flat, proj_matrix.t()).view(B, T, C)
         else:
-            # Standard linear projection
             y = self.c_proj(y)
         
         y = self.resid_dropout(y)

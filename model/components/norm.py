@@ -43,7 +43,7 @@ class ChannelNorm(nn.Module):
         
         x_heads = x.view(B, T, self.n_head, self.head_dim) # Reshape to separate head channels: (B, T, n_head, head_dim)
         
-        #! could weight and bias be passed here (simplify)
+        #NOTE could weight and bias be passed here (simplify)
         normalized = F.layer_norm(x_heads, (self.head_dim,), eps=1e-5) # Vectorized layer normalization across head_dim for all channels
          
         # Apply channel-specific weights and biases using broadcasting

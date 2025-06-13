@@ -23,10 +23,8 @@ class SymbolicTransformerBlock(nn.Module):
         # Symbolic attention mechanism (no vocab reference needed)
         self.attn = SymbolicAttention(config)
 
-        # Optional vocabulary-constrained FFN
-        self.use_symbolic_ffn = getattr(config, 'use_symbolic_ffn', True)
-        if self.use_symbolic_ffn:
-            self.ffn = VocabularyProjectionFFN(config, vocab_embeddings_ref)
+        # Vocabulary-constrained FFN
+        self.ffn = VocabFFN(config, vocab_embeddings_ref)
 
     #TODO: old code
     def forward(self, xt):
@@ -81,7 +79,7 @@ class SymbolicTransformerModel(nn.Module):
         self.lm_head.weight = self.transformer.wte.weight 
         
         # Vocabulary grounding layer for final output
-        self.vocab_grounding = VocabularyProjectionFFN(config, self.transformer.wte)
+        self.vocab_grounding = VocabFFN(config, self.transformer.wte)
 
         # Initialize weights
         self.apply(self._init_weights)
@@ -117,9 +115,9 @@ class SymbolicTransformerModel(nn.Module):
             if hasattr(module, 'v_tmp'):
                 torch.nn.init.normal_(module.v_tmp, mean=0.0, std=0.02)
             if hasattr(module, 'proj_tmp'):
-                torch.nn.init.normal_(module.proj_tmp, mean=0.0, std=0.02/math.sqrt(2 * self.config.n_layer))
+                torch.nn.init.normal_(module.proj_tmp, mean=0.0, std=0.02)
         elif isinstance(module, ChannelNorm):
-            # Initialize symbolic layer norm
+            # Initializer norm
             torch.nn.init.ones_(module.channel_weights)
             if module.channel_biases is not None:
                 torch.nn.init.zeros_(module.channel_biases)
