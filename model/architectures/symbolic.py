@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from ..base import TransformerBase
+from .base import TransformerBase
 from ..components import ChannelNorm, SymbolicAttention, VocabFFN
 
 class SymbolicTransformerBlock(nn.Module):
@@ -54,11 +54,10 @@ class SymbolicTransformerModel(nn.Module):
         assert config.block_size is not None, "block_size must be specified in config"
         
         self.config = config
-        self.padding_idx = getattr(config, 'padding_idx', None)
         
         # Core model components (no positional embeddings with ALiBi)
         self.transformer = nn.ModuleDict(dict(
-            wte=nn.Embedding(config.vocab_size, config.n_embd, padding_idx=self.padding_idx),
+            wte=nn.Embedding(config.vocab_size, config.n_embd),
             drop=nn.Dropout(config.dropout),
             h=nn.ModuleList([SymbolicTransformerBlock(config, None) for _ in range(config.n_layer)]),
             ln_f=ChannelNorm(config.n_embd, config.n_head, bias=config.bias),
@@ -107,9 +106,6 @@ class SymbolicTransformerModel(nn.Module):
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-            if module.padding_idx is not None:
-                with torch.no_grad():
-                    module.weight[module.padding_idx].fill_(0)
         elif isinstance(module, SymbolicAttention):
             # Initialize symbolic attention parameters
             if hasattr(module, 'v_tmp'):

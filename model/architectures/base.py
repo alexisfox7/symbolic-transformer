@@ -24,10 +24,13 @@ class TransformerBase(nn.Module):
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-            if hasattr(module, 'padding_idx') and module.padding_idx is not None:
-                with torch.no_grad():
-                    module.weight[module.padding_idx].fill_(0)
     
+    def _apply_projection_init(self):
+        """Apply special scaled initialization to output projections."""
+        for pn, p in self.named_parameters():
+            if pn.endswith('c_proj.weight'):
+                torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * self.config.n_layer))
+
     #REVIEW - what are good default values for these?
     def configure_optimizer(self, weight_decay=0.1, learning_rate=1e-3, betas=(0.9, 0.95)):
         """Create optimizer with weight decay for appropriate parameters."""
@@ -76,7 +79,6 @@ class TransformerBase(nn.Module):
     
     # UTILITY #
 
-    #TODO implement
     #REVIEW check that it doesn't count the shared embeddings
     def get_num_params(self, non_embedding=True):
         """Count model parameters."""
