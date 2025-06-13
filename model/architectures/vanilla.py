@@ -8,7 +8,7 @@ from ..components import VanillaAttention, VanillaNorm, VanillaFFN
 
 class VanillaTransformerBlock(nn.Module):
     """Standard transformer block with pre-layer normalization."""
-    #TODO: check functionality with base
+    
     def __init__(self, config):
         super().__init__()
         self.ln_1 = VanillaNorm(config.n_embd, bias=config.bias)
@@ -23,7 +23,7 @@ class VanillaTransformerBlock(nn.Module):
         return x
 
 
-class VanillaTransformerModel(TransformerBase):
+class VanillaTransformer(TransformerBase):
     """
     Vanilla Transformer model for baseline comparison.
     Has:
@@ -33,7 +33,6 @@ class VanillaTransformerModel(TransformerBase):
     - Pre-layer norm
     """
 
-    #TODO: old code
     def __init__(self, config):
         super().__init__(config)
         assert config.vocab_size is not None, "vocab_size must be specified in config"
@@ -58,9 +57,6 @@ class VanillaTransformerModel(TransformerBase):
         print(f"VanillaTransformerModel initialized with {self.get_num_params()/1e6:.2f}M parameters")
         print(f"Architecture: vocab_size={config.vocab_size}, n_embd={config.n_embd}, n_head={config.n_head}, n_layer={config.n_layer}")
 
-
-    #TODO: old code
-    #REVIEW why was there previous issue clayton mentioned
     def forward(self, input_ids, targets=None):
         device = input_ids.device
         b, t = input_ids.size()

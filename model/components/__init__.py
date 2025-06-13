@@ -1,4 +1,4 @@
-from .attention import VanillaAttention, SymbolicAttentionALiBi
+from .attention import VanillaAttention, SymbolicAttention
 from .ffn import VanillaFFN, VocabFFN
 from .norm import VanillaNorm, ChannelNorm
 
