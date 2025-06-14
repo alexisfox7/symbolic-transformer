@@ -8,7 +8,6 @@ from typing import Optional
 import torch
 import math
 
-
 @dataclass
 class TransformerConfig:
     """Configuration class for Symbolic Transformer models."""
