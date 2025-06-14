@@ -1,1 +1,0 @@
-{"timestamp": "2025-06-10T03:04:21.328767", "elapsed_time": 0.00013017654418945312, "event_type": "experiment_start", "experiment_name": "symbolic_4gpu_simple", "start_time": "2025-06-10T03:04:21.328756", "log_file": "./outputs/sym_4gpu_simple/logs/symbolic_4gpu_simple_20250610_030421.jsonl", "log_every_n_steps": 64}

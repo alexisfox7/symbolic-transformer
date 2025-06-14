@@ -194,3 +194,4 @@ cython_debug/
 .cursorindexingignore
 CLAUDE.md
 .claudeignore
+.claudesync
