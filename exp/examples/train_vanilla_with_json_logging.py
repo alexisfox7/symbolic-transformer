@@ -20,7 +20,7 @@ from datetime import datetime
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from config import SymbolicConfig, get_preset_config, print_config
+from src.config import SymbolicConfig, get_preset_config, print_config
 from mytokenizers import create_tokenizer
 from modelold import get_model
 from utils.data_utils import load_and_prepare_data
