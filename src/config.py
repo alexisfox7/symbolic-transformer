@@ -10,7 +10,7 @@ import math
 
 
 @dataclass
-class SymbolicConfig:
+class TransformerConfig:
     """Configuration class for Symbolic Transformer models."""
     
     # Model architecture
@@ -23,15 +23,12 @@ class SymbolicConfig:
     bias: bool = False                       # Use bias in linear layers
     
     # ALiBi parameters
+    #REVIEW is this used properly
     max_position_embeddings: Optional[int] = None  # Max sequence length (None = 4x block_size)
     
     # Symbolic-specific parameters
-    use_symbolic_ffn: bool = True            # Use vocabulary-constrained FFN
-    use_vocab_refinement: bool = False       # Use refinement in projections
     use_v: bool = True                       # Use value projection constraints
     use_proj: bool = True                    # Use output projection constraints
-
-    reconstruction_loss_weight: float = 1.0 
 
     # Training parameters
     batch_size: int = 32                     # Batch size
@@ -58,120 +55,100 @@ class SymbolicConfig:
         elif hasattr(tokenizer, '__len__'):
             self.vocab_size = len(tokenizer)
 
+PRESETS = {
+    'tiny': TransformerConfig(
+        n_layer=2, n_head=2, n_embd=128, block_size=64,
+        batch_size=64, learning_rate=5e-4, num_epochs=3
+    ),
+    'small': TransformerConfig(
+        n_layer=6, n_head=6, n_embd=192, block_size=128,
+        batch_size=16, learning_rate=3e-4, num_epochs=5
+    ),
+    'medium': TransformerConfig(
+        n_layer=6, n_head=6, n_embd=384, block_size=128,
+        batch_size=16, learning_rate=2e-4, num_epochs=8
+    ),
+    'large': TransformerConfig(
+        n_layer=12, n_head=12, n_embd=768, block_size=256,
+        batch_size=8, learning_rate=1e-4, num_epochs=10
+    ),
+}
 
-def get_preset_config(preset_name: str) -> SymbolicConfig:
-    """Get predefined configuration presets."""
+def create_config_from_args(args) -> TransformerConfig:
+    """Create config from command line arguments."""
+    # start with preset (optional) so it can be overriden later if needed
+    if hasattr(args, 'preset') and args.preset:
+        config = get_preset_config(args.preset)
+    else:
+        config = TransformerConfig()
     
-    presets = {
-        'tiny': SymbolicConfig(
-            n_layer=2, n_head=2, n_embd=128,
-            block_size=64, batch_size=64,
-            learning_rate=5e-4, num_epochs=3
-        ),
-        'small': SymbolicConfig(
-            n_layer=6, n_head=6, n_embd=192,
-            block_size=128, batch_size=16,
-            learning_rate=3e-4, num_epochs=5
-        ),
-        'medium': SymbolicConfig(
-            n_layer=6, n_head=6, n_embd=384,
-            block_size=128, batch_size=16,
-            learning_rate=2e-4, num_epochs=8
-        ),
-        'large': SymbolicConfig(
-            n_layer=12, n_head=12, n_embd=768,
-            block_size=256, batch_size=8,
-            learning_rate=1e-4, num_epochs=10
-        ),
-    }
-    
-    if preset_name not in presets:
-        available = ', '.join(presets.keys())
+    # Override with any provided arguments
+    fields_to_copy = [
+        # Core model parameters
+        'n_embd', 'n_head', 'n_layer', 'block_size', 'dropout', 'bias',
+        
+        # Symbolic flags
+        'use_symbolic_ffn', 'use_v', 'use_proj',
+        
+        # Training parameters
+        'batch_size', 'num_epochs', 'learning_rate', 'weight_decay',
+        
+        # Generation parameters
+        'temperature', 'top_k',
+    ]
+
+    for name in fields_to_copy:
+        if hasattr(args, name) and getattr(args, name) is not None:
+            setattr(config, name, getattr(args, name))
+        return config
+
+def get_preset_config(preset_name: str) -> TransformerConfig:
+    """Get predefined configuration preset."""
+    if preset_name not in PRESETS:
+        available = ', '.join(PRESETS.keys())
         raise ValueError(f"Unknown preset '{preset_name}'. Available: {available}")
     
-    return presets[preset_name]
+    return PRESETS[preset_name]
 
-
-def print_config(config: SymbolicConfig, dataset_name: str = None, model = None):
-    """Print configuration in a formatted way."""
+def print_config(config: TransformerConfig, dataset_name: str = None, model=None):
+    """Print configuration in a clean format."""
     print("=" * 60)
-    print("SYMBOLIC TRANSFORMER CONFIGURATION")
+    print("TRANSFORMER CONFIGURATION")
     print("=" * 60)
     
-    print(f"\n MODEL ARCHITECTURE:")
-    print(f"  Layers:              {config.n_layer}")
+    print(f"\n🏗️  MODEL ARCHITECTURE:")
+    print(f"  Layers:              {config.n_layer}") 
     print(f"  Attention Heads:     {config.n_head}")
     print(f"  Embedding Dim:       {config.n_embd}")
     print(f"  Head Dimension:      {config.n_embd // config.n_head}")
-    print(f"  Vocabulary Size:     {config.vocab_size}")
-    print(f"  Block Size:          {config.block_size}")
-    print(f"  Max Position:        {config.max_position_embeddings}")
+    print(f"  Vocabulary Size:     {config.vocab_size or 'TBD'}")
+    print(f"  Max Sequence:        {config.block_size}")
+    print(f"  Dropout:             {config.dropout}")
+    print(f"  Bias in Linear:      {config.bias}")
     
-    print(f"\n SYMBOLIC CONSTRAINTS:")
+    print(f"\n🔬 SYMBOLIC FEATURES:")
     print(f"  Symbolic FFN:        {config.use_symbolic_ffn}")
-    print(f"  Vocab Refinement:    {config.use_vocab_refinement}")
-    print(f"  Value Constraints:   {config.use_v}")
-    print(f"  Output Constraints:  {config.use_proj}")
-    print(f"  ALiBi Encoding:      Yes (no learned positions)")
+    print(f"  Kronecker V:         {config.use_v}")
+    print(f"  Kronecker Output:    {config.use_proj}")
     
-    print(f"\n TRAINING:")
+    print(f"\n🏋️  TRAINING SETUP:")
     print(f"  Batch Size:          {config.batch_size}")
     print(f"  Epochs:              {config.num_epochs}")
     print(f"  Learning Rate:       {config.learning_rate}")
     print(f"  Weight Decay:        {config.weight_decay}")
-    print(f"  Dropout:             {config.dropout}")
+    
+    print(f"\n🎲 GENERATION:")
+    print(f"  Temperature:         {config.temperature}")
+    print(f"  Top-K:               {config.top_k}")
     
     if dataset_name:
-        print(f"\n DATASET:")
-        print(f"  Dataset:             {dataset_name}")
-    
-    # Estimate parameters
-    if config.vocab_size:
-        params = estimate_parameters(config)
-        print(f"\n MODEL SIZE:")
-        print(f"  Estimated Params:    {params/1e6:.2f}M")
+        print(f"\n📊 DATASET:")
+        print(f"  Name:                {dataset_name}")
     
     if model is not None:
-        print(f"\n MODEL SIZE:")
         total_params = sum(p.numel() for p in model.parameters())
-        print(f"  Actual Params:       {total_params/1e6:.2f}M")
+        print(f"\n📏 MODEL SIZE:")
+        print(f"  Parameters:          {total_params/1e6:.2f}M")
     
     print("=" * 60)
 
-
-def estimate_parameters(config: SymbolicConfig) -> int:
-    """Estimate number of model parameters."""
-    vocab_size = config.vocab_size or 50257
-    
-    # Token embeddings (shared with lm_head)
-    token_params = vocab_size * config.n_embd
-    
-    # Transformer layers
-    layer_params = 0
-    for _ in range(config.n_layer):
-        # Layer norms (symbolic: n_head parameters each)
-        ln_params = 2 * config.n_head * (2 if config.bias else 1)
-        
-        # Attention (Q, K projections only by default)
-        attn_params = config.n_embd * 2 * config.n_embd + (2 * config.n_embd if config.bias else 0)
-        
-        # Symbolic projections if enabled
-        if config.use_v:
-            attn_params += config.n_head * config.n_head  # V matrix
-        if config.use_proj:
-            attn_params += config.n_head * config.n_head  # Output matrix
-        
-        # Symbolic FFN
-        if config.use_symbolic_ffn:
-            ffn_params = config.n_embd * config.n_embd + config.n_embd * vocab_size
-            if config.bias:
-                ffn_params += config.n_embd
-        else:
-            ffn_params = 0
-        
-        layer_params += ln_params + attn_params + ffn_params
-    
-    # Final layer norm
-    final_ln = config.n_head * (2 if config.bias else 1)
-    
-    return token_params + layer_params + final_ln
