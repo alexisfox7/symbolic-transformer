@@ -8,44 +8,37 @@ from ..components import ChannelNorm, SymbolicAttention, VocabFFN
 
 class SymbolicTransformerBlock(nn.Module):
     """
-    Pure symbolic transformer block with vocabulary-constrained operations.
-    Maintains single symbolic stream with FFN vocabulary projection.
+    Symbolic transformer block, FFN output is vocabulary-constrained.
+    Maintains single symbolic stream.
     """
     #TODO: old code
     def __init__(self, config, vocab_embeddings_ref):
         super().__init__()
         self.config = config
 
-        # Symbolic layer normalization
         self.ln_1 = ChannelNorm(config.n_embd, config.n_head, bias=config.bias)
         self.ln_2 = ChannelNorm(config.n_embd, config.n_head, bias=config.bias)
 
-        # Symbolic attention mechanism (no vocab reference needed)
         self.attn = SymbolicAttention(config)
 
-        # Vocabulary-constrained FFN
         self.ffn = VocabFFN(config, vocab_embeddings_ref)
 
     #TODO: old code
     def forward(self, xt):
         # Symbolic attention path
         norm_for_attn = self.ln_1(xt)
-        attn_output = self.attn(norm_for_attn)  # Fixed: single argument
+        attn_output = self.attn(norm_for_attn) 
         xt = xt + attn_output
 
-        # Optional symbolic FFN path
-        if self.use_symbolic_ffn:
-            norm_for_ffn = self.ln_2(xt)
-            ffn_output = self.ffn(norm_for_ffn)
-            xt = xt + ffn_output
+        norm_for_ffn = self.ln_2(xt)
+        ffn_output = self.ffn(norm_for_ffn)
+        xt = xt + ffn_output
 
         return xt
 
-class SymbolicTransformerModel(nn.Module):
+class SymbolicTransformerModel(TransformerBase):
     """
-    Pure Symbolic Transformer model with ALiBi positional encoding.
-    All internal states are constrained to remain symbolically interpretable
-    as combinations of vocabulary embeddings through architectural design.
+    Symbolic Transformer model.
     """
     #TODO: old code
     def __init__(self, config):
@@ -55,13 +48,14 @@ class SymbolicTransformerModel(nn.Module):
         
         self.config = config
         
-        # Core model components (no positional embeddings with ALiBi)
+        # Core model components
         self.transformer = nn.ModuleDict(dict(
             wte=nn.Embedding(config.vocab_size, config.n_embd),
             drop=nn.Dropout(config.dropout),
             h=nn.ModuleList([SymbolicTransformerBlock(config, None) for _ in range(config.n_layer)]),
             ln_f=ChannelNorm(config.n_embd, config.n_head, bias=config.bias),
         ))
+        #REVIEW fix reference
         
         # Pass vocabulary embedding reference to all blocks after creation
         for block in self.transformer.h:
@@ -73,15 +67,16 @@ class SymbolicTransformerModel(nn.Module):
             if hasattr(block, 'ffn'):
                 block.ffn.vocab_embeddings_ref = self.transformer.wte
 
-        # Language model head (shared weights with token embeddings)
-        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+        # language model head (weight tying)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, config.bias)
         self.lm_head.weight = self.transformer.wte.weight 
         
-        # Vocabulary grounding layer for final output
+        #REVIEW i dont think i need a vocab grounding, i think lm head is that internally? 
+        # vocabulary grounding layer for final output
         self.vocab_grounding = VocabFFN(config, self.transformer.wte)
 
-        # Initialize weights
         self.apply(self._init_weights)
+        self._apply_projection_init()
         
         # Special initialization for symbolic components
         for pn, p in self.named_parameters():
