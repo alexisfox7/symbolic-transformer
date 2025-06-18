@@ -11,7 +11,6 @@ class SymbolicTransformerBlock(nn.Module):
     Symbolic transformer block, FFN output is vocabulary-constrained.
     Maintains single symbolic stream.
     """
-    #TODO: old code
     def __init__(self, config, vocab_embeddings_ref):
         super().__init__()
         self.config = config
@@ -23,17 +22,10 @@ class SymbolicTransformerBlock(nn.Module):
 
         self.ffn = VocabFFN(config, vocab_embeddings_ref)
 
-    #TODO: old code
+    #REVIEW check this is right order
     def forward(self, xt):
-        # Symbolic attention path
-        norm_for_attn = self.ln_1(xt)
-        attn_output = self.attn(norm_for_attn) 
-        xt = xt + attn_output
-
-        norm_for_ffn = self.ln_2(xt)
-        ffn_output = self.ffn(norm_for_ffn)
-        xt = xt + ffn_output
-
+        x = x + self.attn(self.ln_1(x))
+        x = x + self.ffn(self.ln_2(x))
         return xt
 
 class SymbolicTransformer(TransformerBase):
@@ -48,24 +40,15 @@ class SymbolicTransformer(TransformerBase):
         
         self.config = config
         
-        # Core model components
+        self.wte = nn.Embedding(config.vocab_size, config.n_embd)
+
+        #REVIEW ensure the reference got pass
         self.transformer = nn.ModuleDict(dict(
-            wte=nn.Embedding(config.vocab_size, config.n_embd),
+            wte=self.wte,
             drop=nn.Dropout(config.dropout),
-            h=nn.ModuleList([SymbolicTransformerBlock(config, None) for _ in range(config.n_layer)]),
+            h=nn.ModuleList([SymbolicTransformerBlock(config, self.wte) for _ in range(config.n_layer)]),
             ln_f=ChannelNorm(config.n_embd, config.n_head, bias=config.bias),
         ))
-        #REVIEW fix reference
-        
-        # Pass vocabulary embedding reference to all blocks after creation
-        for block in self.transformer.h:
-            block.attn.vocab_embeddings_ref = self.transformer.wte
-            if hasattr(block.attn, 'symbolic_v_projection'):
-                block.attn.symbolic_v_projection.vocab_embeddings_ref = self.transformer.wte
-            if hasattr(block.attn, 'symbolic_output_projection'):
-                block.attn.symbolic_output_projection.vocab_embeddings_ref = self.transformer.wte
-            if hasattr(block, 'ffn'):
-                block.ffn.vocab_embeddings_ref = self.transformer.wte
 
         # language model head (weight tying)
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, config.bias)
@@ -78,17 +61,8 @@ class SymbolicTransformer(TransformerBase):
         self.apply(self._init_weights)
         self._apply_projection_init()
         
-        # Special initialization for symbolic components
-        for pn, p in self.named_parameters():
-            if 'vocab_attention' in pn and 'weight' in pn:
-                # Initialize vocabulary attention to be close to identity
-                torch.nn.init.normal_(p, mean=0.0, std=0.01)
-            elif pn.endswith('temperature'):
-                # Initialize temperature for stable training
-                torch.nn.init.constant_(p, 1.0)
-
+        #REVIEW if needed init temperature
         print(f"SymbolicTransformerModel initialized with {self.get_num_params()/1e6:.2f}M parameters")
-        print(f"Symbolic constraints: symbolic_ffn={getattr(config, 'use_symbolic_ffn', True)}")
         print(f"Vocabulary size: {config.vocab_size}, Embedding dim: {config.n_embd}")
 
     #REVIEW does this need to be overridden?
@@ -102,19 +76,17 @@ class SymbolicTransformer(TransformerBase):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
         elif isinstance(module, SymbolicAttention):
-            # Initialize symbolic attention parameters
             if hasattr(module, 'v_tmp'):
                 torch.nn.init.normal_(module.v_tmp, mean=0.0, std=0.02)
             if hasattr(module, 'proj_tmp'):
                 torch.nn.init.normal_(module.proj_tmp, mean=0.0, std=0.02)
         elif isinstance(module, ChannelNorm):
-            # Initializer norm
             torch.nn.init.ones_(module.channel_weights)
             if module.channel_biases is not None:
                 torch.nn.init.zeros_(module.channel_biases)
 
     #TODO: old code
-    def forward(self, input_ids, attention_mask=None, labels=None):
+    def forward(self, input_ids, targets=None):
         """
         Forward pass for the SymbolicTransformerModel.
         
@@ -126,12 +98,6 @@ class SymbolicTransformer(TransformerBase):
         device = input_ids.device
         b, t = input_ids.size()
 
-        # Check sequence length limits
-        max_len = getattr(self.config, 'max_position_embeddings', self.config.block_size * 4)
-        if t > max_len:
-            raise ValueError(f"Sequence length {t} exceeds maximum supported length {max_len}")
-
-        # Token embeddings only (no positional embeddings with ALiBi)
         tok_emb = self.transformer.wte(input_ids)
         
         # Initialize symbolic stream
@@ -142,18 +108,22 @@ class SymbolicTransformer(TransformerBase):
             xt = block(xt)
 
         # Final vocabulary grounding and normalization
-        xt_grounded = self.vocab_grounding(xt)
+        xt_grounded = self.vocab_grounding(xt) #REVIEW is necessary?
         x_final = self.transformer.ln_f(xt_grounded)
         logits = self.lm_head(x_final)
 
         # Calculate language modeling loss if labels provided
         loss = None
-        if labels is not None:
-            # Shift labels for causal language modeling
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
+        if targets is not None:
+            if targets[0, 0] != input_ids[0, 0]:
+                raise ValueError("Targets may be pre-shifted. Expected targets[0,0] == input_ids[0,0]")
+            if targets.shape != input_ids.shape:
+                raise ValueError(f"Targets shape {targets.shape} must match input_ids shape {input_ids.shape}")
             
-            # Calculate cross-entropy loss
+            # shift labels for causal language modeling
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = targets[..., 1:].contiguous()
+            
             loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 

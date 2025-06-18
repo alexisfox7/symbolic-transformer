@@ -30,7 +30,7 @@ from datasets import load_dataset
 
 # JSON logging imports
 from utils.json_logger import create_json_logger_for_training
-from trainers.json_trainer import create_accelerate_trainer_with_json_logging
+from trainers.old_json_trainer import create_accelerate_trainer_with_json_logging
 
 # Validation imports
 from torch.utils.data import DataLoader, random_split

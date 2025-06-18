@@ -110,6 +110,4 @@ class VocabFFN(nn.Module):
 # add option for channel norm i/o, everywhere, vanilla
 # add flag for residual
 
-# notes
-# make sure embedding sharing works
 # fix config
