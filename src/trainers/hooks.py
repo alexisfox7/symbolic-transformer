@@ -152,20 +152,28 @@ class ConsoleLogHook(TrainingHook):
         self.logger = logging.getLogger(__name__)
     
     def on_train_begin(self, state: Dict[str, Any]) -> None:
+        if not state.get('is_main_process', True):
+            return
         epochs = state.get('num_epochs', '?')
         model_params = state.get('model_params', '?')
         self.logger.info(f"Training started: {epochs} epochs, {model_params:,} parameters")
     
     def on_epoch_begin(self, epoch: int, state: Dict[str, Any]) -> None:
+        if not state.get('is_main_process', True):
+            return
         total = state.get('num_epochs', '?')
         self.logger.info(f"Epoch {epoch}/{total}")
     
     def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
         if batch_idx % self.log_every_n_batches == 0:
+            if not state.get('is_main_process', True):
+                return
             epoch = state.get('current_epoch', '?')
             self.logger.info(f"  Batch {batch_idx}, Loss: {loss:.4f}")
     
     def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
+        if not state.get('is_main_process', True):
+            return
         avg_loss = state.get('avg_loss', 'N/A')
         duration = state.get('epoch_duration', 'N/A')
         if isinstance(avg_loss, float):
@@ -212,11 +220,15 @@ class JSONLogHook(TrainingHook):
             pass  # Silent fail
     
     def on_train_begin(self, state: Dict[str, Any]) -> None:
+        if not state.get('is_main_process', True):
+            return
         config = {k: v for k, v in state.items() 
-                 if not callable(v) and k not in ['model', 'optimizer', 'dataloader']}
+                 if not callable(v) and k not in ['model', 'optimizer', 'dataloader', 'accelerator']}
         self._write({"event": "train_begin", "config": config})
     
     def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
+        if not state.get('is_main_process', True):
+            return
         self._write({
             "event": "epoch_end",
             "epoch": epoch,
@@ -226,6 +238,8 @@ class JSONLogHook(TrainingHook):
     
     def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
         if batch_idx % self.log_every_n_batches == 0:
+            if not state.get('is_main_process', True):
+                return
             self._write({
                 "event": "batch",
                 "epoch": state.get('current_epoch', 0),
@@ -244,6 +258,9 @@ class CheckpointHook(TrainingHook):
     
     def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
         if epoch % self.save_every_n_epochs == 0:
+            if not state.get('is_main_process', True):
+                return
+                
             import os
             import torch
             

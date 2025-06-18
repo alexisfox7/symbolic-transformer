@@ -61,6 +61,8 @@ class VocabFFN(nn.Module):
         Returns:
             Vocabulary-grounded output tensor (B, T, n_embd)
         """
+        if self.vocab_embeddings_ref is None:
+            raise RuntimeError("vocab_embeddings_ref not set.")
 
         z = self.ffn(x)  # (B, T, n_embd)
         z_norm = self.ffn_norm(z)  # (B, T, n_embd)

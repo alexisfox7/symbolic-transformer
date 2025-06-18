@@ -72,11 +72,6 @@ class TransformerBase(nn.Module):
         # generate new tokens autoregressively
         pass
 
-    #TODO implement
-    def get_embeddings(self, input_ids):
-        # way to access embeddings easily
-        return 
-    
     # UTILITY #
 
     #REVIEW check that it doesn't count the shared embeddings
@@ -84,16 +79,6 @@ class TransformerBase(nn.Module):
         """Count model parameters."""
         n_params = sum(p.numel() for p in self.parameters())
         return n_params
-    
-    #TODO implement
-    def save_model(self, path):
-        # save model weights and config
-        pass
-    
-    #TODO implement
-    def load_model(self, path):
-        # load model weights and config / resume checkpoint
-        pass
     
     #TODO implement
     def get_model_info(self):

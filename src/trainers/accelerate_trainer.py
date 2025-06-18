@@ -2,6 +2,7 @@
 """
 Simplified Accelerate Trainer without gradient accumulation - FIXED VERSION.
 Removes the hanging wait_for_everyone() call that causes terminal freezing.
+Updated to use the hook system instead of callbacks.
 """
 
 import time
@@ -13,12 +14,12 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from accelerate import Accelerator
 
-from .base_trainer import BaseTrainer, Callback
+from .base_trainer import BaseTrainer
 
 logger = logging.getLogger(__name__)
 
 class AccelerateTrainer(BaseTrainer):
-    """Accelerate trainer without gradient accumulation complexity - FIXED."""
+    """Accelerate trainer without gradient accumulation complexity - FIXED with hooks."""
 
     def __init__(self,
                  model: torch.nn.Module,
@@ -29,7 +30,6 @@ class AccelerateTrainer(BaseTrainer):
                  output_dir: Optional[str] = None,
                  clip_grad_norm: Optional[float] = None,
                  log_interval: int = 10,
-                 callbacks: Optional[List[Callback]] = None, 
                  start_epoch=1):
         
         # Initialize accelerator (no gradient accumulation)
@@ -39,7 +39,12 @@ class AccelerateTrainer(BaseTrainer):
         )
         
         # Use accelerator's device instead of passed device
-        super().__init__(model, dataloader, optimizer, self.accelerator.device, output_dir, callbacks)
+        super().__init__(model, dataloader, optimizer, self.accelerator.device, output_dir)
+        
+        # Add accelerator-specific items to trainer_state for hooks
+        self.trainer_state['accelerator'] = self.accelerator
+        self.trainer_state['is_main_process'] = self.accelerator.is_main_process
+        
         self.start_epoch = start_epoch
         self.num_epochs = num_epochs
         self.clip_grad_norm = clip_grad_norm
@@ -62,7 +67,7 @@ class AccelerateTrainer(BaseTrainer):
         logger.info("Starting training with accelerate...")
         
         self.trainer_state['num_epochs'] = self.num_epochs
-        self._trigger_callbacks('on_train_begin', logs=self.trainer_state)
+        self.hooks.on_train_begin(self.trainer_state)
 
         total_start_time = time.time()
         training_metrics = {
@@ -78,7 +83,7 @@ class AccelerateTrainer(BaseTrainer):
 
         for epoch in range(self.start_epoch, self.num_epochs + 1):
             self.trainer_state['current_epoch'] = epoch
-            self._trigger_callbacks('on_epoch_begin', epoch, logs=self.trainer_state)
+            self.hooks.on_epoch_begin(epoch, self.trainer_state)
             epoch_start_time = time.time()
             
             epoch_loss = 0.0
@@ -93,8 +98,6 @@ class AccelerateTrainer(BaseTrainer):
 
             for batch_idx, batch_data in enumerate(progress_bar):
                 self.trainer_state['current_batch_idx'] = batch_idx
-                batch_logs = {'batch_data_keys': list(batch_data.keys())}
-                self._trigger_callbacks('on_batch_begin', batch_idx, logs=batch_logs)
 
                 # Forward pass
                 outputs = self.model(**batch_data)
@@ -107,7 +110,7 @@ class AccelerateTrainer(BaseTrainer):
                 if torch.isnan(loss):
                     logger.error(f"Epoch {epoch}, Batch {batch_idx}: Loss is NaN. Stopping training.")
                     self.trainer_state['status'] = 'NaN Loss'
-                    self._trigger_callbacks('on_train_end', logs=self.trainer_state)
+                    self.hooks.on_train_end(self.trainer_state)
                     training_metrics['training_time'] = time.time() - total_start_time
                     return training_metrics
 
@@ -149,11 +152,13 @@ class AccelerateTrainer(BaseTrainer):
                 if (batch_idx + 1) % self.log_interval == 0:
                     logger.info(f"Epoch {epoch}, Batch {batch_idx + 1}: Loss={batch_loss_item:.4f}, "
                                 f"Samples={samples_processed}, Global Batch={global_batch}")
-                # Trigger batch end callback with global batch info
-                self._trigger_callbacks('on_batch_end', batch_idx, logs={
-                    'loss': batch_loss_item, 
+                
+                # Trigger batch end hook with global batch info
+                self.trainer_state.update({
+                    'latest_loss': batch_loss_item,
                     'global_batch': global_batch
                 })
+                self.hooks.on_batch_end(batch_idx, batch_loss_item, self.trainer_state)
 
             # Calculate epoch metrics
             avg_epoch_loss = epoch_loss / num_batches if num_batches > 0 else float('nan')
@@ -175,7 +180,7 @@ class AccelerateTrainer(BaseTrainer):
                 'global_batch': global_batch
             }
             self.trainer_state.update(epoch_end_logs)
-            self._trigger_callbacks('on_epoch_end', epoch, logs=self.trainer_state)
+            self.hooks.on_epoch_end(epoch, self.trainer_state)
 
             # FIXED: Save checkpoint without hanging wait_for_everyone()
             if self.output_dir and self.accelerator.is_main_process:
@@ -199,7 +204,7 @@ class AccelerateTrainer(BaseTrainer):
 
         self.trainer_state['status'] = 'Completed'
         self.trainer_state.update(training_metrics)
-        self._trigger_callbacks('on_train_end', logs=self.trainer_state)
+        self.hooks.on_train_end(self.trainer_state)
 
         return training_metrics
 
@@ -235,6 +240,49 @@ class AccelerateTrainer(BaseTrainer):
         """Legacy method - delegates to fixed version."""
         return self.save_checkpoint_fixed(path, epoch, **kwargs)
 
+    def log_batch(self,
+                  batch_idx: int,
+                  loss: float,
+                  epoch: Optional[int] = None,
+                  metrics: Optional[Dict[str, Any]] = None):
+        """
+        Log information about a training batch.
+
+        Args:
+            batch_idx (int): Index of the current batch.
+            loss (float): Training loss for the batch.
+            epoch (int, optional): Current epoch number.
+            metrics (dict, optional): Additional metrics to log.
+        """
+        metrics_str = ""
+        if metrics:
+            metrics_str = ", ".join(f"{k}: {v}" for k, v in metrics.items())
+
+        epoch_str = f"Epoch {epoch}, " if epoch is not None else ""
+        # Only log at intervals to avoid spam
+        if batch_idx % self.log_interval == 0:
+            logger.info(f"{epoch_str}Batch {batch_idx}, Loss: {loss:.4f}" +
+                       (f", {metrics_str}" if metrics_str else ""))
+
+    def log_epoch(self,
+                  epoch: int,
+                  avg_loss: float,
+                  metrics: Optional[Dict[str, Any]] = None):
+        """
+        Log information about a completed epoch.
+
+        Args:
+            epoch (int): Epoch number.
+            avg_loss (float): Average training loss for the epoch.
+            metrics (dict, optional): Additional metrics to log.
+        """
+        metrics_str = ""
+        if metrics:
+            metrics_str = ", ".join(f"{k}: {v}" for k, v in metrics.items())
+
+        logger.info(f"Epoch {epoch} complete: avg_loss={avg_loss:.4f}" +
+                   (f", {metrics_str}" if metrics_str else ""))
+
     def evaluate(self, eval_dataloader: Optional[DataLoader] = None) -> Dict[str, Any]:
         """Evaluate with accelerator."""
         logger.info("Starting evaluation...")
@@ -246,7 +294,7 @@ class AccelerateTrainer(BaseTrainer):
             eval_dataloader = self.accelerator.prepare(eval_dataloader)
 
         self.trainer_state['eval_dataloader_len'] = len(eval_dataloader)
-        self._trigger_callbacks('on_evaluate_begin', logs=self.trainer_state)
+        self.hooks.on_evaluate_begin(self.trainer_state)
 
         self.model.eval()
         total_loss = 0.0
@@ -256,9 +304,6 @@ class AccelerateTrainer(BaseTrainer):
         with torch.no_grad():
             for batch_idx, batch_data in enumerate(tqdm(eval_dataloader, desc="Evaluating", 
                                                        disable=not self.accelerator.is_local_main_process)):
-                batch_logs = {'batch_data_keys': list(batch_data.keys())}
-                self._trigger_callbacks('on_batch_begin', batch_idx, logs=batch_logs)
-
                 outputs = self.model(**batch_data)
                 loss = outputs.get('loss')
 
@@ -272,8 +317,6 @@ class AccelerateTrainer(BaseTrainer):
                 total_samples += batch_size * self.accelerator.num_processes
                 num_batches_processed += 1
 
-                self._trigger_callbacks('on_batch_end', batch_idx, logs={'loss': loss.item()})
-
         avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
         eval_metrics = {'loss': avg_loss}
         
@@ -286,6 +329,6 @@ class AccelerateTrainer(BaseTrainer):
 
         logger.info(f"Evaluation results: Loss: {eval_metrics['loss']:.6f}, Perplexity: {eval_metrics['perplexity']:.6f}")
         self.trainer_state.update(eval_metrics)
-        self._trigger_callbacks('on_evaluate_end', logs=self.trainer_state)
+        self.hooks.on_evaluate_end(self.trainer_state)
 
         return eval_metrics
