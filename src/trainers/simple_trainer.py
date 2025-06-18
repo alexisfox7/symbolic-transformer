@@ -12,7 +12,8 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
-from .base_trainer import BaseTrainer, Callback
+#FIX: Remove Callback import, keep only BaseTrainer
+from .base_trainer import BaseTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,8 @@ class SimpleTrainer(BaseTrainer):
                  num_epochs: int = 5,
                  output_dir: Optional[str] = None,
                  clip_grad_norm: Optional[float] = None,
-                 log_interval: int = 10,
-                 callbacks: Optional[List[Callback]] = None):
+                 log_interval: int = 10):
+                 #FIX: Remove callbacks parameter entirely
         """
         Initialize the simple trainer.
 
@@ -44,9 +45,9 @@ class SimpleTrainer(BaseTrainer):
             output_dir: Directory to save outputs (e.g., checkpoints).
             clip_grad_norm: Maximum norm for gradient clipping (None = no clipping).
             log_interval: Number of batches between logging.
-            callbacks: A list of Callback instances. Optional.
         """
-        super().__init__(model, dataloader, optimizer, device, output_dir, callbacks)
+        #FIX: Remove callbacks from parent call
+        super().__init__(model, dataloader, optimizer, device, output_dir)
         self.num_epochs = num_epochs
         self.clip_grad_norm = clip_grad_norm
         self.log_interval = log_interval
@@ -55,8 +56,9 @@ class SimpleTrainer(BaseTrainer):
         logger.info(f"Batch size: {dataloader.batch_size}")
         if self.clip_grad_norm:
             logger.info(f"Gradient clipping enabled with max norm: {self.clip_grad_norm}")
-        if self.callbacks:
-            logger.info(f"Attached callbacks: {[cb.__class__.__name__ for cb in self.callbacks]}")
+        #FIX: Remove callback logging, replace with hook logging
+        if len(self.hooks.hooks) > 0:
+            logger.info(f"Active hooks: {[h.name for h in self.hooks.hooks]}")
 
     def train(self) -> Dict[str, Any]:
         """
@@ -70,7 +72,8 @@ class SimpleTrainer(BaseTrainer):
         self.model.train()
 
         self.trainer_state['num_epochs'] = self.num_epochs
-        self._trigger_callbacks('on_train_begin', logs=self.trainer_state)
+        #FIX: Replace _trigger_callbacks with hooks.on_train_begin
+        self.hooks.on_train_begin(self.trainer_state)
 
         total_start_time = time.time()
         training_metrics = {
@@ -83,7 +86,8 @@ class SimpleTrainer(BaseTrainer):
 
         for epoch in range(1, self.num_epochs + 1):
             self.trainer_state['current_epoch'] = epoch
-            self._trigger_callbacks('on_epoch_begin', epoch, logs=self.trainer_state)
+            #FIX: Replace _trigger_callbacks with hooks.on_epoch_begin
+            self.hooks.on_epoch_begin(epoch, self.trainer_state)
             epoch_start_time = time.time()
             
             epoch_loss = 0.0
@@ -98,7 +102,7 @@ class SimpleTrainer(BaseTrainer):
             for batch_idx, batch_data in enumerate(progress_bar):
                 self.trainer_state['current_batch_idx'] = batch_idx
                 batch_logs = {'batch_data_keys': list(batch_data.keys())}
-                self._trigger_callbacks('on_batch_begin', batch_idx, logs=batch_logs)
+                #FIX: Remove _trigger_callbacks call for batch_begin - not needed
 
                 # Move batch to device
                 batch = {k: v.to(self.device) for k, v in batch_data.items() if isinstance(v, torch.Tensor)}
@@ -109,13 +113,14 @@ class SimpleTrainer(BaseTrainer):
 
                 if loss is None:
                     logger.warning(f"Epoch {epoch}, Batch {batch_idx}: Loss is None. Skipping.")
-                    self._trigger_callbacks('on_batch_end', batch_idx, logs={'loss': None})
+                    #FIX: Remove _trigger_callbacks call
                     continue
                     
                 if torch.isnan(loss):
                     logger.error(f"Epoch {epoch}, Batch {batch_idx}: Loss is NaN. Stopping training.")
                     self.trainer_state['status'] = 'NaN Loss'
-                    self._trigger_callbacks('on_train_end', logs=self.trainer_state)
+                    #FIX: Replace _trigger_callbacks with hooks.on_train_end
+                    self.hooks.on_train_end(self.trainer_state)
                     training_metrics['training_time'] = time.time() - total_start_time
                     return training_metrics
 
@@ -145,15 +150,11 @@ class SimpleTrainer(BaseTrainer):
                 if (batch_idx + 1) % self.log_interval == 0:
                     batch_size = batch.get('input_ids', next(iter(batch.values()))).shape[0]
                     samples_processed = (batch_idx + 1) * batch_size
-                    self.log_batch(
-                        batch_idx + 1, batch_loss_item, epoch=epoch,
-                        metrics={
-                            'samples': samples_processed,
-                            'total_batches': len(self.dataloader)
-                        }
-                    )
+                    # Logging is handled by hooks now
 
-                self._trigger_callbacks('on_batch_end', batch_idx, logs={'loss': batch_loss_item})
+                #FIX: Replace _trigger_callbacks with hooks.on_batch_end and update state
+                self.trainer_state['latest_loss'] = batch_loss_item
+                self.hooks.on_batch_end(batch_idx, batch_loss_item, self.trainer_state)
 
             # Calculate epoch metrics
             avg_epoch_loss = epoch_loss / num_batches if num_batches > 0 else float('nan')
@@ -162,18 +163,15 @@ class SimpleTrainer(BaseTrainer):
             training_metrics['total_samples'] += len(self.dataloader.dataset)
 
             epoch_duration = time.time() - epoch_start_time
-            self.log_epoch(epoch, avg_epoch_loss, metrics={
-                'batches': num_batches,
-                'duration': f"{epoch_duration:.2f}s"
-            })
-
+            
             epoch_end_logs = {
                 'loss': avg_epoch_loss, 
                 'epoch_duration': epoch_duration,
                 'batches': num_batches
             }
             self.trainer_state.update(epoch_end_logs)
-            self._trigger_callbacks('on_epoch_end', epoch, logs=self.trainer_state)
+            #FIX: Replace _trigger_callbacks with hooks.on_epoch_end
+            self.hooks.on_epoch_end(epoch, self.trainer_state)
 
             # Save checkpoint
             if self.output_dir:
@@ -195,7 +193,8 @@ class SimpleTrainer(BaseTrainer):
 
         self.trainer_state['status'] = 'Completed'
         self.trainer_state.update(training_metrics)
-        self._trigger_callbacks('on_train_end', logs=self.trainer_state)
+        #FIX: Replace _trigger_callbacks with hooks.on_train_end
+        self.hooks.on_train_end(self.trainer_state)
 
         return training_metrics
 
@@ -237,7 +236,8 @@ class SimpleTrainer(BaseTrainer):
             eval_dataloader = self.dataloader
 
         self.trainer_state['eval_dataloader_len'] = len(eval_dataloader)
-        self._trigger_callbacks('on_evaluate_begin', logs=self.trainer_state)
+        #FIX: Replace _trigger_callbacks with hooks.on_evaluate_begin
+        self.hooks.on_evaluate_begin(self.trainer_state)
 
         self.model.eval()
 
@@ -248,7 +248,7 @@ class SimpleTrainer(BaseTrainer):
         with torch.no_grad():
             for batch_idx, batch_data in enumerate(tqdm(eval_dataloader, desc="Evaluating")):
                 batch_logs = {'batch_data_keys': list(batch_data.keys())}
-                self._trigger_callbacks('on_batch_begin', batch_idx, logs=batch_logs)
+                #FIX: Remove _trigger_callbacks call for evaluate batch_begin - not needed
 
                 batch = {k: v.to(self.device) for k, v in batch_data.items() if isinstance(v, torch.Tensor)}
                 outputs = self.model(**batch)
@@ -256,7 +256,7 @@ class SimpleTrainer(BaseTrainer):
 
                 if loss is None or torch.isnan(loss):
                     logger.warning(f"Evaluation Batch {batch_idx}: Loss is None or NaN. Skipping.")
-                    self._trigger_callbacks('on_batch_end', batch_idx, logs={'loss': None})
+                    #FIX: Remove _trigger_callbacks call
                     continue
 
                 batch_size = batch.get('input_ids', next(iter(batch.values()))).size(0)
@@ -264,7 +264,7 @@ class SimpleTrainer(BaseTrainer):
                 total_samples += batch_size
                 num_batches_processed += 1
 
-                self._trigger_callbacks('on_batch_end', batch_idx, logs={'loss': loss.item()})
+                #FIX: Remove _trigger_callbacks call for evaluate batch_end - not needed
 
         avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
         eval_metrics = {'loss': avg_loss}
@@ -278,6 +278,7 @@ class SimpleTrainer(BaseTrainer):
 
         logger.info(f"Evaluation results: Loss: {eval_metrics['loss']:.6f}, Perplexity: {eval_metrics['perplexity']:.6f}")
         self.trainer_state.update(eval_metrics)
-        self._trigger_callbacks('on_evaluate_end', logs=self.trainer_state)
+        #FIX: Replace _trigger_callbacks with hooks.on_evaluate_end
+        self.hooks.on_evaluate_end(self.trainer_state)
 
         return eval_metrics

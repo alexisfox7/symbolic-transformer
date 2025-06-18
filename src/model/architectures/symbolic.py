@@ -36,7 +36,7 @@ class SymbolicTransformerBlock(nn.Module):
 
         return xt
 
-class SymbolicTransformerModel(TransformerBase):
+class SymbolicTransformer(TransformerBase):
     """
     Symbolic Transformer model.
     """

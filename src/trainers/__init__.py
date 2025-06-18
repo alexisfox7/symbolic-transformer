@@ -7,8 +7,9 @@ import torch
 import logging
 from typing import Dict, Type, Any, List, Optional
 
-from .base_trainer import BaseTrainer, Callback
+from .base_trainer import BaseTrainer
 from .simple_trainer import SimpleTrainer
+from .hooks import TrainingHook
 
 # Import accelerate trainer if available
 try:
@@ -33,7 +34,6 @@ def get_trainer(trainer_type: str,
                 dataloader: torch.utils.data.DataLoader,
                 optimizer: torch.optim.Optimizer,
                 device: torch.device,
-                callbacks: Optional[List[Callback]] = None,
                 **kwargs) -> BaseTrainer:
     """Factory function to get trainer."""
     
@@ -48,7 +48,6 @@ def get_trainer(trainer_type: str,
         dataloader=dataloader,
         optimizer=optimizer,
         device=device,
-        callbacks=callbacks,
         **kwargs
     )
 
@@ -62,7 +61,7 @@ def register_trainer(name: str, trainer_class: Type[BaseTrainer]):
     logger.info(f"Registered trainer: '{name}'")
 
 __all__ = [
-    'BaseTrainer', 'Callback', 'SimpleTrainer', 
+    'BaseTrainer', 'TrainingHook', 'SimpleTrainer', 
     'get_trainer', 'register_trainer', 'TRAINER_REGISTRY'
 ]
 

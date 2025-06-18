@@ -41,7 +41,7 @@ class BaseTrainer(ABC):
             'dataloader': self.dataloader,
             'device': self.device,
             'output_dir': self.output_dir,
-            'model_params': self.model.num_params()
+            'model_params': self.model.get_num_params()
         }
             
         if self.output_dir:
