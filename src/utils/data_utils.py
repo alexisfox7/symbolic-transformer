@@ -47,8 +47,7 @@ def simple_collate_fn(batch, tokenizer, max_length=128):
         # Return dummy batch if all texts are empty
         return {
             'input_ids': torch.tensor([[tokenizer.eos_token_id]]),
-            'attention_mask': torch.tensor([[1]]),
-            'labels': torch.tensor([[tokenizer.eos_token_id]])
+            'targets': torch.tensor([[tokenizer.eos_token_id]])
         }
     
     # Tokenize
@@ -63,8 +62,7 @@ def simple_collate_fn(batch, tokenizer, max_length=128):
     # Labels are input_ids for causal language modeling
     return {
         'input_ids': encoded['input_ids'],
-        'attention_mask': encoded['attention_mask'],
-        'labels': encoded['input_ids'].clone()
+        'targets': encoded['input_ids'].clone()
     }
 
 def load_and_prepare_data(dataset_name, dataset_config, tokenizer, max_samples, 
