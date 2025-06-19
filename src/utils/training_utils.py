@@ -23,19 +23,19 @@ def create_base_parser(description="Train Transformer with Hook System"):
     """Create base argument parser with common arguments."""
     parser = argparse.ArgumentParser(description=description)
     
-    # Dataset arguments
+    # dataset 
     parser.add_argument("--dataset", type=str, default="roneneldan/TinyStories")
     parser.add_argument("--dataset_config", type=str, default=None)
     parser.add_argument("--max_samples", type=int, default=10000)
     
-    # Model config arguments
+    # model config 
     parser.add_argument('--preset', type=str, default='small', 
                        choices=['tiny', 'small', 'medium', 'large'])
     parser.add_argument("--n_embd", type=int, default=None)
     parser.add_argument("--n_head", type=int, default=None)
     parser.add_argument("--n_layer", type=int, default=None)
     
-    # Training arguments
+    # training 
     parser.add_argument('--batch_size', type=int, default=None)
     parser.add_argument('--num_epochs', type=int, default=5)
     parser.add_argument('--learning_rate', type=float, default=None)
@@ -43,7 +43,7 @@ def create_base_parser(description="Train Transformer with Hook System"):
     parser.add_argument("--trainer_type", type=str, default="simple",
                        choices=["simple", "accelerate"])
     
-    # Logging & validation arguments
+    # logging & validation 
     parser.add_argument("--log_interval", type=int, default=50)
     parser.add_argument("--json_log_steps", type=int, default=100)
     parser.add_argument("--disable_json_logging", action="store_true")
@@ -51,10 +51,10 @@ def create_base_parser(description="Train Transformer with Hook System"):
     parser.add_argument("--validate_every", type=int, default=1)
     parser.add_argument("--no_validation", action="store_true")
     
-    # Output arguments
+    # output 
     parser.add_argument('--tokenizer_type', type=str, default='gpt2')
     
-    # Generation testing arguments
+    # generation testing 
     parser.add_argument("--skip_generation", action="store_true")
     parser.add_argument("--generation_max_len", type=int, default=30)
     
@@ -86,7 +86,7 @@ def create_config_from_args(args, symbolic_features=None):
     """Create config from parsed arguments."""
     config = get_preset_config(args.preset)
     
-    # Override with command line arguments
+    # override with command line arguments
     if args.n_embd: config.n_embd = args.n_embd
     if args.n_head: config.n_head = args.n_head
     if args.n_layer: config.n_layer = args.n_layer
@@ -94,7 +94,6 @@ def create_config_from_args(args, symbolic_features=None):
     if args.learning_rate: config.learning_rate = args.learning_rate
     config.num_epochs = args.num_epochs
     
-    # Add symbolic features if provided
     if symbolic_features:
         for feature, value in symbolic_features.items():
             setattr(config, feature, value)
@@ -114,7 +113,7 @@ def setup_data_loaders(args, config, tokenizer, logger):
     """Setup training and validation data loaders."""
     logger.info("Loading data...")
     
-    # Load full dataset
+    # load full dataset
     full_dataloader, tokenizer = load_and_prepare_data(
         dataset_name=args.dataset,
         dataset_config=args.dataset_config,
@@ -125,7 +124,7 @@ def setup_data_loaders(args, config, tokenizer, logger):
         mlm=False, split='train', shuffle=False
     )
     
-    # Create train/val split if validation enabled
+    # create train/val split if enabled
     if not args.no_validation:
         train_dataset, val_dataset = create_train_val_split(
             full_dataloader.dataset, args.val_ratio
@@ -173,35 +172,11 @@ def run_validation(model, val_dataloader, device):
     
     return {'loss': avg_loss, 'perplexity': perplexity, 'samples': total_samples}
 
-class ValidationHook:
-    """Reusable validation hook."""
-    
-    def __init__(self, val_dataloader, device, validate_every=1, model_type=""):
-        self.val_dataloader = val_dataloader
-        self.device = device
-        self.validate_every = validate_every
-        self.model_type = model_type
-        self.name = "validation"
-        self.enabled = True
-        
-    def on_epoch_end(self, epoch, state):
-        if not self.enabled or not self.val_dataloader:
-            return
-            
-        if epoch % self.validate_every == 0:
-            model = state.get('model')
-            if model:
-                val_metrics = run_validation(model, self.val_dataloader, self.device)
-                prefix = f"{self.model_type} " if self.model_type else ""
-                logging.getLogger(__name__).info(
-                    f"{prefix}Validation - Loss: {val_metrics['loss']:.4f}, "
-                    f"Perplexity: {val_metrics['perplexity']:.2f}"
-                )
-
 def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, device, 
                            config, args, val_dataloader=None, model_type=""):
     """Setup trainer with standard hooks."""
     from trainers import get_trainer
+    from trainers.hooks import ValidationHook
     
     trainer = get_trainer(
         trainer_type=trainer_type,
@@ -210,7 +185,7 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
         clip_grad_norm=args.clip_grad_norm, log_interval=args.log_interval
     )
     
-    # Add standard hooks
+    # add standard hooks
     trainer.add_console_logging(log_every_n_batches=args.log_interval)
     
     if not args.disable_json_logging:
@@ -218,7 +193,7 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
         
     trainer.add_checkpointing(save_every_n_epochs=1)
     
-    # Add validation hook if validation data provided
+    # add validation hook if validation data provided
     if val_dataloader:
         validation_hook = ValidationHook(val_dataloader, device, args.validate_every, model_type)
         trainer.add_hook(validation_hook)

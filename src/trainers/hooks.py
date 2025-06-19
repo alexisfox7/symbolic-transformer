@@ -1,6 +1,6 @@
 #src/trainers/hooks.py
 """
-Minimal hook system for trainers, inspired by TransformerLens.
+Hook system for trainers, inspired by TransformerLens.
 """
 
 from typing import Dict, Any, List, Callable, Optional
@@ -24,7 +24,7 @@ class TrainingHook:
     def __repr__(self):
         return f"TrainingHook('{self.name}', enabled={self.enabled})"
     
-    #core training events - override what you need
+    # core training events 
     def on_train_begin(self, state: Dict[str, Any]) -> None:
         """Called once at start of training."""
         pass
@@ -142,9 +142,8 @@ class HookManager:
         self._call_hook_method('on_batch_end', batch_idx, loss, state)
 
 
-# Useful built-in hooks for common cases
 class ConsoleLogHook(TrainingHook):
-    """Simple console logging hook."""
+    """Console logging hook."""
     
     def __init__(self, log_every_n_batches: int = 10):
         super().__init__("console_log")
@@ -183,7 +182,7 @@ class ConsoleLogHook(TrainingHook):
 
 
 class JSONLogHook(TrainingHook):
-    """Simple JSON logging hook."""
+    """JSON logging hook."""
     
     def __init__(self, output_dir: str, log_every_n_batches: int = 100):
         super().__init__("json_log")
@@ -249,7 +248,7 @@ class JSONLogHook(TrainingHook):
 
 
 class CheckpointHook(TrainingHook):
-    """Simple checkpointing hook."""
+    """Checkpointing hook."""
     
     def __init__(self, output_dir: str, save_every_n_epochs: int = 1):
         super().__init__("checkpoint")
@@ -297,3 +296,30 @@ def create_json_log_hook(output_dir: str, log_every_n_batches: int = 100) -> JSO
 def create_checkpoint_hook(output_dir: str, save_every_n_epochs: int = 1) -> CheckpointHook:
     """Create a checkpointing hook."""
     return CheckpointHook(output_dir, save_every_n_epochs)
+
+
+class ValidationHook(TrainingHook):
+    """Validation hook."""
+    
+    def __init__(self, val_dataloader, device, validate_every=1, model_type=""):
+        super().__init__("validation")
+        self.val_dataloader = val_dataloader
+        self.device = device
+        self.validate_every = validate_every
+        self.model_type = model_type
+        self.enabled = True
+        
+    def on_epoch_end(self, epoch, state):
+        if not self.enabled or not self.val_dataloader:
+            return
+            
+        if epoch % self.validate_every == 0:
+            model = state.get('model')
+            if model:
+                from utils.training_utils import run_validation
+                val_metrics = run_validation(model, self.val_dataloader, self.device)
+                prefix = f"{self.model_type} " if self.model_type else ""
+                logger.info(
+                    f"{prefix}Validation - Loss: {val_metrics['loss']:.4f}, "
+                    f"Perplexity: {val_metrics['perplexity']:.2f}"
+                )
