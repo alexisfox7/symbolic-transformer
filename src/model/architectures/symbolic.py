@@ -34,10 +34,8 @@ class SymbolicTransformer(TransformerBase):
     """
     #TODO:old code
     def __init__(self, config):
-        super().__init__()
-        assert config.vocab_size is not None, "vocab_size must be specified in config"
-        assert config.block_size is not None, "block_size must be specified in config"
-        
+        super().__init__(config)
+
         self.config = config
         
         self.wte = nn.Embedding(config.vocab_size, config.n_embd)
