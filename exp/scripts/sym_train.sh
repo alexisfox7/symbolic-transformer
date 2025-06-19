@@ -4,12 +4,12 @@
 set -e
 
 # CONFIG
-DIR="./outputs/sym_4gpu"
+DIR="./outputs/sym"
 N=110000
 N_EMBD=384
 PRESET="small"
 
-NUM_GPUS=4
+NUM_GPUS=2
 
 BATCH_SIZE=4
 NUM_EPOCHS=8
