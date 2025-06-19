@@ -55,16 +55,18 @@ class AccelerateTrainer(BaseTrainer):
             model, optimizer, dataloader
         )
         
-        logger.info(f"AccelerateTrainer initialized:")
-        logger.info(f"  Device: {self.accelerator.device}")
-        logger.info(f"  Mixed precision: {self.accelerator.mixed_precision}")
-        logger.info(f"  Log interval: every {log_interval} batches")
-        if self.accelerator.num_processes > 1:
-            logger.info(f"  Distributed training: {self.accelerator.num_processes} processes")
+        if self.accelerator.is_main_process:
+            logger.info(f"AccelerateTrainer initialized:")
+            logger.info(f"  Device: {self.accelerator.device}")
+            logger.info(f"  Mixed precision: {self.accelerator.mixed_precision}")
+            logger.info(f"  Log interval: every {log_interval} batches")
+            if self.accelerator.num_processes > 1:
+                logger.info(f"  Distributed training: {self.accelerator.num_processes} processes")
 
     def train(self) -> Dict[str, Any]:
         """Execute training loop with accelerate."""
-        logger.info("Starting training with accelerate...")
+        if self.accelerator.is_main_process:
+            logger.info("Starting training with accelerate...")
         
         self.trainer_state['num_epochs'] = self.num_epochs
         self.hooks.on_train_begin(self.trainer_state)
@@ -188,9 +190,10 @@ class AccelerateTrainer(BaseTrainer):
         training_metrics['training_time'] = time.time() - total_start_time
         training_metrics['total_global_batches'] = global_batch
 
-        logger.info(f"Training completed in {training_metrics['training_time']:.2f}s")
-        logger.info(f"Total batches processed: {global_batch}")
-        logger.info(f"Final average training loss: {training_metrics['final_loss']:.6f}")
+        if self.accelerator.is_main_process:
+            logger.info(f"Training completed in {training_metrics['training_time']:.2f}s")
+            logger.info(f"Total batches processed: {global_batch}")
+            logger.info(f"Final average training loss: {training_metrics['final_loss']:.6f}")
 
         self.trainer_state['status'] = 'Completed'
         self.trainer_state.update(training_metrics)
@@ -220,7 +223,8 @@ class AccelerateTrainer(BaseTrainer):
             
             # Direct save - no temporary file complexity
             torch.save(checkpoint, path)
-            logger.info(f"Checkpoint saved to: {path}")
+            if self.accelerator.is_main_process:
+                logger.info(f"Checkpoint saved to: {path}")
             
         except Exception as e:
             logger.error(f"Error saving checkpoint: {e}")

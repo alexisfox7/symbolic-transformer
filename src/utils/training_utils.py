@@ -19,6 +19,18 @@ from mytokenizers import create_tokenizer
 from utils.data_utils import load_and_prepare_data
 from datasets import load_dataset
 
+def log_if_main(logger, message, trainer_type="simple"):
+    """Log only from main process when using accelerate."""
+    if trainer_type == "accelerate":
+        try:
+            from accelerate import Accelerator
+            if Accelerator().is_main_process:
+                logger.info(message)
+        except:
+            pass
+    else:
+        logger.info(message)
+
 def create_base_parser(description="Train Transformer with Hook System"):
     """Create base argument parser with common arguments."""
     parser = argparse.ArgumentParser(description=description)
@@ -68,7 +80,7 @@ def add_symbolic_args(parser):
                        help="Use Kronecker-lifted output projection")
     return parser
 
-def setup_training_environment(output_dir, model_type="Transformer"):
+def setup_training_environment(output_dir, model_type="Transformer", trainer_type="simple"):
     """Setup logging and output directory."""
     os.makedirs(output_dir, exist_ok=True)
     logging.basicConfig(level=logging.INFO)
@@ -76,9 +88,9 @@ def setup_training_environment(output_dir, model_type="Transformer"):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    logger.info("="*60)
-    logger.info(f"{model_type.upper()} TRAINING WITH HOOK SYSTEM")
-    logger.info("="*60)
+    log_if_main(logger, "="*60, trainer_type)
+    log_if_main(logger, f"{model_type.upper()} TRAINING WITH HOOK SYSTEM", trainer_type)
+    log_if_main(logger, "="*60, trainer_type)
     
     return logger, device
 
@@ -109,9 +121,9 @@ def create_train_val_split(dataset, val_ratio=0.1, seed=42):
     generator = torch.Generator().manual_seed(seed)
     return random_split(dataset, [train_size, val_size], generator=generator)
 
-def setup_data_loaders(args, config, tokenizer, logger):
+def setup_data_loaders(args, config, tokenizer, logger, trainer_type="simple"):
     """Setup training and validation data loaders."""
-    logger.info("Loading data...")
+    log_if_main(logger, "Loading data...", trainer_type)
     
     # load full dataset
     full_dataloader, tokenizer = load_and_prepare_data(
@@ -138,11 +150,11 @@ def setup_data_loaders(args, config, tokenizer, logger):
             val_dataset, batch_size=config.batch_size, shuffle=False,
             collate_fn=full_dataloader.collate_fn, drop_last=False
         )
-        logger.info(f"Train: {len(train_dataloader)} batches, Val: {len(val_dataloader)} batches")
+        log_if_main(logger, f"Train: {len(train_dataloader)} batches, Val: {len(val_dataloader)} batches", trainer_type)
     else:
         train_dataloader = full_dataloader
         val_dataloader = None
-        logger.info(f"Training: {len(train_dataloader)} batches (no validation)")
+        log_if_main(logger, f"Training: {len(train_dataloader)} batches (no validation)", trainer_type)
     
     return train_dataloader, val_dataloader, tokenizer
 
@@ -200,14 +212,14 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
     
     return trainer
 
-def test_generation(model, tokenizer, device, args, logger, model_type=""):
+def test_generation(model, tokenizer, device, args, logger, model_type="", trainer_type="simple"):
     """Test model generation with sample prompts."""
     if args.skip_generation:
         return
         
     from inference.generation import run_generation
     
-    logger.info(f"Testing {model_type.lower()} generation...")
+    log_if_main(logger, f"Testing {model_type.lower()} generation...", trainer_type)
     test_prompts = ["The brave knight", "Once upon a time", "The magical forest"]
     
     model.eval()
@@ -218,7 +230,7 @@ def test_generation(model, tokenizer, device, args, logger, model_type=""):
                 device=device, max_new_tokens=args.generation_max_len,
                 show_progress=False
             )
-            logger.info(f"'{prompt}' → '{generated_text}'")
+            log_if_main(logger, f"'{prompt}' → '{generated_text}'", trainer_type)
         except Exception as e:
             logger.error(f"Generation failed for '{prompt}': {e}")
 

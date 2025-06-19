@@ -23,7 +23,7 @@ def main():
     args = parse_args()
     
     # setup env
-    logger, device = setup_training_environment(args.output_dir, "Vanilla Transformer")
+    logger, device = setup_training_environment(args.output_dir, "Vanilla Transformer", args.trainer_type)
     
     # create config
     config = create_config_from_args(args)
@@ -35,7 +35,7 @@ def main():
     print_config(config, dataset_name=args.dataset)
     
     # setup data
-    train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger)
+    train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger, args.trainer_type)
     
     # create model
     logger.info("Creating Vanilla Transformer...")
@@ -65,7 +65,7 @@ def main():
     )
     
     # test generation
-    test_generation(model, tokenizer, device, args, logger, "vanilla")
+    test_generation(model, tokenizer, device, args, logger, "vanilla", args.trainer_type)
     
     logger.info("Vanilla transformer training completed!")
 

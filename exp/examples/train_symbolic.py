@@ -25,7 +25,7 @@ def main():
     args = parse_args()
     
     # setup environment
-    logger, device = setup_training_environment(args.output_dir, "Symbolic Transformer")
+    logger, device = setup_training_environment(args.output_dir, "Symbolic Transformer", args.trainer_type)
     logger.info(f"Symbolic features: use_v={args.use_v}, use_proj={args.use_proj}")
     
     # create config
@@ -42,7 +42,7 @@ def main():
     print_config(config, dataset_name=args.dataset)
     
     # setup data
-    train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger)
+    train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger, args.trainer_type)
     
     # create model
     logger.info("Creating Symbolic Transformer...")
@@ -80,7 +80,7 @@ def main():
     )
     
     # test generation
-    test_generation(model, tokenizer, device, args, logger, "symbolic")
+    test_generation(model, tokenizer, device, args, logger, "symbolic", args.trainer_type)
     
     logger.info("Symbolic transformer training completed!")
     logger.info(f"Symbolic features used: use_v={args.use_v}, use_proj={args.use_proj}")
