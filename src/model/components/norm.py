@@ -1,4 +1,4 @@
-# Different kinds of layer norms
+#different kinds of layer norms
 import torch
 import torch.nn as nn
 from torch.nn import functional as F

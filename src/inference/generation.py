@@ -1,4 +1,4 @@
-# ./inference/generation.py
+#./inference/generation.py
 """
 Text Generation Utilities
 Provides functions for generating text with trained models
@@ -21,7 +21,7 @@ def run_generation(model: torch.nn.Module,
                   max_new_tokens: int = 50,
                   temperature: float = 1.0,
                   top_k: Optional[int] = None,
-                  top_p: Optional[float] = None, # Keep in signature for compatibility if other parts use it
+                  top_p: Optional[float] = None, #keep in signature for compatibility if other parts use it
                   show_progress: bool = True) -> Tuple[List[int], str]:
     """
     Generate text using the model starting from a prompt.
@@ -41,12 +41,12 @@ def run_generation(model: torch.nn.Module,
     Returns:
         Tuple of (list of token IDs, generated text string)
     """
-    # Ensure the model has a generate method
+    #ensure the model has a generate method
     if not hasattr(model, 'generate'):
         logger.error("Model does not have a 'generate' method required for this function.")
         raise AttributeError("Model must have a 'generate' method for text generation")
 
-    # Set the model to evaluation mode
+    #set the model to evaluation mode
     model.eval()
     model.to(device)
 
@@ -55,14 +55,14 @@ def run_generation(model: torch.nn.Module,
     logger.info(f"  Max new tokens: {max_new_tokens}")
     logger.info(f"  Temperature: {temperature}")
     logger.info(f"  Top-k: {top_k if top_k is not None else 'Not Used'}")
-    # Log top_p status based on whether it's provided and if we intend to use it
-    # For now, we will not pass top_p to the current models as they don't support it.
+    #log top_p status based on whether it's provided and if we intend to use it
+    #for now, we will not pass top_p to the current models as they don't support it.
     logger.info(f"  Top-p: {'Not Used (model does not support)' if top_p is not None else 'Not Used'}")
 
 
-    # Encode the starting prompt
+    #encode the starting prompt
     try:
-        # Add special tokens if needed (though model.generate usually handles context without BOS for prompt)
+        #add special tokens if needed (though model.generate usually handles context without BOS for prompt)
         start_ids = tokenizer.encode(prompt_text, add_special_tokens=True, return_tensors='pt')
         
         if not isinstance(start_ids, torch.Tensor):
@@ -72,7 +72,7 @@ def run_generation(model: torch.nn.Module,
         
         if start_ids.shape[1] == 0:
             logger.warning("Encoded prompt is empty. Using BOS token as fallback.")
-            # Ensure bos_token_id is available and is an int
+            #ensure bos_token_id is available and is an int
             start_token_id = tokenizer.bos_token_id if hasattr(tokenizer, 'bos_token_id') and tokenizer.bos_token_id is not None else 0
             start_ids = torch.tensor([[start_token_id]], dtype=torch.long, device=device)
             
@@ -85,7 +85,7 @@ def run_generation(model: torch.nn.Module,
     if show_progress:
         progress_bar = tqdm(total=max_new_tokens, desc="Generating tokens")
     
-    # Prepare arguments for model.generate, excluding top_p as current models don't use it
+    #prepare arguments for model.generate, excluding top_p as current models don't use it
     generate_kwargs = {
         'idx': start_ids,
         'max_new_tokens': max_new_tokens,
@@ -94,9 +94,9 @@ def run_generation(model: torch.nn.Module,
     if top_k is not None:
         generate_kwargs['top_k'] = top_k
     
-    # If your models were updated to handle top_p, you would add it here:
-    # if top_p is not None:
-    #     generate_kwargs['top_p'] = top_p
+    #if your models were updated to handle top_p, you would add it here:
+    #if top_p is not None:
+    #generate_kwargs['top_p'] = top_p
 
     try:
         generated_ids_tensor = model.generate(**generate_kwargs)
@@ -104,14 +104,14 @@ def run_generation(model: torch.nn.Module,
         if isinstance(generated_ids_tensor, torch.Tensor):
             generated_ids = generated_ids_tensor[0].tolist()  
         else:
-            generated_ids = generated_ids_tensor # type: ignore
+            generated_ids = generated_ids_tensor #type: ignore
             
         if show_progress:
             progress_bar.update(max_new_tokens)  
             progress_bar.close()
             
     except Exception as e:
-        if show_progress and 'progress_bar' in locals() and progress_bar: # Check if progress_bar exists and is not None
+        if show_progress and 'progress_bar' in locals() and progress_bar: #check if progress_bar exists and is not None
             progress_bar.close()
         logger.error(f"Error during model.generate(): {e}", exc_info=True)
         raise
@@ -139,7 +139,7 @@ def get_generation_args() -> Dict[str, Any]:
         'max_new_tokens': 50,
         'temperature': 0.8,
         'top_k': 50,
-        'top_p': None, # Keep for consistency, but run_generation handles its non-usage by models
+        'top_p': None, #keep for consistency, but run_generation handles its non-usage by models
         'show_progress': True
     }
 
@@ -164,8 +164,8 @@ def batch_generate(model: torch.nn.Module,
     """
     results = []
     
-    # top_p will be passed to run_generation, which will then decide not to pass it to model.generate
-    # if the model doesn't support it (which is the current case).
+    #top_p will be passed to run_generation, which will then decide not to pass it to model.generate
+    #if the model doesn't support it (which is the current case).
     
     for i, prompt in enumerate(prompts):
         logger.info(f"\nGenerating text for prompt {i+1}/{len(prompts)}: '{prompt}'")
@@ -176,7 +176,7 @@ def batch_generate(model: torch.nn.Module,
                 tokenizer=tokenizer,
                 prompt_text=prompt,
                 device=device,
-                **kwargs # Pass along all kwargs (including top_p if present)
+                **kwargs #pass along all kwargs (including top_p if present)
             )
             results.append(result)
             

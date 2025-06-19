@@ -1,4 +1,4 @@
-# ./mytokenizers/character_tokenizer.py
+#./mytokenizers/character_tokenizer.py
 """
 Character-level tokenizer implementation.
 """

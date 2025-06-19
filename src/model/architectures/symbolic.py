@@ -23,16 +23,16 @@ class SymbolicTransformerBlock(nn.Module):
         self.ffn = VocabFFN(config, vocab_embeddings_ref)
 
     #REVIEW check this is right order
-    def forward(self, xt):
+    def forward(self, x):
         x = x + self.attn(self.ln_1(x))
         x = x + self.ffn(self.ln_2(x))
-        return xt
+        return x
 
 class SymbolicTransformer(TransformerBase):
     """
     Symbolic Transformer model.
     """
-    #TODO: old code
+    #TODO:old code
     def __init__(self, config):
         super().__init__()
         assert config.vocab_size is not None, "vocab_size must be specified in config"
@@ -54,7 +54,7 @@ class SymbolicTransformer(TransformerBase):
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, config.bias)
         self.lm_head.weight = self.transformer.wte.weight 
         
-        #REVIEW i dont think i need a vocab grounding, i think lm head is that internally? 
+        #REVIEW i dont think i need a vocab grounding
         # vocabulary grounding layer for final output
         self.vocab_grounding = VocabFFN(config, self.transformer.wte)
 
@@ -66,7 +66,7 @@ class SymbolicTransformer(TransformerBase):
         print(f"Vocabulary size: {config.vocab_size}, Embedding dim: {config.n_embd}")
 
     #REVIEW does this need to be overridden?
-    #TODO: old code
+    #TODO:old code
     def _init_weights(self, module):
         """Initialize model weights with symbolic-aware initialization."""
         if isinstance(module, nn.Linear):

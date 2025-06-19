@@ -1,4 +1,4 @@
-# ./tokenizers/gpt2_tokenizer.py
+#./tokenizers/gpt2_tokenizer.py
 """
 GPT-2 Tokenizer Wrapper
 Provides a consistent interface to the Hugging Face GPT-2 tokenizer
@@ -14,6 +14,7 @@ from .base_tokenizer import BaseTokenizer
 
 logger = logging.getLogger(__name__)
 
+#REVIEW whats the point of wrapping this
 class GPT2Tokenizer(BaseTokenizer):
     """
     Wrapper for the Hugging Face GPT-2 tokenizer to match our interface.
@@ -36,11 +37,11 @@ class GPT2Tokenizer(BaseTokenizer):
             max_length: Maximum sequence length
             **kwargs: Additional arguments passed to the Hugging Face tokenizer
         """
-        # Initialize with the underlying HF tokenizer
+        #initialize with the underlying HF tokenizer
         tokenizer_class = GPT2TokenizerFast if use_fast else HfGPT2Tokenizer
         self._tokenizer = tokenizer_class.from_pretrained('gpt2', **kwargs)
         
-        # Initialize base class after getting vocab size from HF tokenizer
+        #initialize base class after getting vocab size from HF tokenizer
         super().__init__(
             vocab_size=len(self._tokenizer),
             padding_token=padding_token or self._tokenizer.eos_token,
@@ -48,20 +49,20 @@ class GPT2Tokenizer(BaseTokenizer):
             bos_token=self._tokenizer.bos_token,
         )
         
-        # Set the padding token if specified (GPT-2 uses EOS as padding by default)
+        #set the padding token if specified (GPT-2 uses EOS as padding by default)
         if padding_token:
             self._tokenizer.pad_token = padding_token
         else:
-            # If no padding token specified, use EOS token as padding (common practice)
+            #if no padding token specified, use EOS token as padding (common practice)
             self._tokenizer.pad_token = self._tokenizer.eos_token
         
-        # Set model max length
+        #set model max length
         self.model_max_length = self._tokenizer.model_max_length
         if max_length:
             self._tokenizer.model_max_length = max_length
             self.model_max_length = max_length
         
-        # Set token IDs from the underlying tokenizer
+        #set token IDs from the underlying tokenizer
         self.pad_token_id = self._tokenizer.pad_token_id
         self.eos_token_id = self._tokenizer.eos_token_id
         self.bos_token_id = self._tokenizer.bos_token_id
@@ -152,7 +153,7 @@ class GPT2Tokenizer(BaseTokenizer):
         Returns:
             Dictionary with input_ids and attention_mask
         """
-        # Delegate to the Hugging Face implementation which is well-optimized
+        #delegate to the Hugging Face implementation which is well-optimized
         return self._tokenizer(
             text,
             padding=padding,
@@ -196,15 +197,15 @@ class GPT2Tokenizer(BaseTokenizer):
         use_fast = kwargs.pop('use_fast', True)
         
         if os.path.isdir(directory_or_name):
-            # Load the underlying HF tokenizer from the directory
+            #load the underlying HF tokenizer from the directory
             tokenizer_class = GPT2TokenizerFast if use_fast else HfGPT2Tokenizer
             hf_tokenizer = tokenizer_class.from_pretrained(directory_or_name, **kwargs)
             
-            # Initialize our wrapper with the loaded tokenizer
+            #initialize our wrapper with the loaded tokenizer
             instance = cls(use_fast=use_fast, **kwargs)
             instance._tokenizer = hf_tokenizer
             
-            # Update attributes
+            #update attributes
             instance.pad_token_id = hf_tokenizer.pad_token_id
             instance.eos_token_id = hf_tokenizer.eos_token_id
             instance.bos_token_id = hf_tokenizer.bos_token_id
@@ -212,5 +213,5 @@ class GPT2Tokenizer(BaseTokenizer):
             
             return instance
         else:
-            # Load from predefined name (e.g., 'gpt2', 'gpt2-medium')
+            #load from predefined name (e.g., 'gpt2', 'gpt2-medium')
             return cls(use_fast=use_fast, **kwargs)

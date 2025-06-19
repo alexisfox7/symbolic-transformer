@@ -1,4 +1,4 @@
-# Different kinds of attention
+#different kinds of attention
 import torch
 import torch.nn as nn
 from torch.nn import functional as F

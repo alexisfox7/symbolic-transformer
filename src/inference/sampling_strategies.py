@@ -1,4 +1,4 @@
-# ./inference/sampling_strategies.py
+#./inference/sampling_strategies.py
 """
 Sampling Strategies for Text Generation
 Provides functions for various token sampling approaches
@@ -21,7 +21,7 @@ def greedy_sampling(logits: torch.Tensor) -> torch.Tensor:
     Returns:
         Tensor of token indices with shape (batch_size, 1)
     """
-    # Get the highest probability token
+    #get the highest probability token
     _, next_tokens = torch.max(logits, dim=-1)
     return next_tokens.unsqueeze(-1)
 
@@ -37,14 +37,14 @@ def temperature_sampling(logits: torch.Tensor, temperature: float = 1.0) -> torc
     Returns:
         Tensor of token indices with shape (batch_size, 1)
     """
-    # Apply temperature scaling
+    #apply temperature scaling
     if temperature != 1.0:
         logits = logits / temperature
     
-    # Convert to probabilities
+    #convert to probabilities
     probs = F.softmax(logits, dim=-1)
     
-    # Sample from the distribution
+    #sample from the distribution
     next_tokens = torch.multinomial(probs, num_samples=1)
     return next_tokens
 
@@ -60,20 +60,20 @@ def top_k_sampling(logits: torch.Tensor, k: int = 50, temperature: float = 1.0) 
     Returns:
         Tensor of token indices with shape (batch_size, 1)
     """
-    # Apply temperature scaling
+    #apply temperature scaling
     if temperature != 1.0:
         logits = logits / temperature
     
-    # Get top-k logits and their indices
+    #get top-k logits and their indices
     top_k_logits, top_k_indices = torch.topk(logits, k, dim=-1)
     
-    # Convert top-k logits to probabilities
+    #convert top-k logits to probabilities
     top_k_probs = F.softmax(top_k_logits, dim=-1)
     
-    # Sample from the top-k distribution
+    #sample from the top-k distribution
     next_token_positions = torch.multinomial(top_k_probs, num_samples=1)
     
-    # Map positions back to token indices
+    #map positions back to token indices
     batch_size = logits.shape[0]
     batch_indices = torch.arange(batch_size, device=logits.device).unsqueeze(1)
     next_tokens = top_k_indices[batch_indices, next_token_positions]
@@ -92,43 +92,43 @@ def top_p_sampling(logits: torch.Tensor, p: float = 0.9, temperature: float = 1.
     Returns:
         Tensor of token indices with shape (batch_size, 1)
     """
-    # Apply temperature scaling
+    #apply temperature scaling
     if temperature != 1.0:
         logits = logits / temperature
     
-    # Convert to probabilities
+    #convert to probabilities
     probs = F.softmax(logits, dim=-1)
     
-    # Sort probabilities in descending order
+    #sort probabilities in descending order
     sorted_probs, sorted_indices = torch.sort(probs, descending=True, dim=-1)
     
-    # Calculate cumulative probabilities
+    #calculate cumulative probabilities
     cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
     
-    # Remove tokens below the threshold (creates a mask where True = keep)
+    #remove tokens below the threshold (creates a mask where True = keep)
     nucleus_mask = cumulative_probs < p
     
-    # Add the first token (highest prob) to ensure at least one token is selected
+    #add the first token (highest prob) to ensure at least one token is selected
     nucleus_mask = torch.cat(
         [torch.ones_like(nucleus_mask[:, :1]), nucleus_mask[:, :-1]], dim=-1
     )
     
-    # Filter tokens based on the mask
+    #filter tokens based on the mask
     filtered_indices = sorted_indices[nucleus_mask]
     filtered_probs = sorted_probs[nucleus_mask]
     
-    # Reshape for batch processing
+    #reshape for batch processing
     batch_size = logits.shape[0]
     filtered_indices = filtered_indices.view(batch_size, -1)
     filtered_probs = filtered_probs.view(batch_size, -1)
     
-    # Renormalize probabilities
+    #renormalize probabilities
     filtered_probs = filtered_probs / filtered_probs.sum(dim=-1, keepdim=True)
     
-    # Sample from the filtered distribution
+    #sample from the filtered distribution
     token_positions = torch.multinomial(filtered_probs, num_samples=1)
     
-    # Map positions back to token indices
+    #map positions back to token indices
     batch_indices = torch.arange(batch_size, device=logits.device).unsqueeze(1)
     next_tokens = filtered_indices[batch_indices, token_positions]
     
@@ -150,52 +150,52 @@ def combined_sampling(logits: torch.Tensor,
     Returns:
         Tensor of token indices with shape (batch_size, 1)
     """
-    # Apply temperature scaling
+    #apply temperature scaling
     if temperature != 1.0:
         logits = logits / temperature
     
-    # Apply top-k filtering
+    #apply top-k filtering
     if top_k is not None:
-        # Zero out all logits below top-k
+        #zero out all logits below top-k
         indices_to_remove = logits < torch.topk(logits, top_k)[0][..., -1, None]
         logits[indices_to_remove] = float('-inf')
     
-    # Apply top-p filtering
+    #apply top-p filtering
     if top_p is not None:
-        # Convert to probabilities
+        #convert to probabilities
         probs = F.softmax(logits, dim=-1)
         
-        # Sort probabilities in descending order
+        #sort probabilities in descending order
         sorted_probs, sorted_indices = torch.sort(probs, descending=True, dim=-1)
         
-        # Calculate cumulative probabilities
+        #calculate cumulative probabilities
         cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
         
-        # Create a mask for tokens to remove
+        #create a mask for tokens to remove
         sorted_indices_to_remove = cumulative_probs > top_p
         
-        # Shift mask to keep first token above threshold
+        #shift mask to keep first token above threshold
         sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
         sorted_indices_to_remove[..., 0] = 0
         
-        # Apply mask to sorted indices
+        #apply mask to sorted indices
         batch_indices = torch.arange(logits.shape[0]).unsqueeze(-1).expand_as(sorted_indices)
         indices_to_remove = sorted_indices[batch_indices, sorted_indices_to_remove]
         
-        # Create a mask for the original logits
+        #create a mask for the original logits
         mask = torch.ones_like(logits, dtype=torch.bool)
         mask.scatter_(-1, indices_to_remove, False)
         
-        # Apply mask to logits
+        #apply mask to logits
         logits = logits.masked_fill(~mask, float('-inf'))
     
-    # Convert to probabilities and sample
+    #convert to probabilities and sample
     probs = F.softmax(logits, dim=-1)
     next_tokens = torch.multinomial(probs, num_samples=1)
     
     return next_tokens
 
-# Dictionary of available sampling functions
+#dictionary of available sampling functions
 SAMPLING_STRATEGIES = {
     'greedy': greedy_sampling,
     'temperature': temperature_sampling,

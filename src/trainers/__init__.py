@@ -1,4 +1,4 @@
-# ./trainers/__init__.py
+#./trainers/__init__.py
 """
 Trainers module for cleanGPT.
 """
@@ -11,7 +11,6 @@ from .base_trainer import BaseTrainer
 from .simple_trainer import SimpleTrainer
 from .hooks import TrainingHook
 
-# Import accelerate trainer if available
 try:
     from .accelerate_trainer import AccelerateTrainer
     ACCELERATE_AVAILABLE = True
@@ -21,7 +20,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Registry of available trainer types
+# registry of available trainer types
 TRAINER_REGISTRY: Dict[str, Type[BaseTrainer]] = {
     'simple': SimpleTrainer,
 }

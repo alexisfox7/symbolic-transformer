@@ -1,4 +1,4 @@
-# ./trainers/accelerate_trainer.py
+#./trainers/accelerate_trainer.py
 """
 Simplified Accelerate Trainer without gradient accumulation - FIXED VERSION.
 Removes the hanging wait_for_everyone() call that causes terminal freezing.

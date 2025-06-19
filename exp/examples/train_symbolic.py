@@ -1,0 +1,89 @@
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from utils.training_utils import (
+    create_base_parser, add_symbolic_args, setup_training_environment, 
+    create_config_from_args, setup_data_loaders, setup_trainer_with_hooks, 
+    test_generation, save_model_checkpoint
+)
+from config.config import print_config
+from mytokenizers import create_tokenizer
+from model import get_model
+import torch
+
+def parse_args():
+    """Parse symbolic-specific arguments."""
+    parser = create_base_parser("Train Symbolic Transformer with Hook System")
+    parser = add_symbolic_args(parser) 
+    parser.add_argument('--output_dir', type=str, default='./outputs/symbolic_clean')
+    return parser.parse_args()
+
+def main():
+    """Main symbolic training function."""
+    args = parse_args()
+    
+    # setup environment
+    logger, device = setup_training_environment(args.output_dir, "Symbolic Transformer")
+    logger.info(f"Symbolic features: use_v={args.use_v}, use_proj={args.use_proj}")
+    
+    # create config
+    symbolic_features = {
+        'use_v': args.use_v,
+        'use_proj': args.use_proj
+    }
+    config = create_config_from_args(args, symbolic_features)
+    
+    # init tokenizer
+    tokenizer = create_tokenizer(args.tokenizer_type)
+    config.update_from_tokenizer(tokenizer)
+    
+    print_config(config, dataset_name=args.dataset)
+    
+    # setup data
+    train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger)
+    
+    # create model
+    logger.info("Creating Symbolic Transformer...")
+    model = get_model("symbolic", config=config).to(device)
+    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logger.info(f"Model: {num_params/1e6:.2f}M parameters")
+    
+    # report symbolic features in model
+    if hasattr(model, 'transformer') and hasattr(model.transformer, 'h'):
+        first_block = model.transformer.h[0]
+        if hasattr(first_block, 'attn'):
+            logger.info(f"Attention features: use_v={getattr(first_block.attn, 'use_v', False)}, "
+                       f"use_proj={getattr(first_block.attn, 'use_proj', False)}")
+    
+    # setup optimizer
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=config.learning_rate, weight_decay=0.01
+    )
+    
+    # create trainer with hooks
+    trainer = setup_trainer_with_hooks(
+        args.trainer_type, model, train_dataloader, optimizer, device,
+        config, args, val_dataloader, "Symbolic"
+    )
+    
+    # train
+    logger.info("Starting symbolic transformer training...")
+    training_result = trainer.train()
+    
+    # save model with symbolic features
+    extra_data = {'symbolic_features': symbolic_features}
+    save_model_checkpoint(
+        model, config, training_result, args.output_dir, "symbolic_model.pt",
+        extra_data=extra_data, logger=logger
+    )
+    
+    # test generation
+    test_generation(model, tokenizer, device, args, logger, "symbolic")
+    
+    logger.info("Symbolic transformer training completed!")
+    logger.info(f"Symbolic features used: use_v={args.use_v}, use_proj={args.use_proj}")
+
+if __name__ == "__main__":
+    main()

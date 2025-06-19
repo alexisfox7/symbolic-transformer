@@ -1,4 +1,4 @@
-# ./config.py
+#./config.py
 """
 Configuration settings for Symbolic Transformer with ALiBi positional encoding.
 """
@@ -81,13 +81,13 @@ def create_config_from_args(args) -> TransformerConfig:
     else:
         config = TransformerConfig()
     
-    # Override with any provided arguments
+    # override with any provided arguments
     fields_to_copy = [
-        # Core model parameters
+        # core 
         'n_embd', 'n_head', 'n_layer', 'block_size', 'dropout', 'bias',
         
-        # Symbolic flags
-        'use_symbolic_ffn', 'use_v', 'use_proj',
+        # symbolic flags
+        'use_v', 'use_proj',
         
         # Training parameters
         'batch_size', 'num_epochs', 'learning_rate', 'weight_decay',
@@ -110,7 +110,6 @@ def get_preset_config(preset_name: str) -> TransformerConfig:
     return PRESETS[preset_name]
 
 def print_config(config: TransformerConfig, dataset_name: str = None, model=None):
-    """Print configuration in a clean format."""
     print("=" * 60)
     print("TRANSFORMER CONFIGURATION")
     print("=" * 60)
@@ -126,7 +125,6 @@ def print_config(config: TransformerConfig, dataset_name: str = None, model=None
     print(f"  Bias in Linear:      {config.bias}")
     
     print(f"\n🔬 SYMBOLIC FEATURES:")
-    print(f"  Symbolic FFN:        {config.use_symbolic_ffn}")
     print(f"  Kronecker V:         {config.use_v}")
     print(f"  Kronecker Output:    {config.use_proj}")
     

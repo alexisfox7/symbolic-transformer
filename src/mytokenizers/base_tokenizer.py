@@ -1,4 +1,4 @@
-# ./tokenizers/base_tokenizer.py
+#./tokenizers/base_tokenizer.py
 """
 Base Tokenizer Abstract Class
 Defines the interface that all tokenizers must implement
@@ -33,11 +33,11 @@ class BaseTokenizer(ABC):
         self._eos_token = eos_token
         self._bos_token = bos_token
         
-        # These will be set by implementations
+        #these will be set by implementations
         self.pad_token_id = None
         self.eos_token_id = None
         self.bos_token_id = None
-        self.model_max_length = 1024  # Default, can be overridden
+        self.model_max_length = 1024  #default, can be overridden
         
     @property
     def pad_token(self) -> Optional[str]:

@@ -14,7 +14,7 @@ def get_model(model_type, config):
     models = {
         'symbolic': SymbolicTransformer,
         'vanilla': VanillaTransformer,
-        'SymbolicTransformer': SymbolicTransformer, # alias
+        'SymbolicTransformer': SymbolicTransformer, #alias
         'VanillaTransformer': VanillaTransformer,
     }
     

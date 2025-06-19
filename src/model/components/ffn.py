@@ -1,4 +1,4 @@
-# Different kinds of FFN
+#different kinds of FFN
 import torch
 import torch.nn as nn
 from torch.nn import functional as F

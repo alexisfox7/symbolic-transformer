@@ -1,26 +1,21 @@
 #!/bin/bash
-# Simplified Progressive Symbolic Transformer Training with 4 GPUs
-# Same parameters as original but without gradient accumulation complexity
 
 set -e  # Exit on any error
 
-# Configuration - matching original script
+# CONFIG ----
 DIR="./outputs/sym_4gpu_final"
 N=110000
 EXPERIMENT_NAME="symbolic_4gpu_final"
 
-# Model configuration - matching original
+# model config
 N_EMBD=384
 PRESET="small"
 
-# Multi-GPU configuration - matching original
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 NUM_GPUS=4
 
-# Simplified batch configuration (no gradient accumulation, no stages)
 BATCH_SIZE=4  # Direct batch size per GPU
 
-# JSON logging configuration
 JSON_LOG_STEPS=50
 
 echo "========================================================"

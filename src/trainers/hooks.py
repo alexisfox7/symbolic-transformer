@@ -1,4 +1,4 @@
-# src/trainers/hooks.py
+#src/trainers/hooks.py
 """
 Minimal hook system for trainers, inspired by TransformerLens.
 """
@@ -24,7 +24,7 @@ class TrainingHook:
     def __repr__(self):
         return f"TrainingHook('{self.name}', enabled={self.enabled})"
     
-    # Core training events - override what you need
+    #core training events - override what you need
     def on_train_begin(self, state: Dict[str, Any]) -> None:
         """Called once at start of training."""
         pass

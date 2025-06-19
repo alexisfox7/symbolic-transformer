@@ -1,0 +1,269 @@
+#examples/training_utils.py
+"""
+Shared utilities for training scripts.
+Reduces duplication between vanilla and symbolic training.
+"""
+
+import argparse
+import os
+import sys
+import torch
+import logging
+from torch.utils.data import DataLoader, random_split
+
+#add parent directory to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from config.config import TransformerConfig, get_preset_config
+from mytokenizers import create_tokenizer
+from utils.data_utils import load_and_prepare_data
+from datasets import load_dataset
+
+def create_base_parser(description="Train Transformer with Hook System"):
+    """Create base argument parser with common arguments."""
+    parser = argparse.ArgumentParser(description=description)
+    
+    # Dataset arguments
+    parser.add_argument("--dataset", type=str, default="roneneldan/TinyStories")
+    parser.add_argument("--dataset_config", type=str, default=None)
+    parser.add_argument("--max_samples", type=int, default=10000)
+    
+    # Model config arguments
+    parser.add_argument('--preset', type=str, default='small', 
+                       choices=['tiny', 'small', 'medium', 'large'])
+    parser.add_argument("--n_embd", type=int, default=None)
+    parser.add_argument("--n_head", type=int, default=None)
+    parser.add_argument("--n_layer", type=int, default=None)
+    
+    # Training arguments
+    parser.add_argument('--batch_size', type=int, default=None)
+    parser.add_argument('--num_epochs', type=int, default=5)
+    parser.add_argument('--learning_rate', type=float, default=None)
+    parser.add_argument("--clip_grad_norm", type=float, default=1.0)
+    parser.add_argument("--trainer_type", type=str, default="simple",
+                       choices=["simple", "accelerate"])
+    
+    # Logging & validation arguments
+    parser.add_argument("--log_interval", type=int, default=50)
+    parser.add_argument("--json_log_steps", type=int, default=100)
+    parser.add_argument("--disable_json_logging", action="store_true")
+    parser.add_argument("--val_ratio", type=float, default=0.1)
+    parser.add_argument("--validate_every", type=int, default=1)
+    parser.add_argument("--no_validation", action="store_true")
+    
+    # Output arguments
+    parser.add_argument('--tokenizer_type', type=str, default='gpt2')
+    
+    # Generation testing arguments
+    parser.add_argument("--skip_generation", action="store_true")
+    parser.add_argument("--generation_max_len", type=int, default=30)
+    
+    return parser
+
+def add_symbolic_args(parser):
+    """Add symbolic-specific arguments to parser."""
+    parser.add_argument("--use_v", action='store_true', default=False,
+                       help="Use Kronecker-lifted V matrix in attention")
+    parser.add_argument("--use_proj", action='store_true', default=False,
+                       help="Use Kronecker-lifted output projection")
+    return parser
+
+def setup_training_environment(output_dir, model_type="Transformer"):
+    """Setup logging and output directory."""
+    os.makedirs(output_dir, exist_ok=True)
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    logger.info("="*60)
+    logger.info(f"{model_type.upper()} TRAINING WITH HOOK SYSTEM")
+    logger.info("="*60)
+    
+    return logger, device
+
+def create_config_from_args(args, symbolic_features=None):
+    """Create config from parsed arguments."""
+    config = get_preset_config(args.preset)
+    
+    # Override with command line arguments
+    if args.n_embd: config.n_embd = args.n_embd
+    if args.n_head: config.n_head = args.n_head
+    if args.n_layer: config.n_layer = args.n_layer
+    if args.batch_size: config.batch_size = args.batch_size
+    if args.learning_rate: config.learning_rate = args.learning_rate
+    config.num_epochs = args.num_epochs
+    
+    # Add symbolic features if provided
+    if symbolic_features:
+        for feature, value in symbolic_features.items():
+            setattr(config, feature, value)
+    
+    return config
+
+def create_train_val_split(dataset, val_ratio=0.1, seed=42):
+    """Create train/validation split."""
+    total_size = len(dataset)
+    val_size = int(total_size * val_ratio)
+    train_size = total_size - val_size
+    
+    generator = torch.Generator().manual_seed(seed)
+    return random_split(dataset, [train_size, val_size], generator=generator)
+
+def setup_data_loaders(args, config, tokenizer, logger):
+    """Setup training and validation data loaders."""
+    logger.info("Loading data...")
+    
+    # Load full dataset
+    full_dataloader, tokenizer = load_and_prepare_data(
+        dataset_name=args.dataset,
+        dataset_config=args.dataset_config,
+        tokenizer=tokenizer,
+        max_samples=args.max_samples,
+        max_seq_length=config.block_size,
+        batch_size=config.batch_size,
+        mlm=False, split='train', shuffle=False
+    )
+    
+    # Create train/val split if validation enabled
+    if not args.no_validation:
+        train_dataset, val_dataset = create_train_val_split(
+            full_dataloader.dataset, args.val_ratio
+        )
+        
+        train_dataloader = DataLoader(
+            train_dataset, batch_size=config.batch_size, shuffle=True,
+            collate_fn=full_dataloader.collate_fn, drop_last=True
+        )
+        val_dataloader = DataLoader(
+            val_dataset, batch_size=config.batch_size, shuffle=False,
+            collate_fn=full_dataloader.collate_fn, drop_last=False
+        )
+        logger.info(f"Train: {len(train_dataloader)} batches, Val: {len(val_dataloader)} batches")
+    else:
+        train_dataloader = full_dataloader
+        val_dataloader = None
+        logger.info(f"Training: {len(train_dataloader)} batches (no validation)")
+    
+    return train_dataloader, val_dataloader, tokenizer
+
+def run_validation(model, val_dataloader, device):
+    """Run validation and return metrics."""
+    model.eval()
+    total_loss = 0.0
+    total_samples = 0
+    
+    with torch.no_grad():
+        for batch_data in val_dataloader:
+            batch = {k: v.to(device) for k, v in batch_data.items() 
+                    if isinstance(v, torch.Tensor)}
+            
+            outputs = model(**batch)
+            loss = outputs.get('loss')
+            
+            if loss is not None and not torch.isnan(loss):
+                batch_size = batch.get('input_ids', next(iter(batch.values()))).size(0)
+                total_loss += loss.item() * batch_size
+                total_samples += batch_size
+    
+    model.train()
+    
+    avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
+    perplexity = torch.exp(torch.tensor(avg_loss)).item() if not torch.isnan(torch.tensor(avg_loss)) else float('nan')
+    
+    return {'loss': avg_loss, 'perplexity': perplexity, 'samples': total_samples}
+
+class ValidationHook:
+    """Reusable validation hook."""
+    
+    def __init__(self, val_dataloader, device, validate_every=1, model_type=""):
+        self.val_dataloader = val_dataloader
+        self.device = device
+        self.validate_every = validate_every
+        self.model_type = model_type
+        self.name = "validation"
+        self.enabled = True
+        
+    def on_epoch_end(self, epoch, state):
+        if not self.enabled or not self.val_dataloader:
+            return
+            
+        if epoch % self.validate_every == 0:
+            model = state.get('model')
+            if model:
+                val_metrics = run_validation(model, self.val_dataloader, self.device)
+                prefix = f"{self.model_type} " if self.model_type else ""
+                logging.getLogger(__name__).info(
+                    f"{prefix}Validation - Loss: {val_metrics['loss']:.4f}, "
+                    f"Perplexity: {val_metrics['perplexity']:.2f}"
+                )
+
+def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, device, 
+                           config, args, val_dataloader=None, model_type=""):
+    """Setup trainer with standard hooks."""
+    from trainers import get_trainer
+    
+    trainer = get_trainer(
+        trainer_type=trainer_type,
+        model=model, dataloader=train_dataloader, optimizer=optimizer, device=device,
+        num_epochs=config.num_epochs, output_dir=args.output_dir,
+        clip_grad_norm=args.clip_grad_norm, log_interval=args.log_interval
+    )
+    
+    # Add standard hooks
+    trainer.add_console_logging(log_every_n_batches=args.log_interval)
+    
+    if not args.disable_json_logging:
+        trainer.add_json_logging(log_every_n_batches=args.json_log_steps)
+        
+    trainer.add_checkpointing(save_every_n_epochs=1)
+    
+    # Add validation hook if validation data provided
+    if val_dataloader:
+        validation_hook = ValidationHook(val_dataloader, device, args.validate_every, model_type)
+        trainer.add_hook(validation_hook)
+    
+    return trainer
+
+def test_generation(model, tokenizer, device, args, logger, model_type=""):
+    """Test model generation with sample prompts."""
+    if args.skip_generation:
+        return
+        
+    from inference.generation import run_generation
+    
+    logger.info(f"Testing {model_type.lower()} generation...")
+    test_prompts = ["The brave knight", "Once upon a time", "The magical forest"]
+    
+    model.eval()
+    for prompt in test_prompts:
+        try:
+            _, generated_text = run_generation(
+                model=model, tokenizer=tokenizer, prompt_text=prompt,
+                device=device, max_new_tokens=args.generation_max_len,
+                show_progress=False
+            )
+            logger.info(f"'{prompt}' → '{generated_text}'")
+        except Exception as e:
+            logger.error(f"Generation failed for '{prompt}': {e}")
+
+def save_model_checkpoint(model, config, training_result, output_dir, filename, 
+                         extra_data=None, logger=None):
+    """Save model checkpoint with metadata."""
+    model_path = os.path.join(output_dir, filename)
+    
+    save_dict = {
+        'model_state_dict': model.state_dict(),
+        'config': config,
+        'training_result': training_result,
+    }
+    
+    if extra_data:
+        save_dict.update(extra_data)
+    
+    torch.save(save_dict, model_path)
+    
+    if logger:
+        logger.info(f"Model saved to {model_path}")
+    
+    return model_path

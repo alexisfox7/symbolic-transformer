@@ -1,4 +1,4 @@
-# src/trainers/base_trainer.py
+#src/trainers/base_trainer.py
 """
 Updated base trainer with simple hook integration.
 """

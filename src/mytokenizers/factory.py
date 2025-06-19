@@ -1,4 +1,4 @@
-# mytokenizers/factory.py
+#mytokenizers/factory.py
 """
 Simple tokenizer factory
 """
@@ -9,7 +9,6 @@ from .character_tokenizer import CharacterTokenizer
 
 logger = logging.getLogger(__name__)
 
-# Simple registry - no class needed
 TOKENIZERS = {
     'gpt2': GPT2Tokenizer,
     'character': CharacterTokenizer,
