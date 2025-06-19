@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/vanilla_4gpu_modern"
+DIR="./outputs/vanilla_4gpu"
 N=110000
 N_EMBD=384
 PRESET="small"
@@ -18,9 +18,6 @@ LOG_INTERVAL=50
 JSON_LOG_STEPS=50
 
 echo "Vanilla Transformer Training: $NUM_EPOCHS epochs, $((BATCH_SIZE * NUM_GPUS)) batch size"
-
-# create output directory
-mkdir -p $DIR
 
 # check GPU availability
 python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, GPUs: {torch.cuda.device_count()}')"

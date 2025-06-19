@@ -170,17 +170,7 @@ class SimpleTrainer(BaseTrainer):
                 'batches': num_batches
             }
             self.trainer_state.update(epoch_end_logs)
-            #FIX:replace _trigger_callbacks with hooks.on_epoch_end
             self.hooks.on_epoch_end(epoch, self.trainer_state)
-
-            #save checkpoint
-            if self.output_dir:
-                checkpoint_path = os.path.join(self.output_dir, f"checkpoint_epoch_{epoch}.pt")
-                self.save_checkpoint(
-                    checkpoint_path, 
-                    epoch=epoch, 
-                    loss=avg_epoch_loss
-                )
 
         #final metrics
         if training_metrics['epoch_losses']:

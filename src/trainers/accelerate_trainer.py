@@ -182,16 +182,6 @@ class AccelerateTrainer(BaseTrainer):
             self.trainer_state.update(epoch_end_logs)
             self.hooks.on_epoch_end(epoch, self.trainer_state)
 
-            # FIXED: Save checkpoint without hanging wait_for_everyone()
-            if self.output_dir and self.accelerator.is_main_process:
-                checkpoint_path = os.path.join(self.output_dir, f"checkpoint_epoch_{epoch}.pt")
-                self.save_checkpoint_fixed(
-                    checkpoint_path, 
-                    epoch=epoch, 
-                    loss=avg_epoch_loss,
-                    global_batch=global_batch
-                )
-
         # Final metrics
         if training_metrics['epoch_losses']:
             training_metrics['final_loss'] = training_metrics['epoch_losses'][-1]

@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/sym_4gpu_final"
+DIR="./outputs/sym_4gpu"
 N=110000
 N_EMBD=384
 PRESET="small"
@@ -19,8 +19,7 @@ JSON_LOG_STEPS=50
 
 echo "Symbolic Transformer Training: $NUM_EPOCHS epochs, $((BATCH_SIZE * NUM_GPUS)) batch size"
 
-# create output directory
-mkdir -p $DIR
+# i dont think i need to make output directory
 
 # check GPU availability
 python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, GPUs: {torch.cuda.device_count()}')"
