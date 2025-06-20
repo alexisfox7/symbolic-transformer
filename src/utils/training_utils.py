@@ -202,6 +202,11 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
         clip_grad_norm=args.clip_grad_norm, log_interval=args.log_interval
     )
     
+    # add validation hook FIRST so other hooks can use the metrics
+    if val_dataloader:
+        validation_hook = ValidationHook(val_dataloader, device, args.validate_every, model_type)
+        trainer.add_hook(validation_hook)
+    
     # add standard hooks
     trainer.add_console_logging(log_every_n_batches=args.log_interval)
     
@@ -209,11 +214,6 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
         trainer.add_json_logging(log_every_n_batches=args.json_log_steps)
         
     trainer.add_checkpointing(save_every_n_epochs=1)
-    
-    # add validation hook if validation data provided
-    if val_dataloader:
-        validation_hook = ValidationHook(val_dataloader, device, args.validate_every, model_type)
-        trainer.add_hook(validation_hook)
     
     return trainer
 
