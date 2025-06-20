@@ -1,3 +1,0 @@
-{"event": "log_start", "timestamp": "2025-06-20T11:46:00.702715", "log_file": "./outputs/vanilla_clean/logs/training_20250620_114600.jsonl"}
-{"event": "train_begin", "config": {"device": {"event": "batch", "epoch": 1, "batch": 0, "loss": 10.818081855773926, "perplexity": 49915.25047426816, "timestamp": "2025-06-20T11:46:00.818499"}
-{"event": "epoch_end", "epoch": 1, "loss": 9.770219326019287, "duration": 1.854844331741333, "perplexity": 17504.606012931094, "timestamp": "2025-06-20T11:46:02.558169"}
