@@ -28,8 +28,8 @@ def log_if_main(logger, message, trainer_type="simple"):
                 logger.info(message)
         except:
             pass
-    else:
-        logger.info(message)
+    # else:
+    #     logger.info(message)
 
 def create_base_parser(description="Train Transformer with Hook System"):
     """Create base argument parser with common arguments."""
