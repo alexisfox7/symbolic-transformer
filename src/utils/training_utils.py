@@ -23,13 +23,14 @@ def log_if_main(logger, message, trainer_type="simple"):
     """Log only from main process when using accelerate."""
     if trainer_type == "accelerate":
         try:
-            from accelerate import Accelerator
-            if Accelerator().is_main_process:
+            import os
+            # Check if we're in a distributed setting
+            if os.environ.get('LOCAL_RANK', '0') == '0':
                 logger.info(message)
         except:
             pass
-    # else:
-    #     logger.info(message)
+    else:
+        logger.info(message)
 
 def create_base_parser(description="Train Transformer with Hook System"):
     """Create base argument parser with common arguments."""

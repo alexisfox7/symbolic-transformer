@@ -1,5 +1,11 @@
 import sys
 import os
+import warnings
+
+# Suppress accelerate kernel version warnings globally
+warnings.filterwarnings("ignore", message=".*kernel version.*")
+warnings.filterwarnings("ignore", message=".*MPS.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
 
