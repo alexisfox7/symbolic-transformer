@@ -67,7 +67,6 @@ class SimpleTrainer(BaseTrainer):
         Returns:
             A dictionary containing training metrics.
         """
-        logger.info("Starting training...")
         self.model.to(self.device)
         self.model.train()
 

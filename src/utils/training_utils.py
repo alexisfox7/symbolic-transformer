@@ -83,7 +83,11 @@ def add_symbolic_args(parser):
 def setup_training_environment(output_dir, model_type="Transformer", trainer_type="simple"):
     """Setup logging and output directory."""
     os.makedirs(output_dir, exist_ok=True)
-    logging.basicConfig(level=logging.INFO)
+    
+    # Only configure logging if not already configured
+    if not logging.getLogger().handlers:
+        logging.basicConfig(level=logging.INFO)
+    
     logger = logging.getLogger(__name__)
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

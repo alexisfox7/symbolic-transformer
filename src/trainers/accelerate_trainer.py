@@ -65,9 +65,6 @@ class AccelerateTrainer(BaseTrainer):
 
     def train(self) -> Dict[str, Any]:
         """Execute training loop with accelerate."""
-        if self.accelerator.is_main_process:
-            logger.info("Starting training with accelerate...")
-        
         self.trainer_state['num_epochs'] = self.num_epochs
         self.hooks.on_train_begin(self.trainer_state)
 
@@ -140,20 +137,7 @@ class AccelerateTrainer(BaseTrainer):
                 batch_size = batch_data.get('input_ids', next(iter(batch_data.values()))).shape[0]
                 samples_processed = (batch_idx + 1) * batch_size * self.accelerator.num_processes
 
-                # ALWAYS call log_batch for checkpoints
-                self.log_batch(
-                    batch_idx + 1, batch_loss_item, epoch=epoch,
-                    metrics={
-                        'samples': samples_processed,
-                        'global_batch': global_batch,
-                        'num_processes': self.accelerator.num_processes
-                    }
-                )
-
-                # Optional: Still do detailed console logging only at intervals
-                if (batch_idx + 1) % self.log_interval == 0:
-                    logger.info(f"Epoch {epoch}, Batch {batch_idx + 1}: Loss={batch_loss_item:.4f}, "
-                                f"Samples={samples_processed}, Global Batch={global_batch}")
+                # Remove duplicate logging - hooks will handle this
                 
                 # Trigger batch end hook with global batch info
                 self.trainer_state.update({
@@ -169,11 +153,7 @@ class AccelerateTrainer(BaseTrainer):
             training_metrics['total_samples'] += len(self.dataloader.dataset)
 
             epoch_duration = time.time() - epoch_start_time
-            self.log_epoch(epoch, avg_epoch_loss, metrics={
-                'duration': f"{epoch_duration:.2f}s",
-                'batches': num_batches,
-                'global_batch': global_batch
-            })
+            # Remove duplicate logging - hooks will handle this
 
             epoch_end_logs = {
                 'loss': avg_epoch_loss, 
