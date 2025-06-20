@@ -1,10 +1,12 @@
 #src/trainers/hooks.py
-"""4
-Hook system for trainers, inspired by TransformerLens.
+"""
+Enhanced hook system with perplexity calculation and validation JSON logging.
 """
 
 from typing import Dict, Any, List, Callable, Optional
 import logging
+import torch
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -142,8 +144,19 @@ class HookManager:
         self._call_hook_method('on_batch_end', batch_idx, loss, state)
 
 
+def calculate_perplexity(loss: float) -> float:
+    """Calculate perplexity from loss, handling edge cases."""
+    if loss is None or math.isnan(loss) or math.isinf(loss):
+        return float('nan')
+    
+    try:
+        return math.exp(loss)
+    except OverflowError:
+        return float('inf')
+
+
 class ConsoleLogHook(TrainingHook):
-    """Console logging hook."""
+    """Console logging hook with perplexity."""
     
     def __init__(self, log_every_n_batches: int = 10):
         super().__init__("console_log")
@@ -168,21 +181,24 @@ class ConsoleLogHook(TrainingHook):
             if not state.get('is_main_process', True):
                 return
             epoch = state.get('current_epoch', '?')
-            self.logger.info(f"  Batch {batch_idx}, Loss: {loss:.4f}")
+            perplexity = calculate_perplexity(loss)
+            self.logger.info(f"  Batch {batch_idx}, Loss: {loss:.4f}, Perplexity: {perplexity:.2f}")
     
     def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
         if not state.get('is_main_process', True):
             return
-        avg_loss = state.get('avg_loss', 'N/A')
+        avg_loss = state.get('avg_loss', state.get('loss', 'N/A'))
         duration = state.get('epoch_duration', 'N/A')
-        if isinstance(avg_loss, float):
-            self.logger.info(f"Epoch {epoch} complete: avg_loss={avg_loss:.4f}, time={duration:.1f}s")
+        
+        if isinstance(avg_loss, (int, float)) and not math.isnan(avg_loss):
+            perplexity = calculate_perplexity(avg_loss)
+            self.logger.info(f"Epoch {epoch} complete: loss={avg_loss:.4f}, perplexity={perplexity:.2f}, time={duration:.1f}s")
         else:
-            self.logger.info(f"Epoch {epoch} complete: avg_loss={avg_loss}, time={duration}s")
+            self.logger.info(f"Epoch {epoch} complete: loss={avg_loss}, time={duration}s")
 
 
 class JSONLogHook(TrainingHook):
-    """JSON logging hook."""
+    """JSON logging hook with perplexity and validation metrics."""
     
     def __init__(self, output_dir: str, log_every_n_batches: int = 100):
         super().__init__("json_log")
@@ -228,23 +244,42 @@ class JSONLogHook(TrainingHook):
     def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
         if not state.get('is_main_process', True):
             return
-        self._write({
+        
+        # Training metrics
+        avg_loss = state.get('avg_loss', state.get('loss'))
+        epoch_data = {
             "event": "epoch_end",
             "epoch": epoch,
-            "avg_loss": state.get('avg_loss'),
+            "loss": avg_loss,
             "duration": state.get('epoch_duration')
-        })
+        }
+        
+        # Add perplexity if loss is available
+        if avg_loss is not None:
+            epoch_data["perplexity"] = calculate_perplexity(avg_loss)
+        
+        # Add validation metrics if available
+        val_loss = state.get('val_loss')
+        val_perplexity = state.get('val_perplexity')
+        if val_loss is not None:
+            epoch_data["val_loss"] = val_loss
+            epoch_data["val_perplexity"] = val_perplexity or calculate_perplexity(val_loss)
+        
+        self._write(epoch_data)
     
     def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
         if batch_idx % self.log_every_n_batches == 0:
             if not state.get('is_main_process', True):
                 return
-            self._write({
+            
+            batch_data = {
                 "event": "batch",
                 "epoch": state.get('current_epoch', 0),
                 "batch": batch_idx,
-                "loss": loss
-            })
+                "loss": loss,
+                "perplexity": calculate_perplexity(loss)
+            }
+            self._write(batch_data)
 
 
 class CheckpointHook(TrainingHook):
@@ -273,8 +308,13 @@ class CheckpointHook(TrainingHook):
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
-                    'avg_loss': state.get('avg_loss'),
+                    'loss': state.get('avg_loss', state.get('loss')),
                 }
+                
+                # Add validation metrics if available
+                if 'val_loss' in state:
+                    checkpoint['val_loss'] = state['val_loss']
+                    checkpoint['val_perplexity'] = state.get('val_perplexity')
                 
                 os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
                 torch.save(checkpoint, checkpoint_path)
@@ -282,24 +322,8 @@ class CheckpointHook(TrainingHook):
                 logger.info(f"Saved checkpoint: {checkpoint_path}")
 
 
-# Factory functions for easy hook creation
-def create_console_log_hook(log_every_n_batches: int = 10) -> ConsoleLogHook:
-    """Create a console logging hook."""
-    return ConsoleLogHook(log_every_n_batches)
-
-
-def create_json_log_hook(output_dir: str, log_every_n_batches: int = 100) -> JSONLogHook:
-    """Create a JSON logging hook."""
-    return JSONLogHook(output_dir, log_every_n_batches)
-
-
-def create_checkpoint_hook(output_dir: str, save_every_n_epochs: int = 1) -> CheckpointHook:
-    """Create a checkpointing hook."""
-    return CheckpointHook(output_dir, save_every_n_epochs)
-
-
 class ValidationHook(TrainingHook):
-    """Validation hook."""
+    """Validation hook that adds metrics to state for other hooks to use."""
     
     def __init__(self, val_dataloader, device, validate_every=1, model_type=""):
         super().__init__("validation")
@@ -318,8 +342,31 @@ class ValidationHook(TrainingHook):
             if model:
                 from utils.training_utils import run_validation
                 val_metrics = run_validation(model, self.val_dataloader, self.device)
+                
+                # Add validation metrics to state for other hooks to use
+                state['val_loss'] = val_metrics['loss']
+                state['val_perplexity'] = val_metrics['perplexity']
+                state['val_samples'] = val_metrics['samples']
+                
+                # Console logging
                 prefix = f"{self.model_type} " if self.model_type else ""
                 logger.info(
                     f"{prefix}Validation - Loss: {val_metrics['loss']:.4f}, "
                     f"Perplexity: {val_metrics['perplexity']:.2f}"
                 )
+
+
+# Factory functions for easy hook creation
+def create_console_log_hook(log_every_n_batches: int = 10) -> ConsoleLogHook:
+    """Create a console logging hook."""
+    return ConsoleLogHook(log_every_n_batches)
+
+
+def create_json_log_hook(output_dir: str, log_every_n_batches: int = 100) -> JSONLogHook:
+    """Create a JSON logging hook."""
+    return JSONLogHook(output_dir, log_every_n_batches)
+
+
+def create_checkpoint_hook(output_dir: str, save_every_n_epochs: int = 1) -> CheckpointHook:
+    """Create a checkpointing hook."""
+    return CheckpointHook(output_dir, save_every_n_epochs)

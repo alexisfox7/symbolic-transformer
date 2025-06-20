@@ -49,11 +49,7 @@ class SymbolicTransformer(TransformerBase):
 
         # language model head (weight tying)
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, config.bias)
-        self.lm_head.weight = self.transformer.wte.weight 
-        
-        #REVIEW i dont think i need a vocab grounding
-        # vocabulary grounding layer for final output
-        self.vocab_grounding = VocabFFN(config, self.transformer.wte)
+        self.lm_head.weight = self.transformer.wte.weight
 
         self.apply(self._init_weights)
         self._apply_projection_init()

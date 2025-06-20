@@ -72,6 +72,7 @@ class SimpleTrainer(BaseTrainer):
         self.model.train()
 
         self.trainer_state['num_epochs'] = self.num_epochs
+        self.trainer_state['is_main_process'] = True  # Simple trainer always runs on main process
         #FIX:replace _trigger_callbacks with hooks.on_train_begin
         self.hooks.on_train_begin(self.trainer_state)
 
