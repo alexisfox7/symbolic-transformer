@@ -99,7 +99,8 @@ def create_config_from_args(args) -> TransformerConfig:
     for name in fields_to_copy:
         if hasattr(args, name) and getattr(args, name) is not None:
             setattr(config, name, getattr(args, name))
-        return config
+    
+    return config
 
 def get_preset_config(preset_name: str) -> TransformerConfig:
     """Get predefined configuration preset."""

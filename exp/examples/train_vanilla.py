@@ -22,6 +22,11 @@ def main():
     """Main vanilla training function."""
     args = parse_args()
     
+    # Set random seeds for reproducibility
+    torch.manual_seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(42)
+    
     # setup env
     logger, device = setup_training_environment(args.output_dir, "Vanilla Transformer", args.trainer_type)
     
@@ -45,7 +50,7 @@ def main():
     
     # setup optimizer
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=config.learning_rate, weight_decay=0.01
+        model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay
     )
     
     # create trainer with hooks

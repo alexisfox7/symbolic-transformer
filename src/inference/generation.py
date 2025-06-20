@@ -87,7 +87,7 @@ def run_generation(model: torch.nn.Module,
     
     #prepare arguments for model.generate, excluding top_p as current models don't use it
     generate_kwargs = {
-        'idx': start_ids,
+        'input_ids': start_ids,
         'max_new_tokens': max_new_tokens,
         'temperature': temperature,
     }

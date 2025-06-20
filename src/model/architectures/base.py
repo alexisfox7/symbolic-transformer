@@ -67,11 +67,50 @@ class TransformerBase(nn.Module):
      
     # INFERENCE #
 
-    #TODO implement
     @torch.no_grad()
-    def generate(self):
-        # generate new tokens autoregressively
-        pass
+    def generate(self, input_ids, max_new_tokens, temperature=1.0, top_k=None):
+        """
+        Generate new tokens autoregressively.
+        
+        Args:
+            input_ids: Starting sequence of token ids [batch_size, seq_len]
+            max_new_tokens: Number of new tokens to generate
+            temperature: Sampling temperature
+            top_k: If specified, only sample from top k tokens
+            
+        Returns:
+            Generated token ids [batch_size, seq_len + max_new_tokens]
+        """
+        # Handle both 'input_ids' and 'idx' parameter names for compatibility
+        if input_ids is None:
+            raise ValueError("input_ids cannot be None")
+            
+        for _ in range(max_new_tokens):
+            # Crop sequence if it exceeds block size
+            idx_cond = input_ids if input_ids.size(1) <= self.config.block_size else input_ids[:, -self.config.block_size:]
+            
+            # Get predictions
+            outputs = self(idx_cond)
+            logits = outputs['logits']
+            
+            # Focus on last time step
+            logits = logits[:, -1, :] / temperature
+            
+            # Optionally apply top-k sampling
+            if top_k is not None:
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                logits[logits < v[:, [-1]]] = -float('Inf')
+            
+            # Apply softmax to get probabilities
+            probs = F.softmax(logits, dim=-1)
+            
+            # Sample from distribution
+            idx_next = torch.multinomial(probs, num_samples=1)
+            
+            # Append to sequence
+            input_ids = torch.cat((input_ids, idx_next), dim=1)
+            
+        return input_ids
 
     # UTILITY #
 

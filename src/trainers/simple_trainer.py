@@ -166,7 +166,7 @@ class SimpleTrainer(BaseTrainer):
             epoch_duration = time.time() - epoch_start_time
             
             epoch_end_logs = {
-                'loss': avg_epoch_loss, 
+                'avg_loss': avg_epoch_loss, 
                 'epoch_duration': epoch_duration,
                 'batches': num_batches
             }
