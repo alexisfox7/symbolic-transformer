@@ -52,13 +52,6 @@ class SimpleTrainer(BaseTrainer):
         self.clip_grad_norm = clip_grad_norm
         self.log_interval = log_interval
         
-        logger.info(f"SimpleTrainer initialized with {self.num_epochs} epochs.")
-        logger.info(f"Batch size: {dataloader.batch_size}")
-        if self.clip_grad_norm:
-            logger.info(f"Gradient clipping enabled with max norm: {self.clip_grad_norm}")
-        #FIX:remove callback logging, replace with hook logging
-        if len(self.hooks.hooks) > 0:
-            logger.info(f"Active hooks: {[h.name for h in self.hooks.hooks]}")
 
     def train(self) -> Dict[str, Any]:
         """
@@ -177,9 +170,6 @@ class SimpleTrainer(BaseTrainer):
             training_metrics['final_loss'] = training_metrics['epoch_losses'][-1]
         training_metrics['training_time'] = time.time() - total_start_time
 
-        logger.info(f"Training completed in {training_metrics['training_time']:.2f}s")
-        logger.info(f"Total batches processed: {training_metrics['total_batches']}")
-        logger.info(f"Final average training loss: {training_metrics['final_loss']:.6f}")
 
         self.trainer_state['status'] = 'Completed'
         self.trainer_state.update(training_metrics)

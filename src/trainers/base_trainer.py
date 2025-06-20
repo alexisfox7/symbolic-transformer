@@ -46,9 +46,6 @@ class BaseTrainer(ABC):
             
         if self.output_dir:
             os.makedirs(self.output_dir, exist_ok=True)
-        
-        logger.info(f"Initialized {self.__class__.__name__}")
-        logger.info(f"Model parameters: {self.trainer_state['model_params']:,}")
     
     # Hook management methods
     def add_hook(self, hook: TrainingHook) -> None:

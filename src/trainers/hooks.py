@@ -68,15 +68,12 @@ class HookManager:
         # Remove existing hook with same name
         self.hooks = [h for h in self.hooks if h.name != hook.name]
         self.hooks.append(hook)
-        self.logger.info(f"Added hook: {hook.name}")
     
     def remove_hook(self, name: str) -> bool:
         """Remove hook by name. Returns True if found and removed."""
         original_len = len(self.hooks)
         self.hooks = [h for h in self.hooks if h.name != name]
         removed = len(self.hooks) < original_len
-        if removed:
-            self.logger.info(f"Removed hook: {name}")
         return removed
     
     def get_hook(self, name: str) -> Optional[TrainingHook]:

@@ -7,11 +7,18 @@ Updated to use the hook system instead of callbacks.
 
 import time
 import logging
+import warnings
 from typing import Dict, Any, Optional, List
 import os
 import torch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
+
+# Suppress accelerate kernel version warnings
+warnings.filterwarnings("ignore", message=".*kernel version.*")
+warnings.filterwarnings("ignore", message=".*MPS.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
+
 from accelerate import Accelerator
 
 from .base_trainer import BaseTrainer
@@ -55,13 +62,6 @@ class AccelerateTrainer(BaseTrainer):
             model, optimizer, dataloader
         )
         
-        if self.accelerator.is_main_process:
-            logger.info(f"AccelerateTrainer initialized:")
-            logger.info(f"  Device: {self.accelerator.device}")
-            logger.info(f"  Mixed precision: {self.accelerator.mixed_precision}")
-            logger.info(f"  Log interval: every {log_interval} batches")
-            if self.accelerator.num_processes > 1:
-                logger.info(f"  Distributed training: {self.accelerator.num_processes} processes")
 
     def train(self) -> Dict[str, Any]:
         """Execute training loop with accelerate."""
@@ -170,10 +170,6 @@ class AccelerateTrainer(BaseTrainer):
         training_metrics['training_time'] = time.time() - total_start_time
         training_metrics['total_global_batches'] = global_batch
 
-        if self.accelerator.is_main_process:
-            logger.info(f"Training completed in {training_metrics['training_time']:.2f}s")
-            logger.info(f"Total batches processed: {global_batch}")
-            logger.info(f"Final average training loss: {training_metrics['final_loss']:.6f}")
 
         self.trainer_state['status'] = 'Completed'
         self.trainer_state.update(training_metrics)
