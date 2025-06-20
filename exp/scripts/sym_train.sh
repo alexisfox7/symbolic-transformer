@@ -48,6 +48,6 @@ accelerate launch \
     --json_log_steps $JSON_LOG_STEPS \
     --clip_grad_norm 1.0 \
     --val_ratio 0.1 \
-    --validate_every 2
+    --validate_every 1
 
 echo "Training completed!"
