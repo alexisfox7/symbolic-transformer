@@ -40,7 +40,6 @@ class SymbolicTransformer(TransformerBase):
         
         self.wte = nn.Embedding(config.vocab_size, config.n_embd)
 
-        #REVIEW ensure the reference got pass
         self.transformer = nn.ModuleDict(dict(
             wte=self.wte,
             drop=nn.Dropout(config.dropout),
@@ -64,7 +63,6 @@ class SymbolicTransformer(TransformerBase):
         print(f"Vocabulary size: {config.vocab_size}, Embedding dim: {config.n_embd}")
 
     #REVIEW does this need to be overridden?
-    #TODO:old code
     def _init_weights(self, module):
         """Initialize model weights with symbolic-aware initialization."""
         if isinstance(module, nn.Linear):
@@ -83,34 +81,24 @@ class SymbolicTransformer(TransformerBase):
             if module.channel_biases is not None:
                 torch.nn.init.zeros_(module.channel_biases)
 
-    #TODO: old code
     def forward(self, input_ids, targets=None):
         """
-        Forward pass for the SymbolicTransformerModel.
-        
-        Args:
-            input_ids: Token input IDs (B, T)
-            attention_mask: Attention mask (unused with ALiBi causal attention)
-            labels: Target labels for language modeling loss
+        Forward pass for the SymbolicTransformer.
         """
         device = input_ids.device
         b, t = input_ids.size()
 
         tok_emb = self.transformer.wte(input_ids)
         
-        # Initialize symbolic stream
         xt = self.transformer.drop(tok_emb)
 
-        # Pass through symbolic transformer blocks
         for block in self.transformer.h:
             xt = block(xt)
 
-        # Final vocabulary grounding and normalization
-        xt_grounded = self.vocab_grounding(xt) #REVIEW is necessary?
-        x_final = self.transformer.ln_f(xt_grounded)
+        x_final = self.transformer.ln_f(xt)
         logits = self.lm_head(x_final)
 
-        # Calculate language modeling loss if labels provided
+        # lm loss
         loss = None
         if targets is not None:
             if targets[0, 0] != input_ids[0, 0]:

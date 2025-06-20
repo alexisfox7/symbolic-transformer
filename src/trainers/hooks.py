@@ -1,5 +1,5 @@
 #src/trainers/hooks.py
-"""
+"""4
 Hook system for trainers, inspired by TransformerLens.
 """
 

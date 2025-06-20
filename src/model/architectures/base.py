@@ -32,6 +32,7 @@ class TransformerBase(nn.Module):
                 torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * self.config.n_layer))
 
     #REVIEW - what are good default values for these?
+    #NOTE currently not being used
     def configure_optimizer(self, weight_decay=0.1, learning_rate=1e-3, betas=(0.9, 0.95)):
         """Create optimizer with weight decay for appropriate parameters."""
         decay_params = set()
