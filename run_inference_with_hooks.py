@@ -1,26 +1,32 @@
 #!/usr/bin/env python3
 """
 Run inference with hooks on a saved checkpoint.
+Enhanced with graph visualization capabilities for attention patterns and reasoning flows.
 """
 
 import torch
 import argparse
 import os
 import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from model import get_model
-from config import TransformerConfig
-from inference.generation import run_generation
-from inference.hooks import (
+from src.model import get_model
+from src.config import TransformerConfig
+from src.inference.generation import run_generation
+from src.inference.hooks import (
     create_attention_extraction_hook,
     AttentionExtractionHook,
     SymbolicStreamHook,
     ActivationHook
 )
-from mytokenizers import create_tokenizer, from_pretrained
-# Checkpoint loading handled inline
+from src.mytokenizers import create_tokenizer, from_pretrained
 import logging
 import json
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+from collections import defaultdict, Counter
+import seaborn as sns
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,7 +37,7 @@ def load_model_from_checkpoint(checkpoint_path, device='cpu'):
     logger.info(f"Loading checkpoint from: {checkpoint_path}")
     
     # Load checkpoint
-    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    checkpoint = torch.load(checkpoint_path, map_location=device)
     
     # Extract config
     if 'config' in checkpoint:
@@ -76,59 +82,404 @@ def load_model_from_checkpoint(checkpoint_path, device='cpu'):
     return model, config
 
 
-def analyze_attention_patterns(attention_hook, output_file=None):
-    """Analyze attention patterns from FINAL SEQUENCE ONLY."""
+def create_attention_graph(attention_hook, output_dir=None, min_weight=0.15, max_nodes=50):
+    """
+    Create and visualize attention graphs from hook data.
     
-    # Filter to only the final generation step
+    Args:
+        attention_hook: AttentionExtractionHook with collected data
+        output_dir: Directory to save visualizations
+        min_weight: Minimum attention weight to include in graph
+        max_nodes: Maximum number of nodes to include
+    """
+    logger.info("Creating attention graphs...")
+    
     if not attention_hook.attention_data:
-        print("No attention data found")
+        logger.warning("No attention data available for graph creation")
         return
     
-    max_step = max(record.get('position', 0) for record in attention_hook.attention_data)
+    # Aggregate attention patterns across all layers/heads
+    token_attention = defaultdict(float)
+    edge_weights = defaultdict(float)
+    token_positions = {}
     
-    final_step_data = [
-        record for record in attention_hook.attention_data 
-        if record.get('position', 0) == max_step
-    ]
+    for record in attention_hook.attention_data:
+        for edge in record['edges']:
+            if edge['weight'] >= min_weight:
+                source_token = edge['source_token']
+                target_token = edge['target_token']
+                weight = edge['weight']
+                
+                # Track token importance
+                token_attention[source_token] += weight
+                token_attention[target_token] += weight
+                
+                # Track edge weights (aggregate multiple occurrences)
+                edge_key = (source_token, target_token)
+                edge_weights[edge_key] += weight
+                
+                # Store positions for layout
+                token_positions[source_token] = edge['source_pos']
+                token_positions[target_token] = edge['target_pos']
     
-    print(f"Filtered from {len(attention_hook.attention_data)} total records to {len(final_step_data)} final-step records")
+    # Select most important tokens
+    top_tokens = sorted(token_attention.items(), key=lambda x: x[1], reverse=True)[:max_nodes]
+    selected_tokens = {token for token, _ in top_tokens}
     
-    if not final_step_data:
-        print("No final step data found")
-        return
+    # Create NetworkX graph
+    G = nx.DiGraph()
     
-    # Get sequence length from final step
-    seq_len = final_step_data[0].get('attention_matrix', torch.tensor([[]])).shape[0]
-    max_possible_edges = seq_len * (seq_len + 1) // 2
+    # Add nodes with importance as node attribute
+    for token, importance in top_tokens:
+        G.add_node(token, importance=importance, position=token_positions.get(token, 0))
     
-    print(f"Final sequence length: {seq_len} tokens")
-    print(f"Max possible edges per head (causal): {max_possible_edges}")
-    print()
+    # Add edges between selected tokens
+    for (source, target), weight in edge_weights.items():
+        if source in selected_tokens and target in selected_tokens and weight >= min_weight:
+            G.add_edge(source, target, weight=weight)
     
-    # Analyze layer/head stats using ONLY final step data
-    layer_head_stats = {}
-    for record in final_step_data:
-        key = (record['layer'], record['head'])
-        edges = record['edges']
+    if len(G.nodes()) == 0:
+        logger.warning("No nodes in attention graph after filtering")
+        return G
+    
+    # Create visualization
+    plt.figure(figsize=(15, 10))
+    
+    # Layout based on token positions if available
+    if token_positions:
+        # Use token positions for x-axis, add some y variation
+        pos = {}
+        position_groups = defaultdict(list)
         
+        for token in G.nodes():
+            pos_x = token_positions.get(token, 0)
+            position_groups[pos_x].append(token)
+        
+        for pos_x, tokens in position_groups.items():
+            for i, token in enumerate(tokens):
+                y_offset = (i - len(tokens)/2) * 0.3
+                pos[token] = (pos_x, y_offset)
+    else:
+        # Fallback to spring layout
+        pos = nx.spring_layout(G, k=3, iterations=50)
+    
+    # Node sizes based on importance
+    importance_values = [G.nodes[token]['importance'] for token in G.nodes()]
+    if importance_values:
+        max_importance = max(importance_values)
+        node_sizes = [300 + 1000 * (G.nodes[token]['importance'] / max_importance) for token in G.nodes()]
+    else:
+        node_sizes = [500] * len(G.nodes())
+    
+    # Edge widths based on weights
+    edge_weights_list = [G[u][v]['weight'] for u, v in G.edges()]
+    if edge_weights_list:
+        max_edge_weight = max(edge_weights_list)
+        edge_widths = [1 + 5 * (G[u][v]['weight'] / max_edge_weight) for u, v in G.edges()]
+    else:
+        edge_widths = [1]
+    
+    # Draw the graph
+    nx.draw_networkx_nodes(G, pos, node_size=node_sizes, node_color='lightblue', alpha=0.8)
+    nx.draw_networkx_edges(G, pos, width=edge_widths, alpha=0.6, edge_color='gray', arrows=True, arrowsize=20)
+    nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
+    
+    # Add edge labels for significant connections
+    strong_edges = [(u, v) for u, v in G.edges() if G[u][v]['weight'] > np.percentile(edge_weights_list, 75)]
+    edge_labels = {(u, v): f"{G[u][v]['weight']:.2f}" for u, v in strong_edges}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=8)
+    
+    plt.title("Attention Graph: Token Relationships", fontsize=16, fontweight='bold')
+    plt.axis('off')
+    plt.tight_layout()
+    
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        plt.savefig(os.path.join(output_dir, 'attention_graph.png'), dpi=300, bbox_inches='tight')
+        logger.info(f"Attention graph saved to {output_dir}/attention_graph.png")
+    
+    plt.show()
+    return G
+
+
+def create_layer_head_heatmap(attention_hook, output_dir=None):
+    """Create heatmap showing attention patterns across layers and heads."""
+    if not attention_hook.attention_data:
+        logger.warning("No attention data for heatmap")
+        return
+    
+    # Collect statistics by layer and head
+    layer_head_stats = defaultdict(lambda: {'edges': 0, 'total_weight': 0, 'max_weight': 0})
+    
+    for record in attention_hook.attention_data:
+        key = (record['layer'], record['head'])
+        stats = layer_head_stats[key]
+        
+        edges = record['edges']
         if edges:
             weights = [e['weight'] for e in edges]
+            stats['edges'] += len(edges)
+            stats['total_weight'] += sum(weights)
+            stats['max_weight'] = max(stats['max_weight'], max(weights))
+    
+    if not layer_head_stats:
+        logger.warning("No layer/head statistics available")
+        return
+    
+    # Create matrices for visualization
+    layers = sorted(set(k[0] for k in layer_head_stats.keys()))
+    heads = sorted(set(k[1] for k in layer_head_stats.keys()))
+    
+    edge_matrix = np.zeros((len(layers), len(heads)))
+    weight_matrix = np.zeros((len(layers), len(heads)))
+    max_weight_matrix = np.zeros((len(layers), len(heads)))
+    
+    for (layer, head), stats in layer_head_stats.items():
+        l_idx = layers.index(layer)
+        h_idx = heads.index(head)
+        edge_matrix[l_idx, h_idx] = stats['edges']
+        weight_matrix[l_idx, h_idx] = stats['total_weight']
+        max_weight_matrix[l_idx, h_idx] = stats['max_weight']
+    
+    # Create subplot with multiple heatmaps
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+    
+    # Edge count heatmap
+    sns.heatmap(edge_matrix, annot=True, fmt='d', xticklabels=heads, yticklabels=layers, 
+                ax=axes[0], cmap='Blues', cbar_kws={'label': 'Edge Count'})
+    axes[0].set_title('Attention Edge Count by Layer/Head')
+    axes[0].set_xlabel('Head')
+    axes[0].set_ylabel('Layer')
+    
+    # Total weight heatmap
+    sns.heatmap(weight_matrix, annot=True, fmt='.2f', xticklabels=heads, yticklabels=layers, 
+                ax=axes[1], cmap='Oranges', cbar_kws={'label': 'Total Weight'})
+    axes[1].set_title('Total Attention Weight by Layer/Head')
+    axes[1].set_xlabel('Head')
+    axes[1].set_ylabel('Layer')
+    
+    # Max weight heatmap
+    sns.heatmap(max_weight_matrix, annot=True, fmt='.2f', xticklabels=heads, yticklabels=layers, 
+                ax=axes[2], cmap='Reds', cbar_kws={'label': 'Max Weight'})
+    axes[2].set_title('Maximum Attention Weight by Layer/Head')
+    axes[2].set_xlabel('Head')
+    axes[2].set_ylabel('Layer')
+    
+    plt.tight_layout()
+    
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        plt.savefig(os.path.join(output_dir, 'layer_head_heatmap.png'), dpi=300, bbox_inches='tight')
+        logger.info(f"Layer/head heatmap saved to {output_dir}/layer_head_heatmap.png")
+    
+    plt.show()
+
+
+def create_token_flow_diagram(attention_hook, output_dir=None, top_n=10):
+    """Create a flow diagram showing how attention flows between tokens over time."""
+    if not attention_hook.attention_data:
+        logger.warning("No attention data for flow diagram")
+        return
+    
+    # Group attention by generation position
+    position_flows = defaultdict(lambda: defaultdict(float))
+    all_tokens = set()
+    
+    for record in attention_hook.attention_data:
+        position = record['position']
+        for edge in record['edges']:
+            source = edge['source_token']
+            target = edge['target_token']
+            weight = edge['weight']
+            
+            position_flows[position][(source, target)] += weight
+            all_tokens.add(source)
+            all_tokens.add(target)
+    
+    # Select most active tokens
+    token_activity = defaultdict(float)
+    for pos_flows in position_flows.values():
+        for (source, target), weight in pos_flows.items():
+            token_activity[source] += weight
+            token_activity[target] += weight
+    
+    top_tokens = [token for token, _ in sorted(token_activity.items(), key=lambda x: x[1], reverse=True)[:top_n]]
+    
+    # Create flow visualization
+    fig, ax = plt.subplots(figsize=(16, 10))
+    
+    positions = sorted(position_flows.keys())
+    token_positions = {token: i for i, token in enumerate(top_tokens)}
+    
+    # Plot tokens as horizontal lines
+    for token, y_pos in token_positions.items():
+        ax.axhline(y=y_pos, color='lightgray', alpha=0.3, linewidth=20)
+        ax.text(-0.5, y_pos, token, ha='right', va='center', fontweight='bold')
+    
+    # Plot flows as arrows
+    for pos_idx, position in enumerate(positions[:10]):  # Limit to first 10 positions
+        flows = position_flows[position]
+        
+        for (source, target), weight in flows.items():
+            if source in top_tokens and target in top_tokens and weight > 0.1:
+                y_source = token_positions[source]
+                y_target = token_positions[target]
+                
+                # Arrow properties based on weight
+                alpha = min(0.9, weight * 2)
+                width = max(0.5, weight * 3)
+                
+                # Slight x offset for each position
+                x_pos = pos_idx * 0.8
+                
+                ax.annotate('', xy=(x_pos + 0.3, y_target), xytext=(x_pos, y_source),
+                           arrowprops=dict(arrowstyle='->', lw=width, alpha=alpha, color='red'))
+    
+    ax.set_xlim(-2, len(positions) * 0.8)
+    ax.set_ylim(-0.5, len(top_tokens) - 0.5)
+    ax.set_xlabel('Generation Step')
+    ax.set_title('Token Attention Flow Over Time')
+    ax.set_yticks([])
+    
+    # Add position markers
+    for i, pos in enumerate(positions[:10]):
+        ax.axvline(x=i * 0.8, color='blue', alpha=0.3, linestyle='--')
+        ax.text(i * 0.8, len(top_tokens), f'Step {pos}', rotation=90, ha='center', va='bottom')
+    
+    plt.tight_layout()
+    
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        plt.savefig(os.path.join(output_dir, 'token_flow_diagram.png'), dpi=300, bbox_inches='tight')
+        logger.info(f"Token flow diagram saved to {output_dir}/token_flow_diagram.png")
+    
+    plt.show()
+
+
+def create_attention_distribution_plots(attention_hook, output_dir=None):
+    """Create distribution plots for attention weights and patterns."""
+    if not attention_hook.attention_data:
+        logger.warning("No attention data for distribution plots")
+        return
+    
+    # Collect all attention weights
+    all_weights = []
+    layer_weights = defaultdict(list)
+    head_weights = defaultdict(list)
+    
+    for record in attention_hook.attention_data:
+        layer = record['layer']
+        head = record['head']
+        
+        for edge in record['edges']:
+            weight = edge['weight']
+            all_weights.append(weight)
+            layer_weights[layer].append(weight)
+            head_weights[head].append(weight)
+    
+    if not all_weights:
+        logger.warning("No attention weights to plot")
+        return
+    
+    # Create subplot with multiple distribution plots
+    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    
+    # Overall weight distribution
+    axes[0, 0].hist(all_weights, bins=50, alpha=0.7, color='blue', edgecolor='black')
+    axes[0, 0].set_title('Overall Attention Weight Distribution')
+    axes[0, 0].set_xlabel('Attention Weight')
+    axes[0, 0].set_ylabel('Frequency')
+    axes[0, 0].axvline(np.mean(all_weights), color='red', linestyle='--', label=f'Mean: {np.mean(all_weights):.3f}')
+    axes[0, 0].legend()
+    
+    # Box plot by layer
+    if layer_weights:
+        layers = sorted(layer_weights.keys())
+        layer_data = [layer_weights[layer] for layer in layers]
+        
+        axes[0, 1].boxplot(layer_data, labels=layers)
+        axes[0, 1].set_title('Attention Weight Distribution by Layer')
+        axes[0, 1].set_xlabel('Layer')
+        axes[0, 1].set_ylabel('Attention Weight')
+    
+    # Box plot by head
+    if head_weights:
+        heads = sorted(head_weights.keys())
+        head_data = [head_weights[head] for head in heads]
+        
+        axes[1, 0].boxplot(head_data, labels=heads)
+        axes[1, 0].set_title('Attention Weight Distribution by Head')
+        axes[1, 0].set_xlabel('Head')
+        axes[1, 0].set_ylabel('Attention Weight')
+    
+    # Cumulative distribution
+    sorted_weights = np.sort(all_weights)
+    cumulative = np.arange(1, len(sorted_weights) + 1) / len(sorted_weights)
+    
+    axes[1, 1].plot(sorted_weights, cumulative, linewidth=2)
+    axes[1, 1].set_title('Cumulative Attention Weight Distribution')
+    axes[1, 1].set_xlabel('Attention Weight')
+    axes[1, 1].set_ylabel('Cumulative Probability')
+    axes[1, 1].grid(True, alpha=0.3)
+    
+    # Add percentile markers
+    for percentile in [50, 75, 90, 95]:
+        value = np.percentile(all_weights, percentile)
+        axes[1, 1].axvline(value, color='red', alpha=0.5, linestyle='--')
+        axes[1, 1].text(value, 0.1, f'{percentile}%', rotation=90, ha='right')
+    
+    plt.tight_layout()
+    
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        plt.savefig(os.path.join(output_dir, 'attention_distributions.png'), dpi=300, bbox_inches='tight')
+        logger.info(f"Attention distribution plots saved to {output_dir}/attention_distributions.png")
+    
+    plt.show()
+
+
+def analyze_attention_patterns(attention_hook, output_file=None):
+    """Analyze and optionally save attention patterns."""
+    logger.info("\n=== Attention Pattern Analysis ===")
+    
+    # Get unique tokens that received/gave attention
+    all_tokens = set()
+    for record in attention_hook.attention_data:
+        for edge in record['edges']:
+            all_tokens.add(edge['source_token'])
+            all_tokens.add(edge['target_token'])
+    
+    logger.info(f"Unique tokens involved in attention: {len(all_tokens)}")
+    
+    # Analyze attention by layer/head
+    layer_head_stats = {}
+    for record in attention_hook.attention_data:
+        key = (record['layer'], record['head'])
+        if key not in layer_head_stats:
             layer_head_stats[key] = {
-                'edge_count': len(edges),
-                'avg_weight': sum(weights) / len(weights),
-                'max_weight': max(weights)
+                'edge_count': 0,
+                'avg_weight': 0,
+                'max_weight': 0
             }
+        
+        stats = layer_head_stats[key]
+        edges = record['edges']
+        if edges:
+            weights = [e['weight'] for e in edges]
+            stats['edge_count'] += len(edges)
+            stats['avg_weight'] = sum(weights) / len(weights)
+            stats['max_weight'] = max(weights)
     
-    print("Attention statistics by layer/head (FINAL SEQUENCE ONLY):")
+    logger.info("\nAttention statistics by layer/head:")
     for (layer, head), stats in sorted(layer_head_stats.items()):
-        print(f"  Layer {layer}, Head {head}: "
-              f"{stats['edge_count']} edges, "
-              f"avg weight: {stats['avg_weight']:.4f}, "
-              f"max weight: {stats['max_weight']:.4f}")
+        logger.info(f"  Layer {layer}, Head {head}: "
+                   f"{stats['edge_count']} edges, "
+                   f"avg weight: {stats['avg_weight']:.4f}, "
+                   f"max weight: {stats['max_weight']:.4f}")
     
-    # Token attention using ONLY final step data
+    # Find most attended tokens
     token_attention = {}
-    for record in final_step_data:
+    for record in attention_hook.attention_data:
         for edge in record['edges']:
             target = edge['target_token']
             if target not in token_attention:
@@ -136,31 +487,31 @@ def analyze_attention_patterns(attention_hook, output_file=None):
             token_attention[target] += edge['weight']
     
     top_attended = sorted(token_attention.items(), key=lambda x: x[1], reverse=True)[:10]
-    print("\nTop 10 most attended tokens (FINAL SEQUENCE ONLY):")
+    logger.info("\nTop 10 most attended tokens:")
     for token, total_weight in top_attended:
-        print(f"  '{token}': {total_weight:.4f}")
+        logger.info(f"  '{token}': {total_weight:.4f}")
     
-    # Save data if requested
+    # Save detailed data if requested
     if output_file:
-        import json
-        final_data = {
-            'sequence_length': seq_len,
-            'max_possible_edges': max_possible_edges,
+        data_to_save = {
+            'attention_records': len(attention_hook.attention_data),
+            'unique_tokens': list(all_tokens),
             'layer_head_stats': {f"L{k[0]}_H{k[1]}": v for k, v in layer_head_stats.items()},
             'top_attended_tokens': top_attended,
-            'total_records': len(final_step_data)
+            'full_data': attention_hook.attention_data[:10]  # Save first 10 records as example
         }
         
         with open(output_file, 'w') as f:
-            json.dump(final_data, f, indent=2)
-        print(f"\nFinal sequence analysis saved to: {output_file}")
+            json.dump(data_to_save, f, indent=2, default=str)
+        logger.info(f"\nDetailed attention data saved to: {output_file}")
+
 
 def main():
-    parser = argparse.ArgumentParser(description='Run inference with hooks on a checkpoint')
+    parser = argparse.ArgumentParser(description='Run inference with hooks and graph visualization')
     parser.add_argument('checkpoint', type=str, help='Path to model checkpoint')
-    parser.add_argument('--prompt', type=str, default="He liked to eat", 
+    parser.add_argument('--prompt', type=str, default="Once upon a time", 
                         help='Text prompt for generation')
-    parser.add_argument('--max-tokens', type=int, default=11, 
+    parser.add_argument('--max-tokens', type=int, default=50, 
                         help='Maximum number of tokens to generate')
     parser.add_argument('--temperature', type=float, default=0.8, 
                         help='Sampling temperature')
@@ -178,8 +529,19 @@ def main():
                         help='Track FFN activations')
     parser.add_argument('--no-hooks', action='store_true',
                         help='Run without hooks for comparison')
+    parser.add_argument('--output-dir', type=str, default='./inference_output',
+                        help='Directory to save visualizations and analysis')
+    parser.add_argument('--no-graphs', action='store_true',
+                        help='Skip graph generation (faster)')
+    parser.add_argument('--graph-min-weight', type=float, default=0.15,
+                        help='Minimum attention weight for graph edges')
+    parser.add_argument('--graph-max-nodes', type=int, default=50,
+                        help='Maximum nodes in attention graph')
     
     args = parser.parse_args()
+    
+    # Create output directory
+    os.makedirs(args.output_dir, exist_ok=True)
     
     # Load model
     device = torch.device(args.device)
@@ -244,7 +606,37 @@ def main():
         # Analyze attention patterns
         attention_hook = next((h for h in hooks if isinstance(h, AttentionExtractionHook)), None)
         if attention_hook:
-            analyze_attention_patterns(attention_hook, args.save_attention)
+            # Text analysis
+            save_path = os.path.join(args.output_dir, 'attention_analysis.json') if args.save_attention else None
+            analyze_attention_patterns(attention_hook, save_path)
+            
+            # Generate visualizations
+            if not args.no_graphs:
+                logger.info("\n=== Creating Visualizations ===")
+                
+                try:
+                    # Main attention graph
+                    create_attention_graph(
+                        attention_hook, 
+                        args.output_dir, 
+                        min_weight=args.graph_min_weight,
+                        max_nodes=args.graph_max_nodes
+                    )
+                    
+                    # Layer/head heatmap
+                    create_layer_head_heatmap(attention_hook, args.output_dir)
+                    
+                    # Token flow diagram
+                    create_token_flow_diagram(attention_hook, args.output_dir)
+                    
+                    # Distribution plots
+                    create_attention_distribution_plots(attention_hook, args.output_dir)
+                    
+                    logger.info(f"All visualizations saved to: {args.output_dir}")
+                    
+                except Exception as e:
+                    logger.error(f"Error creating visualizations: {e}")
+                    logger.info("Continuing with text analysis only...")
         
         # Report activation stats if tracked
         if args.track_activations:
@@ -255,6 +647,8 @@ def main():
                 avg_output_norm = sum(a['output_norm'] for a in activation_hook.activations) / len(activation_hook.activations)
                 logger.info(f"Average FFN input norm: {avg_input_norm:.4f}")
                 logger.info(f"Average FFN output norm: {avg_output_norm:.4f}")
+    
+    logger.info(f"\nAnalysis complete! Check {args.output_dir} for saved results.")
 
 
 if __name__ == "__main__":
