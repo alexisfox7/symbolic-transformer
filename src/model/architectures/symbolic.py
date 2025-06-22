@@ -23,9 +23,14 @@ class SymbolicTransformerBlock(nn.Module):
         self.ffn = VocabFFN(config, vocab_embeddings_ref)
 
     #REVIEW check this is right order
-    def forward(self, x):
-        x = x + self.attn(self.ln_1(x))
-        x = x + self.ffn(self.ln_2(x))
+    def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
+        x_norm = self.ln_1(x)
+        attn_out = self.attn(x_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        x = x + attn_out
+        
+        x_norm = self.ln_2(x)
+        ffn_out = self.ffn(x_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        x = x + ffn_out
         return x
 
 class SymbolicTransformer(TransformerBase):
@@ -77,7 +82,7 @@ class SymbolicTransformer(TransformerBase):
             if module.channel_biases is not None:
                 torch.nn.init.zeros_(module.channel_biases)
 
-    def forward(self, input_ids, targets=None):
+    def forward(self, input_ids, targets=None, hook_state=None):
         """
         Forward pass for the SymbolicTransformer.
         """
@@ -88,8 +93,8 @@ class SymbolicTransformer(TransformerBase):
         
         xt = self.transformer.drop(tok_emb)
 
-        for block in self.transformer.h:
-            xt = block(xt)
+        for layer_idx, block in enumerate(self.transformer.h):
+            xt = block(xt, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
 
         x_final = self.transformer.ln_f(xt)
         logits = self.lm_head(x_final)

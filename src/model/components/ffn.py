@@ -14,11 +14,28 @@ class VanillaFFN(nn.Module):
         self.dropout = nn.Dropout(config.dropout)
 
     #TODO: old code
-    def forward(self, x):
+    def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
+        ffn_input = x
         x = self.c_fc(x)
         x = F.gelu(x)
         x = self.c_proj(x)
         x = self.dropout(x)
+        
+        # Call hooks if available
+        if hook_manager is not None and layer_idx is not None and hook_state is not None:
+            tokens = hook_state.get('tokens', [])
+            position = hook_state.get('position', 0)
+            state = hook_state.copy() if hook_state else {}
+            
+            hook_manager.on_ffn_computed(
+                layer_idx=layer_idx,
+                ffn_input=ffn_input,
+                ffn_output=x,
+                tokens=tokens,
+                position=position,
+                state=state
+            )
+        
         return x
     
 class VocabFFN(nn.Module):
@@ -51,7 +68,7 @@ class VocabFFN(nn.Module):
         self.prob_threshold = 0.1 # max 10 
         self.sparsemax = Sparsemax(dim=-1)
         
-    def forward(self, x):
+    def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
         """
         Forward pass with differentiable sparse thresholding.
         
@@ -64,7 +81,10 @@ class VocabFFN(nn.Module):
         if self.vocab_embeddings_ref is None:
             raise RuntimeError("vocab_embeddings_ref not set.")
 
-        z = self.ffn(x)  # (B, T, n_embd)
+        ffn_input = x
+        
+        # Pass hook parameters to nested FFN
+        z = self.ffn(x, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)  # (B, T, n_embd)
         z_norm = self.ffn_norm(z)  # (B, T, n_embd)
         
         vocab_similarities = torch.matmul(z_norm, self.vocab_embeddings_ref.weight.T)  # (B, T, vocab_size)
@@ -77,7 +97,11 @@ class VocabFFN(nn.Module):
         # project to vocabulary manifold (differentiable sparse combination)
         vocab_output = torch.matmul(vocab_weights, self.vocab_embeddings_ref.weight)  # (B, T, n_embd)
         
-        return self.dropout(vocab_output)
+        ffn_output = self.dropout(vocab_output)
+        
+        # Note: The nested VanillaFFN already calls on_ffn_computed, so we don't need to call it again
+        
+        return ffn_output
     
     def relu_method(self, vocab_similarities):
         """

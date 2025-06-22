@@ -9,7 +9,8 @@ import logging
 from tqdm.auto import tqdm
 from typing import Tuple, List, Dict, Optional, Union, Any
 
-from mytokenizers import BaseTokenizer
+from ..mytokenizers import BaseTokenizer
+from .hooks import InferenceHookManager, InferenceHook
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,8 @@ def run_generation(model: torch.nn.Module,
                   temperature: float = 1.0,
                   top_k: Optional[int] = None,
                   top_p: Optional[float] = None, #keep in signature for compatibility if other parts use it
-                  show_progress: bool = True) -> Tuple[List[int], str]:
+                  show_progress: bool = True,
+                  hooks: Optional[List[InferenceHook]] = None) -> Tuple[List[int], str]:
     """
     Generate text using the model starting from a prompt.
     
@@ -37,6 +39,7 @@ def run_generation(model: torch.nn.Module,
         top_p: If set, restricts sampling to tokens with cumulative probability >= top_p. 
                Note: This will only be passed to model.generate if the model supports it.
         show_progress: Whether to show a progress bar
+        hooks: Optional list of InferenceHook objects to attach during generation
         
     Returns:
         Tuple of (list of token IDs, generated text string)
@@ -49,6 +52,15 @@ def run_generation(model: torch.nn.Module,
     #set the model to evaluation mode
     model.eval()
     model.to(device)
+    
+    # Set up hooks if provided
+    hook_manager = None
+    if hooks and hasattr(model, 'set_hook_manager'):
+        hook_manager = InferenceHookManager()
+        for hook in hooks:
+            hook_manager.add_hook(hook)
+        model.set_hook_manager(hook_manager)
+        logger.info(f"Attached {len(hooks)} inference hooks: {[h.name for h in hooks]}")
 
     logger.info(f"Generating text with parameters:")
     logger.info(f"  Prompt: '{prompt_text}'")
@@ -90,6 +102,7 @@ def run_generation(model: torch.nn.Module,
         'input_ids': start_ids,
         'max_new_tokens': max_new_tokens,
         'temperature': temperature,
+        'tokenizer': tokenizer,  # Pass tokenizer for hooks
     }
     if top_k is not None:
         generate_kwargs['top_k'] = top_k
@@ -124,6 +137,11 @@ def run_generation(model: torch.nn.Module,
 
     logger.info("Generation complete")
     logger.info(f"Generated text:\n---\n{generated_text}\n---")
+    
+    # Clean up hooks
+    if hook_manager and hasattr(model, 'set_hook_manager'):
+        model.set_hook_manager(None)
+        logger.info("Removed inference hooks")
 
     return generated_ids, generated_text
 
@@ -148,6 +166,7 @@ def batch_generate(model: torch.nn.Module,
                   tokenizer: BaseTokenizer,
                   prompts: List[str],
                   device: torch.device,
+                  hooks: Optional[List[InferenceHook]] = None,
                   **kwargs) -> List[Tuple[List[int], str]]:
     """
     Generate text for multiple prompts.
@@ -157,6 +176,7 @@ def batch_generate(model: torch.nn.Module,
         tokenizer: Tokenizer for encoding/decoding text
         prompts: List of prompt texts
         device: Device to run generation on
+        hooks: Optional list of InferenceHook objects to attach during generation
         **kwargs: Additional arguments for generation (max_new_tokens, temperature, top_k, top_p)
         
     Returns:
@@ -176,6 +196,7 @@ def batch_generate(model: torch.nn.Module,
                 tokenizer=tokenizer,
                 prompt_text=prompt,
                 device=device,
+                hooks=hooks,
                 **kwargs #pass along all kwargs (including top_p if present)
             )
             results.append(result)

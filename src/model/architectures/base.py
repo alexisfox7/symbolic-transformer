@@ -6,6 +6,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+from typing import Optional
+from ...inference.hooks import InferenceHookManager
 
 class TransformerBase(nn.Module):
     """Shared foundation for all transformer variants."""
@@ -15,6 +17,7 @@ class TransformerBase(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.hook_manager: Optional[InferenceHookManager] = None
     
     #REVIEW what are good default values for these?
     def _init_weights(self, module):
@@ -69,7 +72,7 @@ class TransformerBase(nn.Module):
     # INFERENCE #
 
     @torch.no_grad()
-    def generate(self, input_ids, max_new_tokens, temperature=1.0, top_k=None):
+    def generate(self, input_ids, max_new_tokens, temperature=1.0, top_k=None, tokenizer=None):
         """
         Generate new tokens autoregressively.
         
@@ -78,6 +81,7 @@ class TransformerBase(nn.Module):
             max_new_tokens: Number of new tokens to generate
             temperature: Sampling temperature
             top_k: If specified, only sample from top k tokens
+            tokenizer: Optional tokenizer for decoding tokens (needed for hooks)
             
         Returns:
             Generated token ids [batch_size, seq_len + max_new_tokens]
@@ -85,14 +89,35 @@ class TransformerBase(nn.Module):
         # Handle both 'input_ids' and 'idx' parameter names for compatibility
         if input_ids is None:
             raise ValueError("input_ids cannot be None")
+        
+        # Prepare generation state for hooks
+        generation_state = {
+            'temperature': temperature,
+            'top_k': top_k,
+            'max_new_tokens': max_new_tokens
+        }
+        
+        # Get initial tokens for hooks
+        tokens = []
+        if tokenizer is not None and self.hook_manager is not None:
+            tokens = [tokenizer.decode([t]) for t in input_ids[0].tolist()]
+            self.hook_manager.on_generation_begin(tokens, generation_state)
             
-        for _ in range(max_new_tokens):
+        for position in range(max_new_tokens):
             # Crop sequence if it exceeds block size
             idx_cond = input_ids if input_ids.size(1) <= self.config.block_size else input_ids[:, -self.config.block_size:]
             
+            # Hook: before forward pass
+            if self.hook_manager is not None:
+                self.hook_manager.on_forward_begin(idx_cond, position, generation_state)
+            
             # Get predictions
-            outputs = self(idx_cond)
+            outputs = self(idx_cond, hook_state={'position': position, 'tokens': tokens})
             logits = outputs['logits']
+            
+            # Hook: after forward pass
+            if self.hook_manager is not None:
+                self.hook_manager.on_forward_end(logits, position, generation_state)
             
             # Focus on last time step
             logits = logits[:, -1, :] / temperature
@@ -111,6 +136,15 @@ class TransformerBase(nn.Module):
             # Append to sequence
             input_ids = torch.cat((input_ids, idx_next), dim=1)
             
+            # Update tokens for hooks
+            if tokenizer is not None and self.hook_manager is not None:
+                tokens.append(tokenizer.decode([idx_next[0].item()]))
+        
+        # Hook: generation complete
+        if self.hook_manager is not None and tokenizer is not None:
+            final_tokens = [tokenizer.decode([t]) for t in input_ids[0].tolist()]
+            self.hook_manager.on_generation_end(final_tokens, generation_state)
+            
         return input_ids
 
     # UTILITY #
@@ -125,6 +159,10 @@ class TransformerBase(nn.Module):
     def get_model_info(self):
         # print comprehensive model info
         pass
+    
+    def set_hook_manager(self, hook_manager: Optional[InferenceHookManager]) -> None:
+        """Set the inference hook manager for this model."""
+        self.hook_manager = hook_manager
 
 
     

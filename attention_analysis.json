@@ -1,0 +1,3868 @@
+{
+  "attention_records": 80,
+  "unique_tokens": [
+    "<BOS>",
+    "<UNK>"
+  ],
+  "layer_head_stats": {
+    "L0_H0": {
+      "edge_count": 500,
+      "avg_weight": 0.19036077484488487,
+      "max_weight": 1.0
+    },
+    "L0_H1": {
+      "edge_count": 510,
+      "avg_weight": 0.1885383278131485,
+      "max_weight": 1.0
+    },
+    "L0_H2": {
+      "edge_count": 500,
+      "avg_weight": 0.1903948290646076,
+      "max_weight": 1.0
+    },
+    "L0_H3": {
+      "edge_count": 510,
+      "avg_weight": 0.1883800538147197,
+      "max_weight": 1.0
+    },
+    "L1_H0": {
+      "edge_count": 500,
+      "avg_weight": 0.19017114192247392,
+      "max_weight": 1.0
+    },
+    "L1_H1": {
+      "edge_count": 490,
+      "avg_weight": 0.1920939367644641,
+      "max_weight": 1.0
+    },
+    "L1_H2": {
+      "edge_count": 520,
+      "avg_weight": 0.18680185022262427,
+      "max_weight": 1.0
+    },
+    "L1_H3": {
+      "edge_count": 510,
+      "avg_weight": 0.18853559666404537,
+      "max_weight": 1.0
+    }
+  },
+  "top_attended_tokens": [
+    [
+      "<UNK>",
+      685.1078939139843
+    ],
+    [
+      "<BOS>",
+      80.0
+    ]
+  ],
+  "full_data": [
+    {
+      "layer": 0,
+      "head": 0,
+      "position": 0,
+      "tokens": [
+        "<BOS>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<EOS>"
+      ],
+      "edges": [
+        {
+          "source_pos": 0,
+          "target_pos": 0,
+          "weight": 1.0,
+          "source_token": "<BOS>",
+          "target_token": "<BOS>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 1,
+          "weight": 0.5110408067703247,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 1,
+          "weight": 0.4889591336250305,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 2,
+          "weight": 0.35595133900642395,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 2,
+          "weight": 0.30498865246772766,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 2,
+          "weight": 0.3390599489212036,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 3,
+          "weight": 0.2632846534252167,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 3,
+          "weight": 0.23268482089042664,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 3,
+          "weight": 0.25110721588134766,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 3,
+          "weight": 0.2529233396053314,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 4,
+          "weight": 0.2195255309343338,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 4,
+          "weight": 0.1874966025352478,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 4,
+          "weight": 0.19629238545894623,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 4,
+          "weight": 0.18487757444381714,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 4,
+          "weight": 0.21180786192417145,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 5,
+          "weight": 0.17925865948200226,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 5,
+          "weight": 0.14988712966442108,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 5,
+          "weight": 0.16651107370853424,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 5,
+          "weight": 0.15160679817199707,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 5,
+          "weight": 0.17999126017093658,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 5,
+          "weight": 0.17274512350559235,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 6,
+          "weight": 0.14040717482566833,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 6,
+          "weight": 0.13790327310562134,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 6,
+          "weight": 0.148888498544693,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 6,
+          "weight": 0.13607007265090942,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 6,
+          "weight": 0.14624221622943878,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 6,
+          "weight": 0.14800329506397247,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 6,
+          "weight": 0.14248545467853546,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 7,
+          "weight": 0.12651215493679047,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 7,
+          "weight": 0.11441328376531601,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 7,
+          "weight": 0.12882591784000397,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 7,
+          "weight": 0.11797042936086655,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 7,
+          "weight": 0.1327030509710312,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 7,
+          "weight": 0.13545437157154083,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 7,
+          "weight": 0.11934562772512436,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 7,
+          "weight": 0.12477517127990723,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 8,
+          "weight": 0.11771779507398605,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 8,
+          "weight": 0.10099712759256363,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 8,
+          "weight": 0.11418129503726959,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 8,
+          "weight": 0.1016906276345253,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 8,
+          "weight": 0.11564911901950836,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 8,
+          "weight": 0.11408525705337524,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 8,
+          "weight": 0.10970140993595123,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 8,
+          "weight": 0.1161479502916336,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 8,
+          "weight": 0.1098293587565422,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 9,
+          "weight": 0.10626672953367233,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 9,
+          "weight": 0.10159558057785034,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 9,
+          "weight": 0.1021365150809288,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 9,
+          "weight": 0.10508524626493454,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 9,
+          "target_pos": 9,
+          "weight": 0.10295485705137253,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        }
+      ],
+      "attention_matrix": "tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.5110, 0.4890, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.3560, 0.3050, 0.3391, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2633, 0.2327, 0.2511, 0.2529, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2195, 0.1875, 0.1963, 0.1849, 0.2118, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1793, 0.1499, 0.1665, 0.1516, 0.1800, 0.1727, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1404, 0.1379, 0.1489, 0.1361, 0.1462, 0.1480, 0.1425, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1265, 0.1144, 0.1288, 0.1180, 0.1327, 0.1355, 0.1193, 0.1248, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1177, 0.1010, 0.1142, 0.1017, 0.1156, 0.1141, 0.1097, 0.1161, 0.1098,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1063, 0.0942, 0.0979, 0.0931, 0.1016, 0.1021, 0.0987, 0.1051, 0.0980,\n         0.1030, 0.0000, 0.0000, 0.0000],\n        [0.0919, 0.0856, 0.0911, 0.0827, 0.0932, 0.0975, 0.0908, 0.0960, 0.0911,\n         0.0895, 0.0905, 0.0000, 0.0000],\n        [0.0865, 0.0788, 0.0828, 0.0756, 0.0908, 0.0823, 0.0821, 0.0898, 0.0809,\n         0.0809, 0.0849, 0.0846, 0.0000],\n        [0.0788, 0.0764, 0.0759, 0.0784, 0.0790, 0.0766, 0.0781, 0.0782, 0.0749,\n         0.0764, 0.0755, 0.0764, 0.0753]])",
+      "generation_context": {
+        "prompt_length": 13,
+        "total_length": 13
+      }
+    },
+    {
+      "layer": 0,
+      "head": 1,
+      "position": 0,
+      "tokens": [
+        "<BOS>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<EOS>"
+      ],
+      "edges": [
+        {
+          "source_pos": 0,
+          "target_pos": 0,
+          "weight": 1.0,
+          "source_token": "<BOS>",
+          "target_token": "<BOS>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 1,
+          "weight": 0.4644310474395752,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 1,
+          "weight": 0.53556889295578,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 2,
+          "weight": 0.3243264853954315,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 2,
+          "weight": 0.3489197790622711,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 2,
+          "weight": 0.32675373554229736,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 3,
+          "weight": 0.23693755269050598,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 3,
+          "weight": 0.26174396276474,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 3,
+          "weight": 0.2510990500450134,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 3,
+          "weight": 0.250219464302063,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 4,
+          "weight": 0.1932814121246338,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 4,
+          "weight": 0.20977996289730072,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 4,
+          "weight": 0.19662505388259888,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 4,
+          "weight": 0.19904695451259613,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 4,
+          "weight": 0.20126661658287048,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 5,
+          "weight": 0.16632497310638428,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 5,
+          "weight": 0.17334719002246857,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 5,
+          "weight": 0.15833675861358643,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 5,
+          "weight": 0.1676022708415985,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 5,
+          "weight": 0.16477495431900024,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 5,
+          "weight": 0.16961386799812317,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 6,
+          "weight": 0.13699421286582947,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 6,
+          "weight": 0.1467723846435547,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 6,
+          "weight": 0.14433538913726807,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 6,
+          "weight": 0.141842320561409,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 6,
+          "weight": 0.14393624663352966,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 6,
+          "weight": 0.14422214031219482,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 6,
+          "weight": 0.14189723134040833,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 7,
+          "weight": 0.12375316768884659,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 7,
+          "weight": 0.12981955707073212,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 7,
+          "weight": 0.12317004054784775,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 7,
+          "weight": 0.12117383629083633,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 7,
+          "weight": 0.12263042479753494,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 7,
+          "weight": 0.1268233358860016,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 7,
+          "weight": 0.12720072269439697,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 7,
+          "weight": 0.12542898952960968,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 8,
+          "weight": 0.10405459254980087,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 8,
+          "weight": 0.10915511101484299,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 8,
+          "weight": 0.11349755525588989,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 8,
+          "weight": 0.11087345331907272,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 8,
+          "weight": 0.11412390321493149,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 8,
+          "weight": 0.1095212772488594,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 8,
+          "weight": 0.11125289648771286,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 8,
+          "weight": 0.11120077967643738,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 8,
+          "weight": 0.11632044613361359,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 9,
+          "weight": 0.10257396101951599,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 9,
+          "weight": 0.10168761759996414,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 9,
+          "weight": 0.1075480729341507,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 9,
+          "weight": 0.10059414058923721,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 9,
+          "weight": 0.101057268679142,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 9,
+          "target_pos": 9,
+          "weight": 0.10199364274740219,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        }
+      ],
+      "attention_matrix": "tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.4644, 0.5356, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.3243, 0.3489, 0.3268, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2369, 0.2617, 0.2511, 0.2502, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1933, 0.2098, 0.1966, 0.1990, 0.2013, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1663, 0.1733, 0.1583, 0.1676, 0.1648, 0.1696, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1370, 0.1468, 0.1443, 0.1418, 0.1439, 0.1442, 0.1419, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1238, 0.1298, 0.1232, 0.1212, 0.1226, 0.1268, 0.1272, 0.1254, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1041, 0.1092, 0.1135, 0.1109, 0.1141, 0.1095, 0.1113, 0.1112, 0.1163,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1026, 0.1017, 0.0968, 0.1075, 0.0968, 0.0936, 0.1006, 0.0974, 0.1011,\n         0.1020, 0.0000, 0.0000, 0.0000],\n        [0.0886, 0.0932, 0.0922, 0.0898, 0.0908, 0.0893, 0.0907, 0.0898, 0.0955,\n         0.0890, 0.0911, 0.0000, 0.0000],\n        [0.0802, 0.0829, 0.0827, 0.0854, 0.0837, 0.0800, 0.0841, 0.0823, 0.0853,\n         0.0850, 0.0843, 0.0841, 0.0000],\n        [0.0752, 0.0763, 0.0752, 0.0807, 0.0811, 0.0786, 0.0761, 0.0750, 0.0753,\n         0.0792, 0.0766, 0.0798, 0.0710]])",
+      "generation_context": {
+        "prompt_length": 13,
+        "total_length": 13
+      }
+    },
+    {
+      "layer": 0,
+      "head": 2,
+      "position": 0,
+      "tokens": [
+        "<BOS>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<EOS>"
+      ],
+      "edges": [
+        {
+          "source_pos": 0,
+          "target_pos": 0,
+          "weight": 1.0,
+          "source_token": "<BOS>",
+          "target_token": "<BOS>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 1,
+          "weight": 0.5016642212867737,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 1,
+          "weight": 0.4983358681201935,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 2,
+          "weight": 0.33255836367607117,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 2,
+          "weight": 0.33234548568725586,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 2,
+          "weight": 0.3350961208343506,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 3,
+          "weight": 0.2615232467651367,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 3,
+          "weight": 0.24237313866615295,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 3,
+          "weight": 0.24545925855636597,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 3,
+          "weight": 0.250644326210022,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 4,
+          "weight": 0.2117878794670105,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 4,
+          "weight": 0.1931471824645996,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 4,
+          "weight": 0.19097191095352173,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 4,
+          "weight": 0.1991266906261444,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 4,
+          "weight": 0.20496629178524017,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 5,
+          "weight": 0.18812745809555054,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 5,
+          "weight": 0.15832467377185822,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 5,
+          "weight": 0.15308228135108948,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 5,
+          "weight": 0.16808639466762543,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 5,
+          "weight": 0.16684043407440186,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 5,
+          "weight": 0.1655387133359909,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 6,
+          "weight": 0.14331965148448944,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 6,
+          "weight": 0.14626066386699677,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 6,
+          "weight": 0.13930870592594147,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 6,
+          "weight": 0.1438997983932495,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 6,
+          "weight": 0.1513824611902237,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 6,
+          "weight": 0.1417369544506073,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 6,
+          "weight": 0.1340918093919754,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 7,
+          "weight": 0.14057515561580658,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 7,
+          "weight": 0.1203993558883667,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 7,
+          "weight": 0.1217205673456192,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 7,
+          "weight": 0.12778474390506744,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 7,
+          "weight": 0.1266525536775589,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 7,
+          "weight": 0.12190855294466019,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 7,
+          "weight": 0.12310723215341568,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 7,
+          "weight": 0.1178518608212471,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 8,
+          "weight": 0.11551862955093384,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 8,
+          "weight": 0.1168297752737999,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 8,
+          "weight": 0.10693364590406418,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 8,
+          "weight": 0.11166546493768692,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 8,
+          "weight": 0.11406488716602325,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 8,
+          "weight": 0.10938789695501328,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 8,
+          "weight": 0.11045597493648529,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 8,
+          "weight": 0.1057959645986557,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 8,
+          "weight": 0.10934784263372421,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 9,
+          "weight": 0.1090565174818039,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 9,
+          "weight": 0.10425812751054764,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 9,
+          "weight": 0.10337436199188232,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 9,
+          "weight": 0.10229434818029404,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 9,
+          "target_pos": 9,
+          "weight": 0.10075791925191879,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        }
+      ],
+      "attention_matrix": "tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.5017, 0.4983, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.3326, 0.3323, 0.3351, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2615, 0.2424, 0.2455, 0.2506, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2118, 0.1931, 0.1910, 0.1991, 0.2050, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1881, 0.1583, 0.1531, 0.1681, 0.1668, 0.1655, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1433, 0.1463, 0.1393, 0.1439, 0.1514, 0.1417, 0.1341, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1406, 0.1204, 0.1217, 0.1278, 0.1267, 0.1219, 0.1231, 0.1179, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1155, 0.1168, 0.1069, 0.1117, 0.1141, 0.1094, 0.1105, 0.1058, 0.1093,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1091, 0.1043, 0.0939, 0.0986, 0.1034, 0.1023, 0.0945, 0.0939, 0.0993,\n         0.1008, 0.0000, 0.0000, 0.0000],\n        [0.0915, 0.0942, 0.0897, 0.0937, 0.0938, 0.0876, 0.0879, 0.0858, 0.0931,\n         0.0887, 0.0940, 0.0000, 0.0000],\n        [0.0827, 0.0842, 0.0813, 0.0856, 0.0885, 0.0838, 0.0797, 0.0806, 0.0816,\n         0.0831, 0.0859, 0.0830, 0.0000],\n        [0.0849, 0.0820, 0.0746, 0.0743, 0.0736, 0.0772, 0.0740, 0.0766, 0.0733,\n         0.0768, 0.0776, 0.0753, 0.0799]])",
+      "generation_context": {
+        "prompt_length": 13,
+        "total_length": 13
+      }
+    },
+    {
+      "layer": 0,
+      "head": 3,
+      "position": 0,
+      "tokens": [
+        "<BOS>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<EOS>"
+      ],
+      "edges": [
+        {
+          "source_pos": 0,
+          "target_pos": 0,
+          "weight": 1.0,
+          "source_token": "<BOS>",
+          "target_token": "<BOS>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 1,
+          "weight": 0.511429488658905,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 1,
+          "weight": 0.4885704815387726,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 2,
+          "weight": 0.33810657262802124,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 2,
+          "weight": 0.3367406725883484,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 2,
+          "weight": 0.325152724981308,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 3,
+          "weight": 0.2502860426902771,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 3,
+          "weight": 0.2620145082473755,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 3,
+          "weight": 0.241667702794075,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 3,
+          "weight": 0.24603182077407837,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 4,
+          "weight": 0.20303545892238617,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 4,
+          "weight": 0.20131275057792664,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 4,
+          "weight": 0.19724851846694946,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 4,
+          "weight": 0.1930074840784073,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 4,
+          "weight": 0.20539580285549164,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 5,
+          "weight": 0.1666499376296997,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 5,
+          "weight": 0.16968613862991333,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 5,
+          "weight": 0.16516155004501343,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 5,
+          "weight": 0.16285303235054016,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 5,
+          "weight": 0.1682988405227661,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 5,
+          "weight": 0.16735050082206726,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 6,
+          "weight": 0.14926841855049133,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 6,
+          "weight": 0.1491430401802063,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 6,
+          "weight": 0.14331476390361786,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 6,
+          "weight": 0.14130058884620667,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 6,
+          "weight": 0.1440420299768448,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 6,
+          "weight": 0.13444481790065765,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 6,
+          "weight": 0.1384863704442978,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 7,
+          "weight": 0.12858913838863373,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 7,
+          "weight": 0.1336536556482315,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 7,
+          "weight": 0.1219305545091629,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 7,
+          "weight": 0.12681180238723755,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 7,
+          "weight": 0.12195760011672974,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 7,
+          "weight": 0.12432008236646652,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 7,
+          "weight": 0.1156388372182846,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 7,
+          "weight": 0.12709836661815643,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 8,
+          "weight": 0.11334852129220963,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 8,
+          "weight": 0.11277611553668976,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 8,
+          "weight": 0.115458644926548,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 8,
+          "weight": 0.11030614376068115,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 8,
+          "weight": 0.10786014795303345,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 8,
+          "weight": 0.11127839982509613,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 8,
+          "weight": 0.10953866690397263,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 8,
+          "weight": 0.10926057398319244,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 8,
+          "weight": 0.1101728230714798,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 9,
+          "weight": 0.10109583288431168,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 9,
+          "weight": 0.10303519666194916,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 9,
+          "weight": 0.1021028384566307,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 9,
+          "weight": 0.1001010313630104,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 9,
+          "weight": 0.10016335546970367,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 9,
+          "weight": 0.1008843332529068,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        }
+      ],
+      "attention_matrix": "tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.5114, 0.4886, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.3381, 0.3367, 0.3252, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2503, 0.2620, 0.2417, 0.2460, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2030, 0.2013, 0.1972, 0.1930, 0.2054, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1666, 0.1697, 0.1652, 0.1629, 0.1683, 0.1674, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1493, 0.1491, 0.1433, 0.1413, 0.1440, 0.1344, 0.1385, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1286, 0.1337, 0.1219, 0.1268, 0.1220, 0.1243, 0.1156, 0.1271, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1133, 0.1128, 0.1155, 0.1103, 0.1079, 0.1113, 0.1095, 0.1093, 0.1102,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1011, 0.1030, 0.1021, 0.1001, 0.1002, 0.0999, 0.0975, 0.1009, 0.0976,\n         0.0977, 0.0000, 0.0000, 0.0000],\n        [0.0905, 0.0956, 0.0921, 0.0889, 0.0900, 0.0892, 0.0878, 0.0912, 0.0909,\n         0.0896, 0.0942, 0.0000, 0.0000],\n        [0.0874, 0.0846, 0.0866, 0.0801, 0.0828, 0.0813, 0.0807, 0.0874, 0.0836,\n         0.0806, 0.0848, 0.0802, 0.0000],\n        [0.0792, 0.0787, 0.0765, 0.0762, 0.0770, 0.0788, 0.0760, 0.0743, 0.0788,\n         0.0769, 0.0750, 0.0748, 0.0777]])",
+      "generation_context": {
+        "prompt_length": 13,
+        "total_length": 13
+      }
+    },
+    {
+      "layer": 1,
+      "head": 0,
+      "position": 0,
+      "tokens": [
+        "<BOS>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<EOS>"
+      ],
+      "edges": [
+        {
+          "source_pos": 0,
+          "target_pos": 0,
+          "weight": 1.0,
+          "source_token": "<BOS>",
+          "target_token": "<BOS>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 1,
+          "weight": 0.5341730117797852,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 1,
+          "weight": 0.46582692861557007,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 2,
+          "weight": 0.3436723053455353,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 2,
+          "weight": 0.3248254656791687,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 2,
+          "weight": 0.3315022587776184,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 3,
+          "weight": 0.26764392852783203,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 3,
+          "weight": 0.24870522320270538,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 3,
+          "weight": 0.24088135361671448,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 3,
+          "weight": 0.24276958405971527,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 4,
+          "weight": 0.19656632840633392,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 4,
+          "weight": 0.20240849256515503,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 4,
+          "weight": 0.20397044718265533,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 4,
+          "weight": 0.1969776153564453,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 4,
+          "weight": 0.20007707178592682,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 5,
+          "weight": 0.16421614587306976,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 5,
+          "weight": 0.16988754272460938,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 5,
+          "weight": 0.16826950013637543,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 5,
+          "weight": 0.1674073338508606,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 5,
+          "weight": 0.16512341797351837,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 5,
+          "weight": 0.16509607434272766,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 6,
+          "weight": 0.14954327046871185,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 6,
+          "weight": 0.1470704823732376,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 6,
+          "weight": 0.14594818651676178,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 6,
+          "weight": 0.13989917933940887,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 6,
+          "weight": 0.14123502373695374,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 6,
+          "weight": 0.13796032965183258,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 6,
+          "weight": 0.13834349811077118,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 7,
+          "weight": 0.1237945482134819,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 7,
+          "weight": 0.12318992614746094,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 7,
+          "weight": 0.12484202533960342,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 7,
+          "weight": 0.12174906581640244,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 7,
+          "weight": 0.12482120096683502,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 7,
+          "weight": 0.12326334416866302,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 7,
+          "weight": 0.12844109535217285,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 7,
+          "weight": 0.1298987716436386,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 8,
+          "weight": 0.1109122708439827,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 8,
+          "weight": 0.111395463347435,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 8,
+          "weight": 0.11097455024719238,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 8,
+          "weight": 0.10956819355487823,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 8,
+          "weight": 0.11016608029603958,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 8,
+          "weight": 0.10937561094760895,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 8,
+          "weight": 0.11137250810861588,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 8,
+          "weight": 0.11415785551071167,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 8,
+          "weight": 0.11207738518714905,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 9,
+          "weight": 0.1018652394413948,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 9,
+          "weight": 0.101845882833004,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 9,
+          "weight": 0.10139845311641693,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 9,
+          "weight": 0.10172346979379654,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 9,
+          "weight": 0.1017242893576622,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        }
+      ],
+      "attention_matrix": "tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.5342, 0.4658, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.3437, 0.3248, 0.3315, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2676, 0.2487, 0.2409, 0.2428, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1966, 0.2024, 0.2040, 0.1970, 0.2001, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1642, 0.1699, 0.1683, 0.1674, 0.1651, 0.1651, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1495, 0.1471, 0.1459, 0.1399, 0.1412, 0.1380, 0.1383, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1238, 0.1232, 0.1248, 0.1217, 0.1248, 0.1233, 0.1284, 0.1299, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1109, 0.1114, 0.1110, 0.1096, 0.1102, 0.1094, 0.1114, 0.1142, 0.1121,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1019, 0.1018, 0.1014, 0.0971, 0.0995, 0.0967, 0.1017, 0.0997, 0.1017,\n         0.0984, 0.0000, 0.0000, 0.0000],\n        [0.0954, 0.0891, 0.0860, 0.0909, 0.0917, 0.0906, 0.0887, 0.0912, 0.0900,\n         0.0913, 0.0950, 0.0000, 0.0000],\n        [0.0880, 0.0838, 0.0822, 0.0806, 0.0839, 0.0798, 0.0858, 0.0833, 0.0852,\n         0.0829, 0.0846, 0.0800, 0.0000],\n        [0.0702, 0.0743, 0.0782, 0.0736, 0.0756, 0.0734, 0.0796, 0.0768, 0.0823,\n         0.0782, 0.0821, 0.0774, 0.0783]])",
+      "generation_context": {
+        "prompt_length": 13,
+        "total_length": 13
+      }
+    },
+    {
+      "layer": 1,
+      "head": 1,
+      "position": 0,
+      "tokens": [
+        "<BOS>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<EOS>"
+      ],
+      "edges": [
+        {
+          "source_pos": 0,
+          "target_pos": 0,
+          "weight": 1.0,
+          "source_token": "<BOS>",
+          "target_token": "<BOS>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 1,
+          "weight": 0.49033913016319275,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 1,
+          "weight": 0.5096608996391296,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 2,
+          "weight": 0.32606616616249084,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 2,
+          "weight": 0.3306938409805298,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 2,
+          "weight": 0.34324002265930176,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 3,
+          "weight": 0.24216976761817932,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 3,
+          "weight": 0.25777724385261536,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 3,
+          "weight": 0.2545677125453949,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 3,
+          "weight": 0.24548526108264923,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 4,
+          "weight": 0.1933594048023224,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 4,
+          "weight": 0.20822179317474365,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 4,
+          "weight": 0.20391152799129486,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 4,
+          "weight": 0.1917060911655426,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 4,
+          "weight": 0.20280113816261292,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 5,
+          "weight": 0.16028332710266113,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 5,
+          "weight": 0.1693565547466278,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 5,
+          "weight": 0.17180135846138,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 5,
+          "weight": 0.162997305393219,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 5,
+          "weight": 0.16867148876190186,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 5,
+          "weight": 0.1668899655342102,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 6,
+          "weight": 0.13635940849781036,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 6,
+          "weight": 0.14837707579135895,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 6,
+          "weight": 0.14050394296646118,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 6,
+          "weight": 0.1396041214466095,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 6,
+          "weight": 0.1504725217819214,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 6,
+          "weight": 0.14130927622318268,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 6,
+          "weight": 0.14337371289730072,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 7,
+          "weight": 0.12314356863498688,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 7,
+          "weight": 0.12985877692699432,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 7,
+          "weight": 0.12519270181655884,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 7,
+          "weight": 0.12203476577997208,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 7,
+          "weight": 0.12412358075380325,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 7,
+          "weight": 0.126820370554924,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 7,
+          "weight": 0.12439946085214615,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 7,
+          "weight": 0.12442678213119507,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 8,
+          "weight": 0.11188824474811554,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 8,
+          "weight": 0.11828620731830597,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 8,
+          "weight": 0.1116151437163353,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 8,
+          "weight": 0.10491321980953217,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 8,
+          "weight": 0.11060510575771332,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 8,
+          "weight": 0.11223991215229034,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 8,
+          "weight": 0.10909595340490341,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 8,
+          "weight": 0.11379217356443405,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 8,
+          "weight": 0.10756408423185349,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 9,
+          "weight": 0.10156628489494324,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 9,
+          "weight": 0.1068364754319191,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 9,
+          "weight": 0.10115702450275421,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 9,
+          "weight": 0.10304303467273712,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        }
+      ],
+      "attention_matrix": "tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.4903, 0.5097, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.3261, 0.3307, 0.3432, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2422, 0.2578, 0.2546, 0.2455, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1934, 0.2082, 0.2039, 0.1917, 0.2028, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1603, 0.1694, 0.1718, 0.1630, 0.1687, 0.1669, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1364, 0.1484, 0.1405, 0.1396, 0.1505, 0.1413, 0.1434, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1231, 0.1299, 0.1252, 0.1220, 0.1241, 0.1268, 0.1244, 0.1244, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1119, 0.1183, 0.1116, 0.1049, 0.1106, 0.1122, 0.1091, 0.1138, 0.1076,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1016, 0.1068, 0.1012, 0.0962, 0.0995, 0.0987, 0.0981, 0.1030, 0.0959,\n         0.0989, 0.0000, 0.0000, 0.0000],\n        [0.0906, 0.0923, 0.0922, 0.0900, 0.0915, 0.0944, 0.0887, 0.0918, 0.0889,\n         0.0919, 0.0878, 0.0000, 0.0000],\n        [0.0802, 0.0840, 0.0829, 0.0815, 0.0842, 0.0807, 0.0828, 0.0871, 0.0845,\n         0.0863, 0.0828, 0.0830, 0.0000],\n        [0.0765, 0.0820, 0.0768, 0.0773, 0.0789, 0.0772, 0.0808, 0.0753, 0.0760,\n         0.0752, 0.0759, 0.0732, 0.0748]])",
+      "generation_context": {
+        "prompt_length": 13,
+        "total_length": 13
+      }
+    },
+    {
+      "layer": 1,
+      "head": 2,
+      "position": 0,
+      "tokens": [
+        "<BOS>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<EOS>"
+      ],
+      "edges": [
+        {
+          "source_pos": 0,
+          "target_pos": 0,
+          "weight": 1.0,
+          "source_token": "<BOS>",
+          "target_token": "<BOS>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 1,
+          "weight": 0.49194270372390747,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 1,
+          "weight": 0.5080572962760925,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 2,
+          "weight": 0.3186783194541931,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 2,
+          "weight": 0.3325219750404358,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 2,
+          "weight": 0.3487997055053711,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 3,
+          "weight": 0.2564270496368408,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 3,
+          "weight": 0.2362246811389923,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 3,
+          "weight": 0.2504572570323944,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 3,
+          "weight": 0.25689104199409485,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 4,
+          "weight": 0.20235960185527802,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 4,
+          "weight": 0.19566228985786438,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 4,
+          "weight": 0.1967691034078598,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 4,
+          "weight": 0.20676980912685394,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 4,
+          "weight": 0.19843922555446625,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 5,
+          "weight": 0.16170723736286163,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 5,
+          "weight": 0.16578558087348938,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 5,
+          "weight": 0.1695261150598526,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 5,
+          "weight": 0.17124442756175995,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 5,
+          "weight": 0.16210182011127472,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 5,
+          "weight": 0.1696348637342453,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 6,
+          "weight": 0.15020006895065308,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 6,
+          "weight": 0.1341840922832489,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 6,
+          "weight": 0.13823892176151276,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 6,
+          "weight": 0.146095871925354,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 6,
+          "weight": 0.1440509557723999,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 6,
+          "weight": 0.14328336715698242,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 6,
+          "weight": 0.14394667744636536,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 7,
+          "weight": 0.12747134268283844,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 7,
+          "weight": 0.11979402601718903,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 7,
+          "weight": 0.11948262155056,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 7,
+          "weight": 0.1340566873550415,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 7,
+          "weight": 0.12268881499767303,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 7,
+          "weight": 0.11948376893997192,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 7,
+          "weight": 0.13059471547603607,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 7,
+          "weight": 0.1264280378818512,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 8,
+          "weight": 0.107553631067276,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 8,
+          "weight": 0.10433372855186462,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 8,
+          "weight": 0.11254141479730606,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 8,
+          "weight": 0.11322759091854095,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 8,
+          "weight": 0.11037823557853699,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 8,
+          "weight": 0.1125713586807251,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 8,
+          "weight": 0.11179812997579575,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 8,
+          "weight": 0.11171667277812958,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 8,
+          "weight": 0.11587923020124435,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 9,
+          "weight": 0.10014503449201584,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 9,
+          "weight": 0.10491634160280228,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 9,
+          "weight": 0.10068263858556747,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 9,
+          "weight": 0.10012727230787277,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 9,
+          "weight": 0.10371223092079163,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 9,
+          "weight": 0.10138668864965439,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 9,
+          "target_pos": 9,
+          "weight": 0.1027260348200798,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        }
+      ],
+      "attention_matrix": "tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.4919, 0.5081, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.3187, 0.3325, 0.3488, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2564, 0.2362, 0.2505, 0.2569, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2024, 0.1957, 0.1968, 0.2068, 0.1984, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1617, 0.1658, 0.1695, 0.1712, 0.1621, 0.1696, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1502, 0.1342, 0.1382, 0.1461, 0.1441, 0.1433, 0.1439, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1275, 0.1198, 0.1195, 0.1341, 0.1227, 0.1195, 0.1306, 0.1264, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1076, 0.1043, 0.1125, 0.1132, 0.1104, 0.1126, 0.1118, 0.1117, 0.1159,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.0932, 0.0941, 0.0991, 0.1001, 0.1049, 0.1007, 0.1001, 0.1037, 0.1014,\n         0.1027, 0.0000, 0.0000, 0.0000],\n        [0.0942, 0.0849, 0.0874, 0.0916, 0.0934, 0.0909, 0.0897, 0.0912, 0.0933,\n         0.0926, 0.0907, 0.0000, 0.0000],\n        [0.0816, 0.0794, 0.0837, 0.0857, 0.0863, 0.0845, 0.0834, 0.0833, 0.0826,\n         0.0826, 0.0833, 0.0835, 0.0000],\n        [0.0778, 0.0762, 0.0773, 0.0768, 0.0804, 0.0796, 0.0759, 0.0768, 0.0767,\n         0.0783, 0.0761, 0.0769, 0.0712]])",
+      "generation_context": {
+        "prompt_length": 13,
+        "total_length": 13
+      }
+    },
+    {
+      "layer": 1,
+      "head": 3,
+      "position": 0,
+      "tokens": [
+        "<BOS>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<EOS>"
+      ],
+      "edges": [
+        {
+          "source_pos": 0,
+          "target_pos": 0,
+          "weight": 1.0,
+          "source_token": "<BOS>",
+          "target_token": "<BOS>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 1,
+          "weight": 0.5048242807388306,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 1,
+          "weight": 0.49517571926116943,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 2,
+          "weight": 0.3467786908149719,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 2,
+          "weight": 0.3202708661556244,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 2,
+          "weight": 0.3329504132270813,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 3,
+          "weight": 0.25707757472991943,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 3,
+          "weight": 0.24487915635108948,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 3,
+          "weight": 0.25394633412361145,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 3,
+          "weight": 0.24409691989421844,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 4,
+          "weight": 0.20002005994319916,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 4,
+          "weight": 0.1969813108444214,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 4,
+          "weight": 0.1950961798429489,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 4,
+          "weight": 0.19779622554779053,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 4,
+          "weight": 0.21010616421699524,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 5,
+          "weight": 0.1664290428161621,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 5,
+          "weight": 0.1594543308019638,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 5,
+          "weight": 0.1652601659297943,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 5,
+          "weight": 0.16452179849147797,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 5,
+          "weight": 0.17845414578914642,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 5,
+          "weight": 0.16588057577610016,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 6,
+          "weight": 0.13773058354854584,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 6,
+          "weight": 0.13990983366966248,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 6,
+          "weight": 0.14518502354621887,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 6,
+          "weight": 0.1389966905117035,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 6,
+          "weight": 0.14436140656471252,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 6,
+          "weight": 0.1458158642053604,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 6,
+          "weight": 0.14800064265727997,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 7,
+          "weight": 0.12423327565193176,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 7,
+          "weight": 0.1200999766588211,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 7,
+          "weight": 0.12412476539611816,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 7,
+          "weight": 0.12031871825456619,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 7,
+          "weight": 0.1330103725194931,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 7,
+          "weight": 0.12761647999286652,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 7,
+          "weight": 0.12756945192813873,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 7,
+          "weight": 0.12302695959806442,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 8,
+          "weight": 0.10871081054210663,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 8,
+          "weight": 0.10843654721975327,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 8,
+          "weight": 0.11205964535474777,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 8,
+          "weight": 0.10736209899187088,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 8,
+          "weight": 0.11335978657007217,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 8,
+          "weight": 0.10957347601652145,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 8,
+          "weight": 0.11470704525709152,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 8,
+          "weight": 0.1097061038017273,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 8,
+          "weight": 0.11608454585075378,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 9,
+          "weight": 0.10018216818571091,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 9,
+          "weight": 0.10440129041671753,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 9,
+          "weight": 0.10225294530391693,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 9,
+          "weight": 0.1015949472784996,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 9,
+          "weight": 0.10372194647789001,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 9,
+          "target_pos": 9,
+          "weight": 0.10316222161054611,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        }
+      ],
+      "attention_matrix": "tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.5048, 0.4952, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.3468, 0.3203, 0.3330, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2571, 0.2449, 0.2539, 0.2441, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2000, 0.1970, 0.1951, 0.1978, 0.2101, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1664, 0.1595, 0.1653, 0.1645, 0.1785, 0.1659, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1377, 0.1399, 0.1452, 0.1390, 0.1444, 0.1458, 0.1480, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1242, 0.1201, 0.1241, 0.1203, 0.1330, 0.1276, 0.1276, 0.1230, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1087, 0.1084, 0.1121, 0.1074, 0.1134, 0.1096, 0.1147, 0.1097, 0.1161,\n         0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1002, 0.0936, 0.0982, 0.0970, 0.1044, 0.1023, 0.1016, 0.0959, 0.1037,\n         0.1032, 0.0000, 0.0000, 0.0000],\n        [0.0940, 0.0878, 0.0933, 0.0857, 0.0938, 0.0931, 0.0896, 0.0850, 0.0927,\n         0.0927, 0.0923, 0.0000, 0.0000],\n        [0.0835, 0.0780, 0.0828, 0.0792, 0.0882, 0.0833, 0.0829, 0.0798, 0.0846,\n         0.0854, 0.0872, 0.0851, 0.0000],\n        [0.0748, 0.0776, 0.0766, 0.0749, 0.0805, 0.0750, 0.0761, 0.0765, 0.0798,\n         0.0777, 0.0765, 0.0762, 0.0779]])",
+      "generation_context": {
+        "prompt_length": 13,
+        "total_length": 13
+      }
+    },
+    {
+      "layer": 0,
+      "head": 0,
+      "position": 1,
+      "tokens": [
+        "<BOS>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<EOS>",
+        "<EOS>"
+      ],
+      "edges": [
+        {
+          "source_pos": 0,
+          "target_pos": 0,
+          "weight": 1.0,
+          "source_token": "<BOS>",
+          "target_token": "<BOS>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 1,
+          "weight": 0.5110408067703247,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 1,
+          "weight": 0.4889591336250305,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 2,
+          "weight": 0.35595133900642395,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 2,
+          "weight": 0.30498865246772766,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 2,
+          "weight": 0.3390599489212036,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 3,
+          "weight": 0.2632846534252167,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 3,
+          "weight": 0.23268482089042664,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 3,
+          "weight": 0.25110721588134766,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 3,
+          "weight": 0.2529233396053314,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 4,
+          "weight": 0.2195255309343338,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 4,
+          "weight": 0.1874966025352478,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 4,
+          "weight": 0.19629238545894623,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 4,
+          "weight": 0.18487757444381714,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 4,
+          "weight": 0.21180786192417145,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 5,
+          "weight": 0.17925865948200226,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 5,
+          "weight": 0.14988712966442108,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 5,
+          "weight": 0.16651107370853424,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 5,
+          "weight": 0.15160679817199707,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 5,
+          "weight": 0.17999126017093658,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 5,
+          "weight": 0.17274512350559235,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 6,
+          "weight": 0.14040717482566833,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 6,
+          "weight": 0.13790327310562134,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 6,
+          "weight": 0.148888498544693,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 6,
+          "weight": 0.13607007265090942,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 6,
+          "weight": 0.14624221622943878,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 6,
+          "weight": 0.14800329506397247,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 6,
+          "weight": 0.14248545467853546,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 7,
+          "weight": 0.12651215493679047,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 7,
+          "weight": 0.11441328376531601,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 7,
+          "weight": 0.12882591784000397,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 7,
+          "weight": 0.11797042936086655,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 7,
+          "weight": 0.1327030509710312,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 7,
+          "weight": 0.13545437157154083,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 7,
+          "weight": 0.11934562772512436,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 7,
+          "weight": 0.12477517127990723,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 8,
+          "weight": 0.11771779507398605,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 8,
+          "weight": 0.10099712759256363,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 8,
+          "weight": 0.11418129503726959,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 8,
+          "weight": 0.1016906276345253,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 8,
+          "weight": 0.11564911901950836,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 8,
+          "weight": 0.11408525705337524,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 8,
+          "weight": 0.10970140993595123,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 8,
+          "weight": 0.1161479502916336,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 8,
+          "weight": 0.1098293587565422,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 9,
+          "weight": 0.10626672953367233,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 9,
+          "weight": 0.10159558057785034,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 9,
+          "weight": 0.1021365150809288,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 9,
+          "weight": 0.10508524626493454,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 9,
+          "target_pos": 9,
+          "weight": 0.10295485705137253,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        }
+      ],
+      "attention_matrix": "tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.5110, 0.4890, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.3560, 0.3050, 0.3391, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2633, 0.2327, 0.2511, 0.2529, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2195, 0.1875, 0.1963, 0.1849, 0.2118, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1793, 0.1499, 0.1665, 0.1516, 0.1800, 0.1727, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1404, 0.1379, 0.1489, 0.1361, 0.1462, 0.1480, 0.1425, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1265, 0.1144, 0.1288, 0.1180, 0.1327, 0.1355, 0.1193, 0.1248, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1177, 0.1010, 0.1142, 0.1017, 0.1156, 0.1141, 0.1097, 0.1161, 0.1098,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1063, 0.0942, 0.0979, 0.0931, 0.1016, 0.1021, 0.0987, 0.1051, 0.0980,\n         0.1030, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.0919, 0.0856, 0.0911, 0.0827, 0.0932, 0.0975, 0.0908, 0.0960, 0.0911,\n         0.0895, 0.0905, 0.0000, 0.0000, 0.0000],\n        [0.0865, 0.0788, 0.0828, 0.0756, 0.0908, 0.0823, 0.0821, 0.0898, 0.0809,\n         0.0809, 0.0849, 0.0846, 0.0000, 0.0000],\n        [0.0788, 0.0764, 0.0759, 0.0784, 0.0790, 0.0766, 0.0781, 0.0782, 0.0749,\n         0.0764, 0.0755, 0.0764, 0.0753, 0.0000],\n        [0.0784, 0.0707, 0.0704, 0.0731, 0.0733, 0.0688, 0.0692, 0.0709, 0.0707,\n         0.0723, 0.0695, 0.0724, 0.0675, 0.0730]])",
+      "generation_context": {
+        "prompt_length": 14,
+        "total_length": 14
+      }
+    },
+    {
+      "layer": 0,
+      "head": 1,
+      "position": 1,
+      "tokens": [
+        "<BOS>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<UNK>",
+        "<EOS>",
+        "<EOS>"
+      ],
+      "edges": [
+        {
+          "source_pos": 0,
+          "target_pos": 0,
+          "weight": 1.0,
+          "source_token": "<BOS>",
+          "target_token": "<BOS>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 1,
+          "weight": 0.4644310474395752,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 1,
+          "weight": 0.53556889295578,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 2,
+          "weight": 0.3243264853954315,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 2,
+          "weight": 0.3489197790622711,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 2,
+          "weight": 0.32675373554229736,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 3,
+          "weight": 0.23693755269050598,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 3,
+          "weight": 0.26174396276474,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 3,
+          "weight": 0.2510990500450134,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 3,
+          "weight": 0.250219464302063,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 4,
+          "weight": 0.1932814121246338,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 4,
+          "weight": 0.20977996289730072,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 4,
+          "weight": 0.19662505388259888,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 4,
+          "weight": 0.19904695451259613,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 4,
+          "weight": 0.20126661658287048,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 5,
+          "weight": 0.16632497310638428,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 5,
+          "weight": 0.17334719002246857,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 5,
+          "weight": 0.15833675861358643,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 5,
+          "weight": 0.1676022708415985,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 5,
+          "weight": 0.16477495431900024,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 5,
+          "weight": 0.16961386799812317,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 6,
+          "weight": 0.13699421286582947,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 6,
+          "weight": 0.1467723846435547,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 6,
+          "weight": 0.14433538913726807,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 6,
+          "weight": 0.141842320561409,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 6,
+          "weight": 0.14393624663352966,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 6,
+          "weight": 0.14422214031219482,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 6,
+          "weight": 0.14189723134040833,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 7,
+          "weight": 0.12375316768884659,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 7,
+          "weight": 0.12981955707073212,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 7,
+          "weight": 0.12317004054784775,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 7,
+          "weight": 0.12117383629083633,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 7,
+          "weight": 0.12263042479753494,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 7,
+          "weight": 0.1268233358860016,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 7,
+          "weight": 0.12720072269439697,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 7,
+          "weight": 0.12542898952960968,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 8,
+          "weight": 0.10405459254980087,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 8,
+          "weight": 0.10915511101484299,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 2,
+          "target_pos": 8,
+          "weight": 0.11349755525588989,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 8,
+          "weight": 0.11087345331907272,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 4,
+          "target_pos": 8,
+          "weight": 0.11412390321493149,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 5,
+          "target_pos": 8,
+          "weight": 0.1095212772488594,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 8,
+          "weight": 0.11125289648771286,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 7,
+          "target_pos": 8,
+          "weight": 0.11120077967643738,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 8,
+          "weight": 0.11632044613361359,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 0,
+          "target_pos": 9,
+          "weight": 0.10257396101951599,
+          "source_token": "<BOS>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 1,
+          "target_pos": 9,
+          "weight": 0.10168761759996414,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 3,
+          "target_pos": 9,
+          "weight": 0.1075480729341507,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 6,
+          "target_pos": 9,
+          "weight": 0.10059414058923721,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 8,
+          "target_pos": 9,
+          "weight": 0.101057268679142,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        },
+        {
+          "source_pos": 9,
+          "target_pos": 9,
+          "weight": 0.10199364274740219,
+          "source_token": "<UNK>",
+          "target_token": "<UNK>"
+        }
+      ],
+      "attention_matrix": "tensor([[1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.4644, 0.5356, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.3243, 0.3489, 0.3268, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.2369, 0.2617, 0.2511, 0.2502, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1933, 0.2098, 0.1966, 0.1990, 0.2013, 0.0000, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1663, 0.1733, 0.1583, 0.1676, 0.1648, 0.1696, 0.0000, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1370, 0.1468, 0.1443, 0.1418, 0.1439, 0.1442, 0.1419, 0.0000, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1238, 0.1298, 0.1232, 0.1212, 0.1226, 0.1268, 0.1272, 0.1254, 0.0000,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1041, 0.1092, 0.1135, 0.1109, 0.1141, 0.1095, 0.1113, 0.1112, 0.1163,\n         0.0000, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.1026, 0.1017, 0.0968, 0.1075, 0.0968, 0.0936, 0.1006, 0.0974, 0.1011,\n         0.1020, 0.0000, 0.0000, 0.0000, 0.0000],\n        [0.0886, 0.0932, 0.0922, 0.0898, 0.0908, 0.0893, 0.0907, 0.0898, 0.0955,\n         0.0890, 0.0911, 0.0000, 0.0000, 0.0000],\n        [0.0802, 0.0829, 0.0827, 0.0854, 0.0837, 0.0800, 0.0841, 0.0823, 0.0853,\n         0.0850, 0.0843, 0.0841, 0.0000, 0.0000],\n        [0.0752, 0.0763, 0.0752, 0.0807, 0.0811, 0.0786, 0.0761, 0.0750, 0.0753,\n         0.0792, 0.0766, 0.0798, 0.0710, 0.0000],\n        [0.0733, 0.0709, 0.0694, 0.0774, 0.0722, 0.0704, 0.0704, 0.0689, 0.0695,\n         0.0759, 0.0704, 0.0718, 0.0696, 0.0698]])",
+      "generation_context": {
+        "prompt_length": 14,
+        "total_length": 14
+      }
+    }
+  ]
+}

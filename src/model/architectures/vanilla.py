@@ -16,10 +16,15 @@ class VanillaTransformerBlock(nn.Module):
         self.ln_2 = VanillaNorm(config.n_embd, bias=config.bias)
         self.ffn = VanillaFFN(config)
 
-    def forward(self, x):
+    def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
         # using pre-layer norm
-        x = x + self.attn(self.ln_1(x))
-        x = x + self.ffn(self.ln_2(x))
+        x_norm = self.ln_1(x)
+        attn_out = self.attn(x_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        x = x + attn_out
+        
+        x_norm = self.ln_2(x)
+        ffn_out = self.ffn(x_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        x = x + ffn_out
         return x
 
 
@@ -57,7 +62,7 @@ class VanillaTransformer(TransformerBase):
         print(f"VanillaTransformerModel initialized with {self.get_num_params()/1e6:.2f}M parameters")
         print(f"Architecture: vocab_size={config.vocab_size}, n_embd={config.n_embd}, n_head={config.n_head}, n_layer={config.n_layer}")
 
-    def forward(self, input_ids, targets=None):
+    def forward(self, input_ids, targets=None, hook_state=None):
         device = input_ids.device
         b, t = input_ids.size()
 
@@ -69,8 +74,8 @@ class VanillaTransformer(TransformerBase):
     
         x = self.transformer.drop(tok_emb + pos_emb)
 
-        for block in self.transformer.h:
-            x = block(x)
+        for layer_idx, block in enumerate(self.transformer.h):
+            x = block(x, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
 
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x)
