@@ -177,39 +177,6 @@ class AccelerateTrainer(BaseTrainer):
 
         return training_metrics
 
-    def save_checkpoint_fixed(self, path: str, epoch: Optional[int] = None, **kwargs):
-        """
-        FIXED save checkpoint that doesn't hang.
-        Removes the problematic wait_for_everyone() call and timeout complexity.
-        """
-        if not self.accelerator.is_main_process:
-            return
-            
-        try:
-            # Simple checkpoint save without wait_for_everyone() 
-            checkpoint = {
-                'model_state_dict': self.accelerator.unwrap_model(self.model).state_dict(),
-                'optimizer_state_dict': self.optimizer.state_dict(),
-                'epoch': epoch,
-                **kwargs
-            }
-
-            # Ensure directory exists
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            
-            # Direct save - no temporary file complexity
-            torch.save(checkpoint, path)
-            if self.accelerator.is_main_process:
-                logger.info(f"Checkpoint saved to: {path}")
-            
-        except Exception as e:
-            logger.error(f"Error saving checkpoint: {e}")
-            # Don't raise - continue training even if checkpoint fails
-
-    def save_checkpoint(self, path: str, epoch: Optional[int] = None, **kwargs):
-        """Legacy method - delegates to fixed version."""
-        return self.save_checkpoint_fixed(path, epoch, **kwargs)
-
     def log_batch(self,
                   batch_idx: int,
                   loss: float,

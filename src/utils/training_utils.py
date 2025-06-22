@@ -202,6 +202,9 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
         clip_grad_norm=args.clip_grad_norm, log_interval=args.log_interval
     )
     
+    trainer.trainer_state['config'] = config
+    trainer.trainer_state['model_type'] = model_type
+    
     # add validation hook FIRST so other hooks can use the metrics
     if val_dataloader:
         validation_hook = ValidationHook(val_dataloader, device, args.validate_every, model_type)
@@ -238,24 +241,3 @@ def test_generation(model, tokenizer, device, args, logger, model_type="", train
             log_if_main(logger, f"'{prompt}' → '{generated_text}'", trainer_type)
         except Exception as e:
             logger.error(f"Generation failed for '{prompt}': {e}")
-
-def save_model_checkpoint(model, config, training_result, output_dir, filename, 
-                         extra_data=None, logger=None):
-    """Save model checkpoint with metadata."""
-    model_path = os.path.join(output_dir, filename)
-    
-    save_dict = {
-        'model_state_dict': model.state_dict(),
-        'config': config,
-        'training_result': training_result,
-    }
-    
-    if extra_data:
-        save_dict.update(extra_data)
-    
-    torch.save(save_dict, model_path)
-    
-    if logger:
-        logger.info(f"Model saved to {model_path}")
-    
-    return model_path

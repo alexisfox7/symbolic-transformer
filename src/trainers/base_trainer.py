@@ -98,19 +98,6 @@ class BaseTrainer(ABC):
         """Evaluate the model."""
         pass
     
-    def save_checkpoint(self, path: str, epoch: Optional[int] = None, **kwargs):
-        """Save a training checkpoint."""
-        checkpoint = {
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'epoch': epoch,
-            **kwargs
-        }
-        
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        torch.save(checkpoint, path)
-        logger.info(f"Checkpoint saved to: {path}")
-    
     def load_checkpoint(self, path: str, map_location: Optional[torch.device] = None):
         """Load a training checkpoint."""
         if not os.path.exists(path):

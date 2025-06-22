@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from utils.training_utils import (
     create_base_parser, setup_training_environment, create_config_from_args,
-    setup_data_loaders, setup_trainer_with_hooks, test_generation, save_model_checkpoint
+    setup_data_loaders, setup_trainer_with_hooks, test_generation
 )
 from config.config import print_config
 from mytokenizers import create_tokenizer
@@ -63,12 +63,6 @@ def main():
     # train
     logger.info("Starting vanilla transformer training...")
     training_result = trainer.train()
-    
-    # save model
-    save_model_checkpoint(
-        model, config, training_result, args.output_dir, "vanilla_model.pt", 
-        logger=logger
-    )
     
     # test generation
     test_generation(model, tokenizer, device, args, logger, "vanilla", args.trainer_type)

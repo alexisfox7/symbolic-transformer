@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from utils.training_utils import (
     create_base_parser, add_symbolic_args, setup_training_environment, 
     create_config_from_args, setup_data_loaders, setup_trainer_with_hooks, 
-    test_generation, save_model_checkpoint
+    test_generation
 )
 from config.config import print_config
 from mytokenizers import create_tokenizer
@@ -77,14 +77,7 @@ def main():
     # train
     logger.info("Starting symbolic transformer training...")
     training_result = trainer.train()
-    
-    # save model with symbolic features
-    extra_data = {'symbolic_features': symbolic_features}
-    save_model_checkpoint(
-        model, config, training_result, args.output_dir, "symbolic_model.pt",
-        extra_data=extra_data, logger=logger
-    )
-    
+
     # test generation
     test_generation(model, tokenizer, device, args, logger, "symbolic", args.trainer_type)
     

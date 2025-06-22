@@ -280,7 +280,7 @@ class JSONLogHook(TrainingHook):
 
 
 class CheckpointHook(TrainingHook):
-    """Checkpointing hook."""
+    """Enhanced checkpointing hook that saves config and comprehensive training state."""
     
     def __init__(self, output_dir: str, save_every_n_epochs: int = 1):
         super().__init__("checkpoint")
@@ -297,6 +297,7 @@ class CheckpointHook(TrainingHook):
             
             model = state.get('model')
             optimizer = state.get('optimizer')
+            config = getattr(model, 'config', None)  # Get config from model if available
             
             if model and optimizer and self.output_dir:
                 checkpoint_path = os.path.join(self.output_dir, f"checkpoint_epoch_{epoch}.pt")
@@ -308,16 +309,41 @@ class CheckpointHook(TrainingHook):
                     'loss': state.get('avg_loss', state.get('loss')),
                 }
                 
+                # Add config if available (from model or trainer state)
+                if config is not None:
+                    checkpoint['config'] = config
+                elif 'config' in state:
+                    checkpoint['config'] = state['config']
+                
                 # Add validation metrics if available
                 if 'val_loss' in state:
                     checkpoint['val_loss'] = state['val_loss']
                     checkpoint['val_perplexity'] = state.get('val_perplexity')
                 
+                # Add training metrics from state
+                training_metrics = {}
+                metric_keys = ['epoch_losses', 'total_batches', 'total_samples', 'training_time']
+                for key in metric_keys:
+                    if key in state:
+                        training_metrics[key] = state[key]
+                
+                if training_metrics:
+                    checkpoint['training_metrics'] = training_metrics
+                
+                # Add any extra data from state
+                extra_keys = ['symbolic_features', 'model_params']
+                for key in extra_keys:
+                    if key in state:
+                        checkpoint[key] = state[key]
+                
                 os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
                 torch.save(checkpoint, checkpoint_path)
                 
-                logger.info(f"Saved checkpoint: {checkpoint_path}")
-
+                logger.info(f"Enhanced checkpoint saved: {checkpoint_path}")
+                if config is not None:
+                    logger.info(f"  Included config: {type(config).__name__}")
+                if training_metrics:
+                    logger.info(f"  Included metrics: {list(training_metrics.keys())}")
 
 class ValidationHook(TrainingHook):
     """Validation hook that adds metrics to state for other hooks to use."""
