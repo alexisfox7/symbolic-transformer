@@ -9,8 +9,8 @@ import logging
 from tqdm.auto import tqdm
 from typing import Tuple, List, Dict, Optional, Union, Any
 
-from ..mytokenizers import BaseTokenizer
-from .hooks import InferenceHookManager, InferenceHook
+from mytokenizers import BaseTokenizer
+from hooks import InferenceHookManager, InferenceHook
 
 logger = logging.getLogger(__name__)
 
