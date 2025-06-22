@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from typing import Optional
-from ...inference.hooks import InferenceHookManager
+from src.inference.hooks import InferenceHookManager
 
 class TransformerBase(nn.Module):
     """Shared foundation for all transformer variants."""
