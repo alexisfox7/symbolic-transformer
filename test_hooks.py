@@ -7,7 +7,6 @@ Tests that hooks are properly called during model generation.
 import torch
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
 
 from model import get_model
 from config import TransformerConfig

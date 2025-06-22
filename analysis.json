@@ -1,0 +1,229 @@
+{
+  "sequence_length": 14,
+  "max_possible_edges": 105,
+  "layer_head_stats": {
+    "L0_H0": {
+      "edge_count": 52,
+      "avg_weight": 0.21046500696012607,
+      "max_weight": 1.0
+    },
+    "L0_H1": {
+      "edge_count": 58,
+      "avg_weight": 0.19304622439988728,
+      "max_weight": 1.0
+    },
+    "L0_H2": {
+      "edge_count": 39,
+      "avg_weight": 0.27780502843551147,
+      "max_weight": 1.0
+    },
+    "L0_H3": {
+      "edge_count": 44,
+      "avg_weight": 0.25388411940498784,
+      "max_weight": 1.0
+    },
+    "L0_H4": {
+      "edge_count": 45,
+      "avg_weight": 0.23793732904725604,
+      "max_weight": 1.0
+    },
+    "L0_H5": {
+      "edge_count": 57,
+      "avg_weight": 0.1922057685360574,
+      "max_weight": 1.0
+    },
+    "L1_H0": {
+      "edge_count": 38,
+      "avg_weight": 0.25798164464925466,
+      "max_weight": 1.0
+    },
+    "L1_H1": {
+      "edge_count": 45,
+      "avg_weight": 0.2263881206512451,
+      "max_weight": 1.0
+    },
+    "L1_H2": {
+      "edge_count": 45,
+      "avg_weight": 0.24042918897337384,
+      "max_weight": 1.0
+    },
+    "L1_H3": {
+      "edge_count": 52,
+      "avg_weight": 0.20877243836338705,
+      "max_weight": 1.0
+    },
+    "L1_H4": {
+      "edge_count": 44,
+      "avg_weight": 0.2308607055720958,
+      "max_weight": 1.0
+    },
+    "L1_H5": {
+      "edge_count": 50,
+      "avg_weight": 0.23473664209246636,
+      "max_weight": 1.0
+    },
+    "L2_H0": {
+      "edge_count": 50,
+      "avg_weight": 0.2165953016281128,
+      "max_weight": 1.0
+    },
+    "L2_H1": {
+      "edge_count": 43,
+      "avg_weight": 0.27087730359892515,
+      "max_weight": 1.0
+    },
+    "L2_H2": {
+      "edge_count": 37,
+      "avg_weight": 0.3248654160950635,
+      "max_weight": 1.0
+    },
+    "L2_H3": {
+      "edge_count": 33,
+      "avg_weight": 0.3681948853261543,
+      "max_weight": 1.0
+    },
+    "L2_H4": {
+      "edge_count": 40,
+      "avg_weight": 0.3126141790300608,
+      "max_weight": 1.0
+    },
+    "L2_H5": {
+      "edge_count": 34,
+      "avg_weight": 0.3431708733825123,
+      "max_weight": 1.0
+    },
+    "L3_H0": {
+      "edge_count": 36,
+      "avg_weight": 0.34135292160014313,
+      "max_weight": 1.0
+    },
+    "L3_H1": {
+      "edge_count": 31,
+      "avg_weight": 0.3951742733197828,
+      "max_weight": 1.0
+    },
+    "L3_H2": {
+      "edge_count": 25,
+      "avg_weight": 0.5158207604289055,
+      "max_weight": 1.0
+    },
+    "L3_H3": {
+      "edge_count": 31,
+      "avg_weight": 0.40240534491116003,
+      "max_weight": 1.0
+    },
+    "L3_H4": {
+      "edge_count": 36,
+      "avg_weight": 0.3261590006036891,
+      "max_weight": 1.0
+    },
+    "L3_H5": {
+      "edge_count": 33,
+      "avg_weight": 0.3611899555632562,
+      "max_weight": 1.0
+    },
+    "L4_H0": {
+      "edge_count": 32,
+      "avg_weight": 0.3761412254534662,
+      "max_weight": 1.0
+    },
+    "L4_H1": {
+      "edge_count": 35,
+      "avg_weight": 0.3507593972342355,
+      "max_weight": 1.0
+    },
+    "L4_H2": {
+      "edge_count": 25,
+      "avg_weight": 0.5091914129257202,
+      "max_weight": 1.0
+    },
+    "L4_H3": {
+      "edge_count": 27,
+      "avg_weight": 0.4741018577306359,
+      "max_weight": 1.0
+    },
+    "L4_H4": {
+      "edge_count": 24,
+      "avg_weight": 0.5483697994301716,
+      "max_weight": 1.0
+    },
+    "L4_H5": {
+      "edge_count": 28,
+      "avg_weight": 0.4660728855856827,
+      "max_weight": 1.0
+    },
+    "L5_H0": {
+      "edge_count": 44,
+      "avg_weight": 0.26276919194920495,
+      "max_weight": 1.0
+    },
+    "L5_H1": {
+      "edge_count": 29,
+      "avg_weight": 0.41007416772431343,
+      "max_weight": 1.0
+    },
+    "L5_H2": {
+      "edge_count": 22,
+      "avg_weight": 0.5782514600591226,
+      "max_weight": 1.0
+    },
+    "L5_H3": {
+      "edge_count": 30,
+      "avg_weight": 0.40057761321465174,
+      "max_weight": 1.0
+    },
+    "L5_H4": {
+      "edge_count": 29,
+      "avg_weight": 0.4164819732822221,
+      "max_weight": 1.0
+    },
+    "L5_H5": {
+      "edge_count": 35,
+      "avg_weight": 0.36635845260960714,
+      "max_weight": 1.0
+    }
+  },
+  "top_attended_tokens": [
+    [
+      " yogurt",
+      60.246715649962425
+    ],
+    [
+      "He",
+      36.0
+    ],
+    [
+      " liked",
+      35.74435689300299
+    ],
+    [
+      " to",
+      35.43353395164013
+    ],
+    [
+      " eat",
+      34.30020369589329
+    ],
+    [
+      ".",
+      31.71133529394865
+    ],
+    [
+      " He",
+      30.21234580129385
+    ],
+    [
+      " had",
+      30.112542651593685
+    ],
+    [
+      " many",
+      28.646885819733143
+    ],
+    [
+      " for",
+      26.242194682359695
+    ]
+  ],
+  "total_records": 36
+}

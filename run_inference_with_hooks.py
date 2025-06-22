@@ -7,18 +7,17 @@ import torch
 import argparse
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from src.model import get_model
-from src.config import TransformerConfig
-from src.inference.generation import run_generation
-from src.inference.hooks import (
+from model import get_model
+from config import TransformerConfig
+from inference.generation import run_generation
+from inference.hooks import (
     create_attention_extraction_hook,
     AttentionExtractionHook,
     SymbolicStreamHook,
     ActivationHook
 )
-from src.mytokenizers import create_tokenizer, from_pretrained
+from mytokenizers import create_tokenizer, from_pretrained
 # Checkpoint loading handled inline
 import logging
 import json
@@ -32,7 +31,7 @@ def load_model_from_checkpoint(checkpoint_path, device='cpu'):
     logger.info(f"Loading checkpoint from: {checkpoint_path}")
     
     # Load checkpoint
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     
     # Extract config
     if 'config' in checkpoint:
@@ -78,47 +77,58 @@ def load_model_from_checkpoint(checkpoint_path, device='cpu'):
 
 
 def analyze_attention_patterns(attention_hook, output_file=None):
-    """Analyze and optionally save attention patterns."""
-    logger.info("\n=== Attention Pattern Analysis ===")
+    """Analyze attention patterns from FINAL SEQUENCE ONLY."""
     
-    # Get unique tokens that received/gave attention
-    all_tokens = set()
-    for record in attention_hook.attention_data:
-        for edge in record['edges']:
-            all_tokens.add(edge['source_token'])
-            all_tokens.add(edge['target_token'])
+    # Filter to only the final generation step
+    if not attention_hook.attention_data:
+        print("No attention data found")
+        return
     
-    logger.info(f"Unique tokens involved in attention: {len(all_tokens)}")
+    max_step = max(record.get('position', 0) for record in attention_hook.attention_data)
     
-    # Analyze attention by layer/head
+    final_step_data = [
+        record for record in attention_hook.attention_data 
+        if record.get('position', 0) == max_step
+    ]
+    
+    print(f"Filtered from {len(attention_hook.attention_data)} total records to {len(final_step_data)} final-step records")
+    
+    if not final_step_data:
+        print("No final step data found")
+        return
+    
+    # Get sequence length from final step
+    seq_len = final_step_data[0].get('attention_matrix', torch.tensor([[]])).shape[0]
+    max_possible_edges = seq_len * (seq_len + 1) // 2
+    
+    print(f"Final sequence length: {seq_len} tokens")
+    print(f"Max possible edges per head (causal): {max_possible_edges}")
+    print()
+    
+    # Analyze layer/head stats using ONLY final step data
     layer_head_stats = {}
-    for record in attention_hook.attention_data:
+    for record in final_step_data:
         key = (record['layer'], record['head'])
-        if key not in layer_head_stats:
-            layer_head_stats[key] = {
-                'edge_count': 0,
-                'avg_weight': 0,
-                'max_weight': 0
-            }
-        
-        stats = layer_head_stats[key]
         edges = record['edges']
+        
         if edges:
             weights = [e['weight'] for e in edges]
-            stats['edge_count'] += len(edges)
-            stats['avg_weight'] = sum(weights) / len(weights)
-            stats['max_weight'] = max(weights)
+            layer_head_stats[key] = {
+                'edge_count': len(edges),
+                'avg_weight': sum(weights) / len(weights),
+                'max_weight': max(weights)
+            }
     
-    logger.info("\nAttention statistics by layer/head:")
+    print("Attention statistics by layer/head (FINAL SEQUENCE ONLY):")
     for (layer, head), stats in sorted(layer_head_stats.items()):
-        logger.info(f"  Layer {layer}, Head {head}: "
-                   f"{stats['edge_count']} edges, "
-                   f"avg weight: {stats['avg_weight']:.4f}, "
-                   f"max weight: {stats['max_weight']:.4f}")
+        print(f"  Layer {layer}, Head {head}: "
+              f"{stats['edge_count']} edges, "
+              f"avg weight: {stats['avg_weight']:.4f}, "
+              f"max weight: {stats['max_weight']:.4f}")
     
-    # Find most attended tokens
+    # Token attention using ONLY final step data
     token_attention = {}
-    for record in attention_hook.attention_data:
+    for record in final_step_data:
         for edge in record['edges']:
             target = edge['target_token']
             if target not in token_attention:
@@ -126,37 +136,37 @@ def analyze_attention_patterns(attention_hook, output_file=None):
             token_attention[target] += edge['weight']
     
     top_attended = sorted(token_attention.items(), key=lambda x: x[1], reverse=True)[:10]
-    logger.info("\nTop 10 most attended tokens:")
+    print("\nTop 10 most attended tokens (FINAL SEQUENCE ONLY):")
     for token, total_weight in top_attended:
-        logger.info(f"  '{token}': {total_weight:.4f}")
+        print(f"  '{token}': {total_weight:.4f}")
     
-    # Save detailed data if requested
+    # Save data if requested
     if output_file:
-        data_to_save = {
-            'attention_records': len(attention_hook.attention_data),
-            'unique_tokens': list(all_tokens),
+        import json
+        final_data = {
+            'sequence_length': seq_len,
+            'max_possible_edges': max_possible_edges,
             'layer_head_stats': {f"L{k[0]}_H{k[1]}": v for k, v in layer_head_stats.items()},
             'top_attended_tokens': top_attended,
-            'full_data': attention_hook.attention_data[:10]  # Save first 10 records as example
+            'total_records': len(final_step_data)
         }
         
         with open(output_file, 'w') as f:
-            json.dump(data_to_save, f, indent=2, default=str)
-        logger.info(f"\nDetailed attention data saved to: {output_file}")
-
+            json.dump(final_data, f, indent=2)
+        print(f"\nFinal sequence analysis saved to: {output_file}")
 
 def main():
     parser = argparse.ArgumentParser(description='Run inference with hooks on a checkpoint')
     parser.add_argument('checkpoint', type=str, help='Path to model checkpoint')
-    parser.add_argument('--prompt', type=str, default="Once upon a time", 
+    parser.add_argument('--prompt', type=str, default="He liked to eat", 
                         help='Text prompt for generation')
-    parser.add_argument('--max-tokens', type=int, default=50, 
+    parser.add_argument('--max-tokens', type=int, default=11, 
                         help='Maximum number of tokens to generate')
     parser.add_argument('--temperature', type=float, default=0.8, 
                         help='Sampling temperature')
     parser.add_argument('--top-k', type=int, default=50, 
                         help='Top-k sampling')
-    parser.add_argument('--tokenizer', type=str, default='character',
+    parser.add_argument('--tokenizer', type=str, default='gpt2',
                         help='Tokenizer type (character, gpt2, or path to pretrained)')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
                         help='Device to run on')

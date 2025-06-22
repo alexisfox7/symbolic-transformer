@@ -176,51 +176,47 @@ class AttentionExtractionHook(InferenceHook):
                             attention_weights: torch.Tensor, 
                             query: torch.Tensor, key: torch.Tensor, value: torch.Tensor,
                             tokens: List[str], position: int, state: Dict[str, Any]) -> None:
-        """Extract significant attention edges"""
+        """Simple fix - just handle the index bounds properly"""
         
-        # attention_weights shape: [batch_size, seq_len, seq_len]
-        # We typically only care about batch_size=1 during generation
-        att_matrix = attention_weights[0].detach().cpu()  # [seq_len, seq_len]
-        
-        # Find significant edges (above threshold)
-        significant_edges = []
+        att_matrix = attention_weights[0].detach().cpu()
         seq_len = att_matrix.shape[0]
         
+        # Ensure we have enough tokens
+        while len(tokens) < seq_len:
+            tokens.append(f"<POS_{len(tokens)}>")
+        
+        # Rest of your existing code...
+        significant_edges = []
         for i in range(seq_len):
             for j in range(seq_len):
                 weight = att_matrix[i, j].item()
                 if weight > self.threshold:
                     edge_data = {
-                        'source_pos': j,  # what we're attending FROM
-                        'target_pos': i,  # what we're attending TO  
+                        'source_pos': j,
+                        'target_pos': i,  
                         'weight': weight,
-                        'source_token': tokens[j] if j < len(tokens) else '<UNK>',
-                        'target_token': tokens[i] if i < len(tokens) else '<UNK>'
+                        'source_token': tokens[j],  # Now safe
+                        'target_token': tokens[i]   # Now safe
                     }
-                    
-                    # Optionally store value vectors for deeper analysis
-                    if self.store_values:
-                        edge_data['value_vector'] = value[0, head_idx, j, :].detach().cpu()
-                    
                     significant_edges.append(edge_data)
         
-        # Store this layer/head's attention data
+        # Store record (your existing code)
         attention_record = {
             'layer': layer_idx,
             'head': head_idx,
-            'position': position,  # which generation step
-            'tokens': tokens.copy(),
+            'position': position,
+            'tokens': tokens[:seq_len],
             'edges': significant_edges,
-            'attention_matrix': att_matrix,  # full matrix for analysis
+            'attention_matrix': att_matrix,
             'generation_context': {
-                'prompt_length': len(self.prompt_tokens),
-                'total_length': len(tokens)
+                'prompt_length': len(self.prompt_tokens) if hasattr(self, 'prompt_tokens') else 0,
+                'total_length': seq_len
             }
         }
         
         self.attention_data.append(attention_record)
-        self.data.append(attention_record)  # for base class compatibility
-    
+        self.data.append(attention_record)
+
     def get_edges_for_layer_head(self, layer: int, head: int) -> List[Dict]:
         """Get all edges for a specific layer/head combination"""
         edges = []
