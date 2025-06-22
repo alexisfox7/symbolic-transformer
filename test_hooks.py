@@ -7,12 +7,12 @@ Tests that hooks are properly called during model generation.
 import torch
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
 
-from src.model import get_model
-from src.config import TransformerConfig
-from src.inference.generation import run_generation
-from src.inference.hooks import (
+from model import get_model
+from config import TransformerConfig
+from inference.generation import run_generation
+from inference.hooks import (
     InferenceHook, 
     InferenceHookManager,
     create_attention_extraction_hook,
@@ -20,7 +20,7 @@ from src.inference.hooks import (
     SymbolicStreamHook,
     ActivationHook
 )
-from src.mytokenizers import create_tokenizer
+from mytokenizers import create_tokenizer
 import logging
 
 logging.basicConfig(level=logging.INFO)
