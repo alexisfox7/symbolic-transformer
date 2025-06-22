@@ -9,7 +9,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from src.model import get_model
-from src.config.config import TransformerConfig
+from src.config import TransformerConfig
 from src.inference.generation import run_generation
 from src.inference.hooks import create_attention_extraction_hook
 from src.mytokenizers import create_tokenizer
@@ -37,7 +37,7 @@ def load_checkpoint(checkpoint_path, device='cpu'):
 
 def main():
     # Path to your checkpoint
-    checkpoint_path = "path/to/your/checkpoint.pt"  # UPDATE THIS
+    checkpoint_path = "test_vanilla_checkpoint.pt"  # Using test checkpoint
     
     # Check if checkpoint exists
     if not os.path.exists(checkpoint_path):
