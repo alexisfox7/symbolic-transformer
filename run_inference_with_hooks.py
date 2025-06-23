@@ -2,6 +2,7 @@
 """
 Run inference with hooks on a saved checkpoint.
 Enhanced with graph visualization capabilities for attention patterns and reasoning flows.
+Now includes simple matrix visualization for attention patterns.
 """
 
 import torch
@@ -37,7 +38,7 @@ def load_model_from_checkpoint(checkpoint_path, device='cpu'):
     logger.info(f"Loading checkpoint from: {checkpoint_path}")
     
     # Load checkpoint
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     
     # Extract config
     if 'config' in checkpoint:
@@ -80,6 +81,215 @@ def load_model_from_checkpoint(checkpoint_path, device='cpu'):
     logger.info(f"Model loaded successfully with {model.get_num_params()/1e6:.2f}M parameters")
     
     return model, config
+
+
+def create_attention_matrices_visualization(attention_hook, output_dir=None, max_layers=3, max_heads=4):
+    """
+    Create simple matrix visualizations of attention patterns.
+    Shows actual attention weight matrices for selected layers/heads.
+    ONLY analyzes the final complete sequence (last generation step).
+    
+    Args:
+        attention_hook: AttentionExtractionHook with collected data
+        output_dir: Directory to save visualizations
+        max_layers: Maximum number of layers to visualize
+        max_heads: Maximum number of heads per layer to visualize
+    """
+    logger.info("Creating attention matrix visualizations (final sequence only)...")
+    
+    if not attention_hook.attention_data:
+        logger.warning("No attention data available for matrix visualization")
+        return
+    
+    # Find the maximum position (final generation step)
+    max_position = max(record['position'] for record in attention_hook.attention_data)
+    logger.info(f"Analyzing final sequence at position {max_position}")
+    
+    # Group attention data by layer and head - ONLY from final step
+    attention_by_layer_head = defaultdict(list)
+    for record in attention_hook.attention_data:
+        if record['position'] == max_position and 'attention_matrix' in record:
+            key = (record['layer'], record['head'])
+            attention_by_layer_head[key].append(record)
+    
+    if not attention_by_layer_head:
+        logger.warning("No attention matrices found in data")
+        return
+    
+    # Select layers and heads to visualize
+    layer_head_pairs = sorted(attention_by_layer_head.keys())[:max_layers * max_heads]
+    
+    # Calculate grid dimensions
+    n_plots = len(layer_head_pairs)
+    if n_plots == 1:
+        rows, cols = 1, 1
+    elif n_plots <= 4:
+        rows, cols = 2, 2
+    elif n_plots <= 6:
+        rows, cols = 2, 3
+    elif n_plots <= 9:
+        rows, cols = 3, 3
+    else:
+        rows, cols = (n_plots + 3) // 6, 6  # More than 9 plots, use 4 columns
+        #layer_head_pairs = layer_head_pairs[:16]  # Limit to 16 plots max
+    
+    fig, axes = plt.subplots(rows, cols, figsize=(cols * 4, rows * 4))
+    if rows == 1 and cols == 1:
+        axes = [axes]
+    elif rows == 1 or cols == 1:
+        axes = axes.flatten()
+    else:
+        axes = axes.flatten()
+    
+    for idx, (layer, head) in enumerate(layer_head_pairs):
+        if idx >= len(axes):
+            break
+            
+        ax = axes[idx]
+        records = attention_by_layer_head[(layer, head)]
+        
+        # Use the last record (final generation step) for this layer/head
+        record = records[-1] if records else records[0]
+        attention_matrix = record['attention_matrix'].numpy()
+        tokens = record.get('tokens', [])
+        
+        # Limit matrix size for readability
+        max_seq_len = min(20, attention_matrix.shape[0])
+        attention_matrix = attention_matrix[:max_seq_len, :max_seq_len]
+        display_tokens = tokens[:max_seq_len] if tokens else [f"pos_{i}" for i in range(max_seq_len)]
+        
+        # Create heatmap
+        im = ax.imshow(attention_matrix, cmap='Blues', aspect='auto', vmin=0, vmax=1)
+        
+        # Add colorbar
+        cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        cbar.set_label('Attention Weight', rotation=270, labelpad=15)
+        
+        # Set ticks and labels
+        ax.set_xticks(range(len(display_tokens)))
+        ax.set_yticks(range(len(display_tokens)))
+        ax.set_xticklabels(display_tokens, rotation=90, ha='center')
+        ax.set_yticklabels(display_tokens)
+        
+        # Labels and title
+        ax.set_xlabel('Key Position')
+        ax.set_ylabel('Query Position')
+        ax.set_title(f'Layer {layer}, Head {head}\nFinal Sequence (pos {record["position"]})')
+        
+        # Add grid for better readability
+        ax.grid(True, alpha=0.3)
+        
+        # Highlight strong attention weights with text annotations
+        if attention_matrix.shape[0] <= 10 and attention_matrix.shape[1] <= 10:
+            for i in range(attention_matrix.shape[0]):
+                for j in range(attention_matrix.shape[1]):
+                    weight = attention_matrix[i, j]
+                    if weight > 0.1:  # Only show significant weights
+                        color = 'white' if weight > 0.5 else 'black'
+                        ax.text(j, i, f'{weight:.2f}', ha='center', va='center', 
+                               color=color, fontsize=8, fontweight='bold')
+    
+    # Hide unused subplots
+    for idx in range(len(layer_head_pairs), len(axes)):
+        axes[idx].set_visible(False)
+    
+    plt.suptitle('Attention Weight Matrices', fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        plt.savefig(os.path.join(output_dir, 'attention_matrices.png'), dpi=300, bbox_inches='tight')
+        logger.info(f"Attention matrices saved to {output_dir}/attention_matrices.png")
+    
+    plt.show()
+
+
+def create_attention_pattern_summary(attention_hook, output_dir=None):
+    """
+    Create a summary visualization showing attention patterns across all layers and heads.
+    Simple bar charts and statistics.
+    """
+    logger.info("Creating attention pattern summary...")
+    
+    if not attention_hook.attention_data:
+        logger.warning("No attention data for pattern summary")
+        return
+    
+    # Collect statistics
+    layer_stats = defaultdict(lambda: {'total_weight': 0, 'max_weight': 0, 'edge_count': 0})
+    head_stats = defaultdict(lambda: {'total_weight': 0, 'max_weight': 0, 'edge_count': 0})
+    
+    for record in attention_hook.attention_data:
+        layer = record['layer']
+        head = record['head']
+        edges = record.get('edges', [])
+        
+        if edges:
+            weights = [e['weight'] for e in edges]
+            total_weight = sum(weights)
+            max_weight = max(weights)
+            edge_count = len(edges)
+            
+            # Update layer stats
+            layer_stats[layer]['total_weight'] += total_weight
+            layer_stats[layer]['max_weight'] = max(layer_stats[layer]['max_weight'], max_weight)
+            layer_stats[layer]['edge_count'] += edge_count
+            
+            # Update head stats  
+            head_stats[head]['total_weight'] += total_weight
+            head_stats[head]['max_weight'] = max(head_stats[head]['max_weight'], max_weight)
+            head_stats[head]['edge_count'] += edge_count
+    
+    # Create summary plots
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    
+    # Layer-wise total attention
+    layers = sorted(layer_stats.keys())
+    layer_totals = [layer_stats[l]['total_weight'] for l in layers]
+    
+    axes[0, 0].bar(layers, layer_totals, color='skyblue', alpha=0.7)
+    axes[0, 0].set_title('Total Attention Weight by Layer')
+    axes[0, 0].set_xlabel('Layer')
+    axes[0, 0].set_ylabel('Total Attention Weight')
+    axes[0, 0].grid(True, alpha=0.3)
+    
+    # Head-wise total attention
+    heads = sorted(head_stats.keys())
+    head_totals = [head_stats[h]['total_weight'] for h in heads]
+    
+    axes[0, 1].bar(heads, head_totals, color='lightcoral', alpha=0.7)
+    axes[0, 1].set_title('Total Attention Weight by Head')
+    axes[0, 1].set_xlabel('Head')
+    axes[0, 1].set_ylabel('Total Attention Weight')
+    axes[0, 1].grid(True, alpha=0.3)
+    
+    # Layer-wise edge count
+    layer_edges = [layer_stats[l]['edge_count'] for l in layers]
+    
+    axes[1, 0].bar(layers, layer_edges, color='lightgreen', alpha=0.7)
+    axes[1, 0].set_title('Attention Edge Count by Layer')
+    axes[1, 0].set_xlabel('Layer')
+    axes[1, 0].set_ylabel('Number of Attention Edges')
+    axes[1, 0].grid(True, alpha=0.3)
+    
+    # Head-wise edge count
+    head_edges = [head_stats[h]['edge_count'] for h in heads]
+    
+    axes[1, 1].bar(heads, head_edges, color='gold', alpha=0.7)
+    axes[1, 1].set_title('Attention Edge Count by Head')
+    axes[1, 1].set_xlabel('Head')
+    axes[1, 1].set_ylabel('Number of Attention Edges')
+    axes[1, 1].grid(True, alpha=0.3)
+    
+    plt.suptitle('Attention Pattern Summary Statistics', fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        plt.savefig(os.path.join(output_dir, 'attention_summary.png'), dpi=300, bbox_inches='tight')
+        logger.info(f"Attention summary saved to {output_dir}/attention_summary.png")
+    
+    plt.show()
 
 
 def create_attention_graph(attention_hook, output_dir=None, min_weight=0.15, max_nodes=50):
@@ -245,7 +455,7 @@ def create_layer_head_heatmap(attention_hook, output_dir=None):
     fig, axes = plt.subplots(1, 3, figsize=(20, 6))
     
     # Edge count heatmap
-    sns.heatmap(edge_matrix, annot=True, fmt='d', xticklabels=heads, yticklabels=layers, 
+    sns.heatmap(edge_matrix, annot=True, fmt='.0f', xticklabels=heads, yticklabels=layers, 
                 ax=axes[0], cmap='Blues', cbar_kws={'label': 'Edge Count'})
     axes[0].set_title('Attention Edge Count by Layer/Head')
     axes[0].set_xlabel('Head')
@@ -271,169 +481,6 @@ def create_layer_head_heatmap(attention_hook, output_dir=None):
         os.makedirs(output_dir, exist_ok=True)
         plt.savefig(os.path.join(output_dir, 'layer_head_heatmap.png'), dpi=300, bbox_inches='tight')
         logger.info(f"Layer/head heatmap saved to {output_dir}/layer_head_heatmap.png")
-    
-    plt.show()
-
-
-def create_token_flow_diagram(attention_hook, output_dir=None, top_n=10):
-    """Create a flow diagram showing how attention flows between tokens over time."""
-    if not attention_hook.attention_data:
-        logger.warning("No attention data for flow diagram")
-        return
-    
-    # Group attention by generation position
-    position_flows = defaultdict(lambda: defaultdict(float))
-    all_tokens = set()
-    
-    for record in attention_hook.attention_data:
-        position = record['position']
-        for edge in record['edges']:
-            source = edge['source_token']
-            target = edge['target_token']
-            weight = edge['weight']
-            
-            position_flows[position][(source, target)] += weight
-            all_tokens.add(source)
-            all_tokens.add(target)
-    
-    # Select most active tokens
-    token_activity = defaultdict(float)
-    for pos_flows in position_flows.values():
-        for (source, target), weight in pos_flows.items():
-            token_activity[source] += weight
-            token_activity[target] += weight
-    
-    top_tokens = [token for token, _ in sorted(token_activity.items(), key=lambda x: x[1], reverse=True)[:top_n]]
-    
-    # Create flow visualization
-    fig, ax = plt.subplots(figsize=(16, 10))
-    
-    positions = sorted(position_flows.keys())
-    token_positions = {token: i for i, token in enumerate(top_tokens)}
-    
-    # Plot tokens as horizontal lines
-    for token, y_pos in token_positions.items():
-        ax.axhline(y=y_pos, color='lightgray', alpha=0.3, linewidth=20)
-        ax.text(-0.5, y_pos, token, ha='right', va='center', fontweight='bold')
-    
-    # Plot flows as arrows
-    for pos_idx, position in enumerate(positions[:10]):  # Limit to first 10 positions
-        flows = position_flows[position]
-        
-        for (source, target), weight in flows.items():
-            if source in top_tokens and target in top_tokens and weight > 0.1:
-                y_source = token_positions[source]
-                y_target = token_positions[target]
-                
-                # Arrow properties based on weight
-                alpha = min(0.9, weight * 2)
-                width = max(0.5, weight * 3)
-                
-                # Slight x offset for each position
-                x_pos = pos_idx * 0.8
-                
-                ax.annotate('', xy=(x_pos + 0.3, y_target), xytext=(x_pos, y_source),
-                           arrowprops=dict(arrowstyle='->', lw=width, alpha=alpha, color='red'))
-    
-    ax.set_xlim(-2, len(positions) * 0.8)
-    ax.set_ylim(-0.5, len(top_tokens) - 0.5)
-    ax.set_xlabel('Generation Step')
-    ax.set_title('Token Attention Flow Over Time')
-    ax.set_yticks([])
-    
-    # Add position markers
-    for i, pos in enumerate(positions[:10]):
-        ax.axvline(x=i * 0.8, color='blue', alpha=0.3, linestyle='--')
-        ax.text(i * 0.8, len(top_tokens), f'Step {pos}', rotation=90, ha='center', va='bottom')
-    
-    plt.tight_layout()
-    
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        plt.savefig(os.path.join(output_dir, 'token_flow_diagram.png'), dpi=300, bbox_inches='tight')
-        logger.info(f"Token flow diagram saved to {output_dir}/token_flow_diagram.png")
-    
-    plt.show()
-
-
-def create_attention_distribution_plots(attention_hook, output_dir=None):
-    """Create distribution plots for attention weights and patterns."""
-    if not attention_hook.attention_data:
-        logger.warning("No attention data for distribution plots")
-        return
-    
-    # Collect all attention weights
-    all_weights = []
-    layer_weights = defaultdict(list)
-    head_weights = defaultdict(list)
-    
-    for record in attention_hook.attention_data:
-        layer = record['layer']
-        head = record['head']
-        
-        for edge in record['edges']:
-            weight = edge['weight']
-            all_weights.append(weight)
-            layer_weights[layer].append(weight)
-            head_weights[head].append(weight)
-    
-    if not all_weights:
-        logger.warning("No attention weights to plot")
-        return
-    
-    # Create subplot with multiple distribution plots
-    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-    
-    # Overall weight distribution
-    axes[0, 0].hist(all_weights, bins=50, alpha=0.7, color='blue', edgecolor='black')
-    axes[0, 0].set_title('Overall Attention Weight Distribution')
-    axes[0, 0].set_xlabel('Attention Weight')
-    axes[0, 0].set_ylabel('Frequency')
-    axes[0, 0].axvline(np.mean(all_weights), color='red', linestyle='--', label=f'Mean: {np.mean(all_weights):.3f}')
-    axes[0, 0].legend()
-    
-    # Box plot by layer
-    if layer_weights:
-        layers = sorted(layer_weights.keys())
-        layer_data = [layer_weights[layer] for layer in layers]
-        
-        axes[0, 1].boxplot(layer_data, labels=layers)
-        axes[0, 1].set_title('Attention Weight Distribution by Layer')
-        axes[0, 1].set_xlabel('Layer')
-        axes[0, 1].set_ylabel('Attention Weight')
-    
-    # Box plot by head
-    if head_weights:
-        heads = sorted(head_weights.keys())
-        head_data = [head_weights[head] for head in heads]
-        
-        axes[1, 0].boxplot(head_data, labels=heads)
-        axes[1, 0].set_title('Attention Weight Distribution by Head')
-        axes[1, 0].set_xlabel('Head')
-        axes[1, 0].set_ylabel('Attention Weight')
-    
-    # Cumulative distribution
-    sorted_weights = np.sort(all_weights)
-    cumulative = np.arange(1, len(sorted_weights) + 1) / len(sorted_weights)
-    
-    axes[1, 1].plot(sorted_weights, cumulative, linewidth=2)
-    axes[1, 1].set_title('Cumulative Attention Weight Distribution')
-    axes[1, 1].set_xlabel('Attention Weight')
-    axes[1, 1].set_ylabel('Cumulative Probability')
-    axes[1, 1].grid(True, alpha=0.3)
-    
-    # Add percentile markers
-    for percentile in [50, 75, 90, 95]:
-        value = np.percentile(all_weights, percentile)
-        axes[1, 1].axvline(value, color='red', alpha=0.5, linestyle='--')
-        axes[1, 1].text(value, 0.1, f'{percentile}%', rotation=90, ha='right')
-    
-    plt.tight_layout()
-    
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        plt.savefig(os.path.join(output_dir, 'attention_distributions.png'), dpi=300, bbox_inches='tight')
-        logger.info(f"Attention distribution plots saved to {output_dir}/attention_distributions.png")
     
     plt.show()
 
@@ -507,7 +554,7 @@ def analyze_attention_patterns(attention_hook, output_file=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run inference with hooks and graph visualization')
+    parser = argparse.ArgumentParser(description='Run inference with hooks and visualization')
     parser.add_argument('checkpoint', type=str, help='Path to model checkpoint')
     parser.add_argument('--prompt', type=str, default="Once upon a time", 
                         help='Text prompt for generation')
@@ -533,10 +580,14 @@ def main():
                         help='Directory to save visualizations and analysis')
     parser.add_argument('--no-graphs', action='store_true',
                         help='Skip graph generation (faster)')
-    parser.add_argument('--graph-min-weight', type=float, default=0.15,
-                        help='Minimum attention weight for graph edges')
-    parser.add_argument('--graph-max-nodes', type=int, default=50,
-                        help='Maximum nodes in attention graph')
+    parser.add_argument('--no-matrices', action='store_true',
+                        help='Skip matrix visualization')
+    parser.add_argument('--matrices-only', action='store_true',
+                        help='Only generate matrix visualizations (fastest)')
+    parser.add_argument('--max-matrix-layers', type=int, default=6,
+                        help='Maximum layers to show in matrix visualization')
+    parser.add_argument('--max-matrix-heads', type=int, default=6,
+                        help='Maximum heads per layer in matrix visualization')
     
     args = parser.parse_args()
     
@@ -611,32 +662,55 @@ def main():
             analyze_attention_patterns(attention_hook, save_path)
             
             # Generate visualizations
-            if not args.no_graphs:
+            if not args.no_graphs and not args.matrices_only:
                 logger.info("\n=== Creating Visualizations ===")
                 
                 try:
-                    # Main attention graph
-                    create_attention_graph(
-                        attention_hook, 
-                        args.output_dir, 
-                        min_weight=args.graph_min_weight,
-                        max_nodes=args.graph_max_nodes
-                    )
+                    # Matrix visualizations (simple and fast)
+                    if not args.no_matrices:
+                        create_attention_matrices_visualization(
+                            attention_hook, 
+                            args.output_dir,
+                            max_layers=args.max_matrix_layers,
+                            max_heads=args.max_matrix_heads
+                        )
+                        
+                        create_attention_pattern_summary(attention_hook, args.output_dir)
                     
-                    # Layer/head heatmap
-                    create_layer_head_heatmap(attention_hook, args.output_dir)
-                    
-                    # Token flow diagram
-                    create_token_flow_diagram(attention_hook, args.output_dir)
-                    
-                    # Distribution plots
-                    create_attention_distribution_plots(attention_hook, args.output_dir)
+                    # More complex visualizations
+                    if not args.matrices_only:
+                        # Main attention graph
+                        create_attention_graph(
+                            attention_hook, 
+                            args.output_dir, 
+                            min_weight=0.15,
+                            max_nodes=50
+                        )
+                        
+                        # Layer/head heatmap
+                        create_layer_head_heatmap(attention_hook, args.output_dir)
                     
                     logger.info(f"All visualizations saved to: {args.output_dir}")
                     
                 except Exception as e:
                     logger.error(f"Error creating visualizations: {e}")
                     logger.info("Continuing with text analysis only...")
+            
+            elif args.matrices_only:
+                logger.info("\n=== Creating Matrix Visualizations Only ===")
+                try:
+                    create_attention_matrices_visualization(
+                        attention_hook, 
+                        args.output_dir,
+                        max_layers=args.max_matrix_layers,
+                        max_heads=args.max_matrix_heads
+                    )
+                    
+                    create_attention_pattern_summary(attention_hook, args.output_dir)
+                    
+                    logger.info(f"Matrix visualizations saved to: {args.output_dir}")
+                except Exception as e:
+                    logger.error(f"Error creating matrix visualizations: {e}")
         
         # Report activation stats if tracked
         if args.track_activations:
