@@ -246,3 +246,79 @@ class SymbolicAttention(nn.Module):
         y = self.resid_dropout(y)
         
         return y
+    
+class TFTAttention(nn.Module):
+    """
+    Only difference from symbolic is that V is computed from X_t
+    """
+
+    def forward(self, x, xt, layer_idx=None, hook_manager=None, hook_state=None):
+        B, T, C = x.size()
+
+        if self.use_v:
+            # Separate Q, K from input and compute V using Kronecker lifting
+            qk = self.c_attn(x)
+            q, k = qk.split(self.n_embd, dim=2)
+            
+            # Use x_t
+            v_matrix = self._get_kronecker_lifted_tensor(self.v_tmp)
+            x_flat = xt.view(-1, C) #NOTE: this is the major change
+            v = torch.matmul(x_flat, v_matrix).view(B, T, C) #REVIEW check if i need transpose
+        else:
+            qkv = self.c_attn(x)
+            q, k, v = qkv.split(self.n_embd, dim=2)
+
+        # reshape for multi-head attention
+        q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
+        k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
+        v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
+
+        # compute attention scores 
+        scale = 1.0 / math.sqrt(self.head_dim)
+        att_scores = (q @ k.transpose(-2, -1)) * scale
+
+        # add ALiBi bias
+        if T > 1:
+            alibi_bias = self._get_alibi_bias(T, x.device)
+            att_scores = att_scores + alibi_bias[None, :, :, :]
+
+        # softmax, dropout, value
+        att_weights = F.softmax(att_scores, dim=-1)
+        att_weights_dropout = self.attn_dropout(att_weights)
+        y = att_weights_dropout @ v  # (B, nh, T, hs)
+        
+        # call hooks if available
+        if hook_manager is not None and layer_idx is not None and hook_state is not None:
+            tokens = hook_state.get('tokens', [])
+            position = hook_state.get('position', 0)
+            state = hook_state.copy() if hook_state else {}
+            state['stream_type'] = 'symbolic'  # Mark this as symbolic stream
+            
+            # call hook for each attention head
+            for head_idx in range(self.n_head):
+                hook_manager.on_attention_computed(
+                    layer_idx=layer_idx,
+                    head_idx=head_idx,
+                    attention_weights=att_weights[:, head_idx, :, :],  # [B, T, T]
+                    query=q[:, head_idx, :, :],  # [B, T, hd]
+                    key=k[:, head_idx, :, :],  # [B, T, hd]
+                    value=v[:, head_idx, :, :],  # [B, T, hd]
+                    tokens=tokens,
+                    position=position,
+                    state=state
+                )
+
+        # concatenate heads
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+        
+        if self.use_proj:
+            proj_matrix = self._get_kronecker_lifted_tensor(self.proj_tmp)
+            y_flat = y.view(-1, C)
+            y = torch.matmul(y_flat, proj_matrix.t()).view(B, T, C)
+        else:
+            y = self.c_proj(y)
+        
+        y = self.resid_dropout(y)
+        
+        return y
+    

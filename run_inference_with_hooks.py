@@ -52,7 +52,7 @@ def load_model_from_checkpoint(checkpoint_path, device='cpu'):
         raise ValueError("No config found in checkpoint")
     
     # Determine model type from training_result or guess from structure
-    model_type = 'vanilla'  # default
+    model_type = 'symbolic'  # default
     if 'training_result' in checkpoint and 'model_type' in checkpoint['training_result']:
         model_type = checkpoint['training_result']['model_type']
     elif 'model_type' in checkpoint:
@@ -130,7 +130,7 @@ def create_attention_matrices_visualization(attention_hook, output_dir=None, max
     elif n_plots <= 9:
         rows, cols = 3, 3
     else:
-        rows, cols = (n_plots + 3) // 6, 6  # More than 9 plots, use 4 columns
+        rows, cols = (n_plots + 3) // 6, 6
         #layer_head_pairs = layer_head_pairs[:16]  # Limit to 16 plots max
     
     fig, axes = plt.subplots(rows, cols, figsize=(cols * 4, rows * 4))
@@ -556,7 +556,7 @@ def analyze_attention_patterns(attention_hook, output_file=None):
 def main():
     parser = argparse.ArgumentParser(description='Run inference with hooks and visualization')
     parser.add_argument('checkpoint', type=str, help='Path to model checkpoint')
-    parser.add_argument('--prompt', type=str, default="Once upon a time", 
+    parser.add_argument('--prompt', type=str, default="Once upon a time there was a boy named", 
                         help='Text prompt for generation')
     parser.add_argument('--max-tokens', type=int, default=50, 
                         help='Maximum number of tokens to generate')
