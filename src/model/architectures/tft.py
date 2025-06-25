@@ -11,7 +11,7 @@ class TFTTransformerBlock(nn.Module):
     Symbolic transformer block, FFN output is vocabulary-constrained.
     Contains a symbolic stream and embedding stream. 
     """
-    def __init__(self, config, vocab_embeddings_ref):
+    def __init__(self, config):
         super().__init__()
         self.config = config
 
@@ -23,7 +23,6 @@ class TFTTransformerBlock(nn.Module):
 
         self.ffn = VanillaFFN(config)
 
-    #REVIEW check this is right order
     def forward(self, xt, xe, layer_idx=None, hook_manager=None, hook_state=None):
         x_comb = self.ln_1(xt + xe)
         xt = self.ln_2(xt)
