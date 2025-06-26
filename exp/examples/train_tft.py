@@ -32,6 +32,8 @@ def parse_args():
     parser = create_base_parser("Train Token-Factored Transformer (TFT) with Hook System")
     parser = add_symbolic_args(parser)  # TFT uses same symbolic flags (use_v, use_proj)
     parser.add_argument('--output_dir', type=str, default='./outputs/tft_clean')
+    parser.add_argument('--cascade', action='store_true', default=False,
+                        help='Enable cascade mode for TFT')
     return parser.parse_args()
 
 def main():
@@ -40,13 +42,14 @@ def main():
     
     # Setup environment
     logger, device = setup_training_environment(args.output_dir, "Token-Factored Transformer", args.trainer_type)
-    logger.info(f"TFT features: use_v={args.use_v}, use_proj={args.use_proj}")
+    logger.info(f"TFT features: use_v={args.use_v}, use_proj={args.use_proj}, cascade={args.cascade}")
     logger.info("Training TFT: stream separation without vocabulary constraints")
     
     # Create config with TFT features
     tft_features = {
         'use_v': args.use_v,
-        'use_proj': args.use_proj
+        'use_proj': args.use_proj,
+        'cascade': args.cascade
     }
     config = create_config_from_args(args, tft_features)
     
@@ -97,7 +100,7 @@ def main():
     test_generation(model, tokenizer, device, args, logger, "TFT", args.trainer_type)
     
     logger.info("Token-Factored Transformer training completed!")
-    logger.info(f"TFT features used: use_v={args.use_v}, use_proj={args.use_proj}")
+    logger.info(f"TFT features used: use_v={args.use_v}, use_proj={args.use_proj}, cascade={args.cascade}")
     logger.info("Stream separation achieved without vocabulary constraints")
 
 if __name__ == "__main__":
