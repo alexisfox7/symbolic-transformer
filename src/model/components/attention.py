@@ -118,7 +118,7 @@ class SymbolicAttention(nn.Module):
         if self.use_sparsemax:
             self.sparsemax = Sparsemax(dim=-1)
 
-        # ALiBi slopes - computed once and cached
+        # ALiBi sl opes - computed once and cached
         slopes = self._get_alibi_slopes(config.n_head)
         self.register_buffer("alibi_slopes", slopes, persistent=False)
 
@@ -179,7 +179,11 @@ class SymbolicAttention(nn.Module):
         alibi_bias = self.alibi_slopes[:, None, None] * relative_position[None, :, :]
         
         # Apply causal masking
-        alibi_bias = alibi_bias.masked_fill(~causal_mask[None, :, :], float('-inf'))
+        if self.use_sparsemax:
+            # Use large negative value instead of -inf for sparsemax
+            alibi_bias = alibi_bias.masked_fill(~causal_mask[None, :, :], -1e9)
+        else:
+            alibi_bias = alibi_bias.masked_fill(~causal_mask[None, :, :], float('-inf'))
         
         return alibi_bias
 
