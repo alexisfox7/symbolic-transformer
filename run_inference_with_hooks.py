@@ -52,7 +52,7 @@ def load_model_from_checkpoint(checkpoint_path, device='cpu'):
         raise ValueError("No config found in checkpoint")
     
     # Determine model type from training_result or guess from structure
-    model_type = 'symbolic'  # default
+    model_type = 'tft'  # default
     if 'training_result' in checkpoint and 'model_type' in checkpoint['training_result']:
         model_type = checkpoint['training_result']['model_type']
     elif 'model_type' in checkpoint:
@@ -556,6 +556,8 @@ def analyze_attention_patterns(attention_hook, output_file=None):
 def main():
     parser = argparse.ArgumentParser(description='Run inference with hooks and visualization')
     parser.add_argument('checkpoint', type=str, help='Path to model checkpoint')
+    parser.add_argument('--output-dir', type=str, default='./outputs/inference/tft',
+                        help='Directory to save visualizations and analysis')
     parser.add_argument('--prompt', type=str, default="Once upon a time there was a boy named", 
                         help='Text prompt for generation')
     parser.add_argument('--max-tokens', type=int, default=50, 
@@ -576,8 +578,6 @@ def main():
                         help='Track FFN activations')
     parser.add_argument('--no-hooks', action='store_true',
                         help='Run without hooks for comparison')
-    parser.add_argument('--output-dir', type=str, default='./inference_output',
-                        help='Directory to save visualizations and analysis')
     parser.add_argument('--no-graphs', action='store_true',
                         help='Skip graph generation (faster)')
     parser.add_argument('--no-matrices', action='store_true',

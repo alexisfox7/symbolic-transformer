@@ -1,2 +1,0 @@
-{"event": "log_start", "timestamp": "2025-06-26T12:47:58.760806", "log_file": "./outputs/tft_clean/logs/training_20250626_124758.jsonl"}
-{"event": "train_begin", "config": {"device": 
