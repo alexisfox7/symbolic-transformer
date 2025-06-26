@@ -85,7 +85,7 @@ def main():
     test_generation(model, tokenizer, device, args, logger, "symbolic", args.trainer_type)
     
     logger.info("Symbolic transformer training completed!")
-    logger.info(f"Symbolic features used: use_v={args.use_v}, use_proj={args.use_proj}")
+    logger.info(f"Symbolic features used: use_v={args.use_v}, use_proj={args.use_proj}, vocab_ffn={args.vocab_ffn}")
 
 if __name__ == "__main__":
     main()

@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 import math
+from sparsemax import Sparsemax
 
 #NOTE pretty sure this works, similar to karpathys
 class VanillaAttention(nn.Module):
@@ -21,6 +22,10 @@ class VanillaAttention(nn.Module):
         self.n_head = config.n_head
         self.n_embd = config.n_embd
         self.head_dim = config.n_embd // config.n_head
+        
+        self.use_sparsemax = getattr(config, 'use_sparsemax', False)
+        if self.use_sparsemax:
+            self.sparsemax = Sparsemax(dim=-1)
         
         self.register_buffer("causal_mask", torch.tril(torch.ones(config.block_size, config.block_size)).view(1, 1, config.block_size, config.block_size)) 
 
@@ -43,8 +48,11 @@ class VanillaAttention(nn.Module):
         # causal mask
         att = att.masked_fill(self.causal_mask[:, :, :T, :T] == 0, float('-inf'))
         
-        # softmax, dropout, apply to values
-        att = F.softmax(att, dim=-1)
+        # softmax or sparsemax, dropout, apply to values
+        if self.use_sparsemax:
+            att = self.sparsemax(att)
+        else:
+            att = F.softmax(att, dim=-1)
         att_dropout = self.attn_dropout(att)
         y = att_dropout @ v  # (B, nh, T, hd)
         
@@ -104,6 +112,10 @@ class SymbolicAttention(nn.Module):
  
         self.attn_dropout = nn.Dropout(config.dropout)
         self.resid_dropout = nn.Dropout(config.dropout)
+        
+        self.use_sparsemax = getattr(config, 'use_sparsemax', False)
+        if self.use_sparsemax:
+            self.sparsemax = Sparsemax(dim=-1)
 
         # ALiBi slopes - computed once and cached
         slopes = self._get_alibi_slopes(config.n_head)
@@ -207,8 +219,11 @@ class SymbolicAttention(nn.Module):
             alibi_bias = self._get_alibi_bias(T, x.device)
             att_scores = att_scores + alibi_bias[None, :, :, :]
 
-        # softmax, dropout, value
-        att_weights = F.softmax(att_scores, dim=-1)
+        # softmax or sparsemax, dropout, value
+        if self.use_sparsemax:
+            att_weights = self.sparsemax(att_scores)
+        else:
+            att_weights = F.softmax(att_scores, dim=-1)
         att_weights_dropout = self.attn_dropout(att_weights)
         y = att_weights_dropout @ v  # (B, nh, T, hs)
         
@@ -285,8 +300,11 @@ class TFTAttention(SymbolicAttention):
             alibi_bias = self._get_alibi_bias(T, x.device)
             att_scores = att_scores + alibi_bias[None, :, :, :]
 
-        # softmax, dropout, value
-        att_weights = F.softmax(att_scores, dim=-1)
+        # softmax or sparsemax, dropout, value
+        if self.use_sparsemax:
+            att_weights = self.sparsemax(att_scores)
+        else:
+            att_weights = F.softmax(att_scores, dim=-1)
         att_weights_dropout = self.attn_dropout(att_weights)
         y = att_weights_dropout @ v  # (B, nh, T, hs)
         

@@ -71,6 +71,10 @@ def create_base_parser(description="Train Transformer with Hook System"):
     parser.add_argument("--skip_generation", action="store_true")
     parser.add_argument("--generation_max_len", type=int, default=30)
     
+    # attention parameters
+    parser.add_argument("--use_sparsemax", action="store_true", default=False,
+                       help="Use sparsemax instead of softmax in attention")
+    
     return parser
 
 def add_symbolic_args(parser):
@@ -110,6 +114,7 @@ def create_config_from_args(args, symbolic_features=None):
     if args.batch_size: config.batch_size = args.batch_size
     if args.learning_rate: config.learning_rate = args.learning_rate
     config.num_epochs = args.num_epochs
+    config.use_sparsemax = args.use_sparsemax
     
     if symbolic_features:
         for feature, value in symbolic_features.items():

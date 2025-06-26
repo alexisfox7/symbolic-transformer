@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/cascade"
+DIR="./outputs/cascade_sparse"
 N=110000
 N_EMBD=384
 PRESET="small"
@@ -48,6 +48,7 @@ accelerate launch \
     --clip_grad_norm 1.0 \
     --val_ratio 0.1 \
     --validate_every 1 \
-    --cascade
+    --cascade \
+    --use_sparsemax
 
 echo "TFT Training completed!"

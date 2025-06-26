@@ -28,6 +28,9 @@ class TransformerConfig:
     # Symbolic-specific parameters
     use_v: bool = True                       # Use value projection constraints
     use_proj: bool = True                    # Use output projection constraints
+    
+    # Attention parameters
+    use_sparsemax: bool = False              # Use sparsemax instead of softmax in attention
 
     # Training parameters
     batch_size: int = 32                     # Batch size
