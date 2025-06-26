@@ -1,4 +1,4 @@
-from .attention import VanillaAttention, SymbolicAttention
+from .attention import VanillaAttention, SymbolicAttention, TFTAttention
 from .ffn import VanillaFFN, VocabFFN
 from .norm import VanillaNorm, ChannelNorm
 
@@ -9,4 +9,5 @@ __all__ = [
     'VocabFFN',
     'VanillaNorm',
     'ChannelNorm',
+    'TFTAttention',
 ]

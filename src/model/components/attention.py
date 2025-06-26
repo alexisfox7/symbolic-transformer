@@ -247,10 +247,13 @@ class SymbolicAttention(nn.Module):
         
         return y
     
-class TFTAttention(nn.Module):
+class TFTAttention(SymbolicAttention):
     """
     Only difference from symbolic is that V is computed from X_t
     """
+
+    def __init__(self, config):
+        super().__init__(config) 
 
     def forward(self, x, xt, layer_idx=None, hook_manager=None, hook_state=None):
         B, T, C = x.size()
@@ -262,8 +265,8 @@ class TFTAttention(nn.Module):
             
             # Use x_t
             v_matrix = self._get_kronecker_lifted_tensor(self.v_tmp)
-            x_flat = xt.view(-1, C) #NOTE: this is the major change
-            v = torch.matmul(x_flat, v_matrix).view(B, T, C) #REVIEW check if i need transpose
+            xt_flat = xt.view(-1, C) #NOTE: this is the major change
+            v = torch.matmul(xt_flat, v_matrix).view(B, T, C)
         else:
             qkv = self.c_attn(x)
             q, k, v = qkv.split(self.n_embd, dim=2)
@@ -292,7 +295,7 @@ class TFTAttention(nn.Module):
             tokens = hook_state.get('tokens', [])
             position = hook_state.get('position', 0)
             state = hook_state.copy() if hook_state else {}
-            state['stream_type'] = 'symbolic'  # Mark this as symbolic stream
+            state['stream_type'] = 'tft'  # Mark this as symbolic stream
             
             # call hook for each attention head
             for head_idx in range(self.n_head):

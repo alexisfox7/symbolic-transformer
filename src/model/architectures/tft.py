@@ -25,10 +25,10 @@ class TFTTransformerBlock(nn.Module):
 
     def forward(self, xt, xe, layer_idx=None, hook_manager=None, hook_state=None):
         x_comb = self.ln_1(xt + xe)
-        xt = self.ln_2(xt)
+        xt_norm = self.ln_2(xt)
         
         # attention
-        attn_out = self.attn(x_comb, xt, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        attn_out = self.attn(x_comb, xt_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
         xt = xt + attn_out
        
         xe = xt + xe

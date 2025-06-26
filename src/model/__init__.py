@@ -4,6 +4,7 @@ Model factory.
 
 from .architectures.symbolic import SymbolicTransformer
 from .architectures.vanilla import VanillaTransformer
+from .architectures.tft import TFTTransformer
 
 def get_model(model_type, config):
     """
@@ -14,8 +15,10 @@ def get_model(model_type, config):
     models = {
         'symbolic': SymbolicTransformer,
         'vanilla': VanillaTransformer,
+        'tft': TFTTransformer,
         'SymbolicTransformer': SymbolicTransformer, #alias
         'VanillaTransformer': VanillaTransformer,
+        'TFTTransformer': TFTTransformer,
     }
     
     if model_type not in models:
@@ -27,5 +30,6 @@ def get_model(model_type, config):
 __all__ = [
     'get_model',
     'SymbolicTransformer', 
-    'VanillaTransformer'
+    'VanillaTransformer',
+    'TFTTransformer'
 ]
