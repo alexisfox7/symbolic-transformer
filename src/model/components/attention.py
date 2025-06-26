@@ -45,13 +45,14 @@ class VanillaAttention(nn.Module):
         scale = 1.0 / math.sqrt(self.head_dim)
         att = (q @ k.transpose(-2, -1)) * scale # (B, nh, hd, T) -> (B, nh, T, T)
         
-        # causal mask
-        att = att.masked_fill(self.causal_mask[:, :, :T, :T] == 0, float('-inf'))
-        
         # softmax or sparsemax, dropout, apply to values
         if self.use_sparsemax:
+            # For sparsemax, use a large negative value instead of -inf
+            att = att.masked_fill(self.causal_mask[:, :, :T, :T] == 0, -1e9)
             att = self.sparsemax(att)
         else:
+            # For softmax, use -inf as usual
+            att = att.masked_fill(self.causal_mask[:, :, :T, :T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
         att_dropout = self.attn_dropout(att)
         y = att_dropout @ v  # (B, nh, T, hd)
@@ -221,6 +222,7 @@ class SymbolicAttention(nn.Module):
 
         # softmax or sparsemax, dropout, value
         if self.use_sparsemax:
+            # Sparsemax handles the causal masking through ALiBi bias, no additional masking needed
             att_weights = self.sparsemax(att_scores)
         else:
             att_weights = F.softmax(att_scores, dim=-1)
@@ -302,6 +304,7 @@ class TFTAttention(SymbolicAttention):
 
         # softmax or sparsemax, dropout, value
         if self.use_sparsemax:
+            # Sparsemax handles the causal masking through ALiBi bias, no additional masking needed
             att_weights = self.sparsemax(att_scores)
         else:
             att_weights = F.softmax(att_scores, dim=-1)
