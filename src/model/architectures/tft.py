@@ -101,7 +101,7 @@ class TFTTransformer(TransformerBase):
         xe = torch.zeros_like(xt)
 
         for layer_idx, block in enumerate(self.transformer.h):
-            xt, xe = block(xt, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
+            xt, xe = block(xt, xe, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
 
         x_final = xt + xe
         x_final = self.transformer.ln_f(x_final)

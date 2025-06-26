@@ -25,7 +25,6 @@ from utils.training_utils import (
 from config.config import print_config
 from mytokenizers import create_tokenizer
 from model import get_model
-from model.architectures.tft import TFTTransformer
 import torch
 
 def parse_args():
