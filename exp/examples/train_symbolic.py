@@ -24,6 +24,8 @@ def parse_args():
     parser = create_base_parser("Train Symbolic Transformer with Hook System")
     parser = add_symbolic_args(parser) 
     parser.add_argument('--output_dir', type=str, default='./outputs/symbolic_clean')
+    parser.add_argument('--vocab-ffn', action='store_true', default=True,
+                        help='Use vocabulary-constrained FFN (SymbolicFFN). If False, uses VanillaFFN')
     return parser.parse_args()
 
 def main():
@@ -32,12 +34,13 @@ def main():
     
     # setup environment
     logger, device = setup_training_environment(args.output_dir, "Symbolic Transformer", args.trainer_type)
-    logger.info(f"Symbolic features: use_v={args.use_v}, use_proj={args.use_proj}")
+    logger.info(f"Symbolic features: use_v={args.use_v}, use_proj={args.use_proj}, vocab_ffn={args.vocab_ffn}")
     
     # create config
     symbolic_features = {
         'use_v': args.use_v,
-        'use_proj': args.use_proj
+        'use_proj': args.use_proj,
+        'vocab_ffn': args.vocab_ffn
     }
     config = create_config_from_args(args, symbolic_features)
     
