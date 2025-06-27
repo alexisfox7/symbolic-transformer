@@ -199,6 +199,7 @@ class SymbolicAttention(nn.Module):
         if self.use_sparsemax:
             # Use large negative value instead of -inf for sparsemax
             alibi_bias = alibi_bias.masked_fill(~causal_mask[None, :, :], -1e9)
+            #STUB TRY THIS WITH 1e-4
         else:
             alibi_bias = alibi_bias.masked_fill(~causal_mask[None, :, :], float('-inf'))
         
