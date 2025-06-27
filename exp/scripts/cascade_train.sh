@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/cascade_sparse_temp"
+DIR="./outputs/cascade_sparse_novp"
 N=110000
 N_EMBD=384
 PRESET="small"
@@ -34,7 +34,7 @@ accelerate launch \
     --multi_gpu \
     --mixed_precision fp16 \
     exp/examples/train_tft.py \
-    --use_proj --use_v \
+   # --use_proj --use_v \
     --preset $PRESET \
     --n_embd $N_EMBD \
     --batch_size $BATCH_SIZE \
@@ -49,7 +49,7 @@ accelerate launch \
     --val_ratio 0.1 \
     --validate_every 1 \
     --cascade \
-    --use_sparsemax \
-    --learnable_temperature
+    --use_sparsemax
+  #  --learnable_temperature
 
 echo "TFT Training completed!"
