@@ -31,6 +31,7 @@ class TransformerConfig:
     
     # Attention parameters
     use_sparsemax: bool = False              # Use sparsemax instead of softmax in attention
+    learnable_temperature: bool = False      # Use learnable temperature in attention
 
     # Training parameters
     batch_size: int = 32                     # Batch size
