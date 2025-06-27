@@ -29,7 +29,7 @@ class TFTTransformerBlock(nn.Module):
         
         # attention
         attn_out = self.attn(x_comb, xt_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
-        xt_add = xt + attn_out
+        xt_add = attn_out
        
         xe = xt_add + xe
         xe = self.ln_3(xe)
@@ -107,7 +107,7 @@ class TFTTransformer(TransformerBase):
         for layer_idx, block in enumerate(self.transformer.h):
             xt, xe = block(xt, xe, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
 
-        x_final = xe
+        x_final = xe + xt
         x_final = self.transformer.ln_f(x_final)
         logits = self.lm_head(x_final)
 
