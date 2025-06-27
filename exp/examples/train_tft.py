@@ -99,6 +99,13 @@ def main():
     # Test generation
     test_generation(model, tokenizer, device, args, logger, "TFT", args.trainer_type)
     
+    # Log learned temperatures if applicable
+    if args.learnable_temperature:
+        logger.info("Learned Temperature Values:")
+        for name, param in model.named_parameters():
+            if 'temperature' in name:
+                logger.info(f"  {name}: {param.item():.4f}")
+    
     logger.info("Token-Factored Transformer training completed!")
     logger.info(f"TFT features used: use_v={args.use_v}, use_proj={args.use_proj}, cascade={args.cascade}")
     logger.info("Stream separation achieved without vocabulary constraints")

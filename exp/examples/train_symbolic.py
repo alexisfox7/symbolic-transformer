@@ -84,6 +84,13 @@ def main():
     # test generation
     test_generation(model, tokenizer, device, args, logger, "symbolic", args.trainer_type)
     
+    # Log learned temperatures if applicable
+    if args.learnable_temperature:
+        logger.info("Learned Temperature Values:")
+        for name, param in model.named_parameters():
+            if 'temperature' in name:
+                logger.info(f"  {name}: {param.item():.4f}")
+    
     logger.info("Symbolic transformer training completed!")
     logger.info(f"Symbolic features used: use_v={args.use_v}, use_proj={args.use_proj}, vocab_ffn={args.vocab_ffn}")
 

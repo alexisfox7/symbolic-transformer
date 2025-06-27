@@ -282,10 +282,12 @@ class JSONLogHook(TrainingHook):
 class CheckpointHook(TrainingHook):
     """Enhanced checkpointing hook that saves config and comprehensive training state."""
     
-    def __init__(self, output_dir: str, save_every_n_epochs: int = 1):
+    def __init__(self, output_dir: str, save_every_n_epochs: int = 1, save_best: bool = True):
         super().__init__("checkpoint")
         self.output_dir = output_dir
         self.save_every_n_epochs = save_every_n_epochs
+        self.save_best = save_best
+        self.best_loss = float('inf')
     
     def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
         if epoch % self.save_every_n_epochs == 0:
@@ -344,6 +346,16 @@ class CheckpointHook(TrainingHook):
                     logger.info(f"  Included config: {type(config).__name__}")
                 if training_metrics:
                     logger.info(f"  Included metrics: {list(training_metrics.keys())}")
+                
+                # Save best model checkpoint if enabled
+                if self.save_best:
+                    current_loss = state.get('val_loss', state.get('avg_loss', state.get('loss', float('inf'))))
+                    if isinstance(current_loss, (int, float)) and current_loss < self.best_loss:
+                        self.best_loss = current_loss
+                        best_path = os.path.join(self.output_dir, "best_model.pt")
+                        checkpoint['best_loss'] = self.best_loss
+                        torch.save(checkpoint, best_path)
+                        logger.info(f"Saved best model (loss={self.best_loss:.4f}): {best_path}")
 
 class ValidationHook(TrainingHook):
     """Validation hook that adds metrics to state for other hooks to use."""
