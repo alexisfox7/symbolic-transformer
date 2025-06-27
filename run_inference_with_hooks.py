@@ -154,7 +154,7 @@ def create_attention_matrices_visualization(attention_hook, output_dir=None, max
         tokens = record.get('tokens', [])
         
         # Limit matrix size for readability
-        max_seq_len = min(20, attention_matrix.shape[0])
+        max_seq_len = attention_matrix.shape[0]
         attention_matrix = attention_matrix[:max_seq_len, :max_seq_len]
         display_tokens = tokens[:max_seq_len] if tokens else [f"pos_{i}" for i in range(max_seq_len)]
         
@@ -559,9 +559,9 @@ def main():
     parser.add_argument('--output-dir', type=str, default='vanilla',
                         help='Directory to save visualizations and analysis')
     parser.add_argument('--model-type', type=str, default='vanilla')
-    parser.add_argument('--prompt', type=str, default="Once upon a time there was a boy named", 
+    parser.add_argument('--prompt', type=str, default="The door was locked. Tim had a key to the door. Tim used", 
                         help='Text prompt for generation')
-    parser.add_argument('--max-tokens', type=int, default=50, 
+    parser.add_argument('--max-tokens', type=int, default=5, 
                         help='Maximum number of tokens to generate')
     parser.add_argument('--temperature', type=float, default=0.8, 
                         help='Sampling temperature')

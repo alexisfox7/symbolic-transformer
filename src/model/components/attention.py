@@ -30,7 +30,8 @@ class VanillaAttention(nn.Module):
         self.learnable_temperature = getattr(config, 'learnable_temperature', False)
         if self.learnable_temperature:
             # Per-head temperatures initialized to 2.0
-            self.temperature = nn.Parameter(torch.ones(self.n_head) * 2)
+            #self.temperature = nn.Parameter(torch.ones(self.n_head) * 2)
+            self.temperature = nn.Parameter(torch.ones(1) * 2)
         
         self.register_buffer("causal_mask", torch.tril(torch.ones(config.block_size, config.block_size)).view(1, 1, config.block_size, config.block_size)) 
 
@@ -129,8 +130,9 @@ class SymbolicAttention(nn.Module):
         
         self.learnable_temperature = getattr(config, 'learnable_temperature', False)
         if self.learnable_temperature:
+            self.temperature = nn.Parameter(torch.ones(1) * 2)
             # Per-head temperatures initialized to 2.0
-            self.temperature = nn.Parameter(torch.ones(self.n_head) * 2)
+            #self.temperature = nn.Parameter(torch.ones(self.n_head) * 2)
 
         # ALiBi sl opes - computed once and cached
         slopes = self._get_alibi_slopes(config.n_head)
