@@ -316,6 +316,10 @@ class TFTAttention(SymbolicAttention):
         # compute attention scores 
         scale = 1.0 / math.sqrt(self.head_dim)
         att_scores = (q @ k.transpose(-2, -1)) * scale
+        
+        # Apply learnable temperature if enabled
+        if self.learnable_temperature:
+            att_scores = att_scores / self.temperature
 
         # add ALiBi bias
         if T > 1:
