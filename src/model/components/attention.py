@@ -57,8 +57,9 @@ class VanillaAttention(nn.Module):
         
         # softmax or sparsemax, dropout, apply to values
         if self.use_sparsemax:
-            # For sparsemax, use a large negative value instead of -inf
-            att = att.masked_fill(self.causal_mask[:, :, :T, :T] == 0, -1e9)
+            # For sparsemax, use a large negative value that works with float16
+            # Float16 max is ~65504, so use -1e4 to be safe
+            att = att.masked_fill(self.causal_mask[:, :, :T, :T] == 0, -1e4)
             att = self.sparsemax(att)
         else:
             # For softmax, use -inf as usual
