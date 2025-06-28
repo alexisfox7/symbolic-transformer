@@ -34,7 +34,6 @@ accelerate launch \
     --multi_gpu \
     --mixed_precision fp16 \
     exp/examples/train_tft.py \
-   # --use_proj --use_v \
     --preset $PRESET \
     --n_embd $N_EMBD \
     --batch_size $BATCH_SIZE \
@@ -50,6 +49,6 @@ accelerate launch \
     --validate_every 1 \
     --cascade \
     --use_sparsemax
-  #  --learnable_temperature
-
+  #  --learnable_temperature \
+   # --use_proj --use_v \
 echo "TFT Training completed!"
