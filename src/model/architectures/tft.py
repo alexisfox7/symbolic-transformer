@@ -29,7 +29,7 @@ class TFTTransformerBlock(nn.Module):
         
         # attention
         attn_out = self.attn(x_comb, xt_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
-        xt_add = attn_out
+        xt_add = xt + attn_out
        
         xe = xt_add + xe
         xe = self.ln_3(xe)

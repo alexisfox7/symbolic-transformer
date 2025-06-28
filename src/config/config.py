@@ -26,8 +26,8 @@ class TransformerConfig:
     max_position_embeddings: Optional[int] = None  # Max sequence length (None = 4x block_size)
     
     # Symbolic-specific parameters
-    use_v: bool = True                       # Use value projection constraints
-    use_proj: bool = True                    # Use output projection constraints
+    use_v: bool = False                      # Use value projection constraints
+    use_proj: bool = False                   # Use output projection constraints
     
     # Attention parameters
     use_sparsemax: bool = False              # Use sparsemax instead of softmax in attention
