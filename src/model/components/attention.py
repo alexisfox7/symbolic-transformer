@@ -115,7 +115,8 @@ class SymbolicAttention(nn.Module):
             self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias) # only Q and K projections 
             self.v_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02) # kronecker-lifted V matrix parameter
         else:
-            self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias) # standard Q, K, V projections
+            self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias) 
+            self.v_attn = nn.Linear(config.n_embd, config.n_embd, bias=config.bias) 
         
         if self.use_proj:
             self.proj_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
@@ -199,7 +200,7 @@ class SymbolicAttention(nn.Module):
         if self.use_sparsemax:
             # Use large negative value instead of -inf for sparsemax
             alibi_bias = alibi_bias.masked_fill(~causal_mask[None, :, :], -1e9)
-            #STUB TRY THIS WITH 1e-4
+            #STUB TRY THIS WITH
         else:
             alibi_bias = alibi_bias.masked_fill(~causal_mask[None, :, :], float('-inf'))
         
@@ -224,9 +225,13 @@ class SymbolicAttention(nn.Module):
             x_flat = x.view(-1, C)
             v = torch.matmul(x_flat, v_matrix).view(B, T, C) #REVIEW check if i need transpose
         else:
-            # Standard Q, K, V projections
-            qkv = self.c_attn(x)
-            q, k, v = qkv.split(self.n_embd, dim=2)
+            qk = self.c_attn(x)
+            q, k = qk.split(self.n_embd, dim=2)
+            v = self.v_attn(x)
+        # else:
+        #     # Standard Q, K, V projections
+        #     qkv = self.c_attn(x)
+        #     q, k, v = qkv.split(self.n_embd, dim=2)
 
         # Reshape for multi-head attention
         q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
@@ -311,8 +316,12 @@ class TFTAttention(SymbolicAttention):
             xt_flat = xt.view(-1, C) #NOTE: this is the major change
             v = torch.matmul(xt_flat, v_matrix).view(B, T, C)
         else:
-            qkv = self.c_attn(x)
-            q, k, v = qkv.split(self.n_embd, dim=2)
+            qk = self.c_attn(x)
+            q, k = qk.split(self.n_embd, dim=2)
+            v = self.v_attn(xt)
+        # else:
+        #     qkv = self.c_attn(x)
+        #     q, k, v = qkv.split(self.n_embd, dim=2)
 
         # reshape for multi-head attention
         q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
