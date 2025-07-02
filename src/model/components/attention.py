@@ -108,20 +108,31 @@ class SymbolicAttention(nn.Module):
         self.n_embd = config.n_embd
         self.head_dim = config.n_embd // config.n_head
 
-        self.use_v = getattr(config, 'use_v', False)
-        self.use_proj = getattr(config, 'use_proj', False)
+        self.use_v = getattr(config, 'use_v', 'none')
+        self.use_proj = getattr(config, 'use_proj', 'none')
 
-        if self.use_v:
-            self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias) # only Q and K projections 
-            self.v_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02) # kronecker-lifted V matrix parameter
-        else:
-            self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias) 
-            self.v_attn = nn.Linear(config.n_embd, config.n_embd, bias=config.bias) 
+        # Handle V matrix configuration
+        if self.use_v == 'none':
+            # No V matrix - only Q and K projections
+            self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias)
+        elif self.use_v == 'normal':
+            # Standard V matrix - Q, K, V projections
+            self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias)
+        elif self.use_v == 'kronecker':
+            # Kronecker-lifted V matrix
+            self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias)
+            self.v_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
         
-        if self.use_proj:
-            self.proj_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
-        else:
+        # Handle output projection configuration
+        if self.use_proj == 'none':
+            # No output projection
+            pass
+        elif self.use_proj == 'normal':
+            # Standard output projection
             self.c_proj = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
+        elif self.use_proj == 'kronecker':
+            # Kronecker-lifted output projection
+            self.proj_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
  
         self.attn_dropout = nn.Dropout(config.dropout)
         self.resid_dropout = nn.Dropout(config.dropout)
@@ -215,7 +226,16 @@ class SymbolicAttention(nn.Module):
         """
         B, T, C = x.size()
 
-        if self.use_v:
+        if self.use_v == 'none':
+            # No V matrix - Q, K only, V is just identity (copy of input)
+            qk = self.c_attn(x)
+            q, k = qk.split(self.n_embd, dim=2)
+            v = x  # V is identity
+        elif self.use_v == 'normal':
+            # Standard Q, K, V projections
+            qkv = self.c_attn(x)
+            q, k, v = qkv.split(self.n_embd, dim=2)
+        elif self.use_v == 'kronecker':
             # Separate Q, K from input and compute V using Kronecker lifting
             qk = self.c_attn(x)
             q, k = qk.split(self.n_embd, dim=2)
@@ -223,15 +243,7 @@ class SymbolicAttention(nn.Module):
             # Apply Kronecker-lifted V transformation
             v_matrix = self._get_kronecker_lifted_tensor(self.v_tmp)
             x_flat = x.view(-1, C)
-            v = torch.matmul(x_flat, v_matrix).view(B, T, C) #REVIEW check if i need transpose
-        else:
-            qk = self.c_attn(x)
-            q, k = qk.split(self.n_embd, dim=2)
-            v = self.v_attn(x)
-        # else:
-        #     # Standard Q, K, V projections
-        #     qkv = self.c_attn(x)
-        #     q, k, v = qkv.split(self.n_embd, dim=2)
+            v = torch.matmul(x_flat, v_matrix).view(B, T, C)
 
         # Reshape for multi-head attention
         q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
@@ -284,12 +296,17 @@ class SymbolicAttention(nn.Module):
         # Concatenate heads
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         
-        if self.use_proj:
+        if self.use_proj == 'none':
+            # No output projection - y remains as is
+            pass
+        elif self.use_proj == 'normal':
+            # Standard output projection
+            y = self.c_proj(y)
+        elif self.use_proj == 'kronecker':
+            # Kronecker-lifted output projection
             proj_matrix = self._get_kronecker_lifted_tensor(self.proj_tmp)
             y_flat = y.view(-1, C)
             y = torch.matmul(y_flat, proj_matrix.t()).view(B, T, C)
-        else:
-            y = self.c_proj(y)
         
         y = self.resid_dropout(y)
         
@@ -306,22 +323,26 @@ class TFTAttention(SymbolicAttention):
     def forward(self, x, xt, layer_idx=None, hook_manager=None, hook_state=None):
         B, T, C = x.size()
 
-        if self.use_v:
+        if self.use_v == 'none':
+            # No V matrix - Q, K from x, V is just identity (copy of xt)
+            qk = self.c_attn(x)
+            q, k = qk.split(self.n_embd, dim=2)
+            v = xt  # V is identity of xt
+        elif self.use_v == 'normal':
+            # Standard Q, K, V projections (Q, K from x, V from xt)
+            qkv = self.c_attn(x)
+            q, k, _ = qkv.split(self.n_embd, dim=2)
+            # Compute V from xt using the same projection weights
+            v = self.c_attn(xt).split(self.n_embd, dim=2)[2]  # Extract V component
+        elif self.use_v == 'kronecker':
             # Separate Q, K from input and compute V using Kronecker lifting
             qk = self.c_attn(x)
             q, k = qk.split(self.n_embd, dim=2)
             
-            # Use x_t
+            # Use x_t for V with Kronecker lifting
             v_matrix = self._get_kronecker_lifted_tensor(self.v_tmp)
-            xt_flat = xt.view(-1, C) #NOTE: this is the major change
+            xt_flat = xt.view(-1, C)
             v = torch.matmul(xt_flat, v_matrix).view(B, T, C)
-        else:
-            qk = self.c_attn(x)
-            q, k = qk.split(self.n_embd, dim=2)
-            v = self.v_attn(xt)
-        # else:
-        #     qkv = self.c_attn(x)
-        #     q, k, v = qkv.split(self.n_embd, dim=2)
 
         # reshape for multi-head attention
         q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
@@ -374,12 +395,17 @@ class TFTAttention(SymbolicAttention):
         # concatenate heads
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         
-        if self.use_proj:
+        if self.use_proj == 'none':
+            # No output projection - y remains as is
+            pass
+        elif self.use_proj == 'normal':
+            # Standard output projection
+            y = self.c_proj(y)
+        elif self.use_proj == 'kronecker':
+            # Kronecker-lifted output projection
             proj_matrix = self._get_kronecker_lifted_tensor(self.proj_tmp)
             y_flat = y.view(-1, C)
             y = torch.matmul(y_flat, proj_matrix.t()).view(B, T, C)
-        else:
-            y = self.c_proj(y)
         
         y = self.resid_dropout(y)
         

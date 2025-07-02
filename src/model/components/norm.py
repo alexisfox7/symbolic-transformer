@@ -23,10 +23,7 @@ class ChannelNorm(nn.Module):
     #TODO: old code
     def __init__(self, n_embd, n_head, bias=True):
         super().__init__()
-        assert n_embd > 0, "n_embd must be positive"
-        assert n_head > 0, "n_head must be positive"
-        assert n_embd % n_head == 0, "n_embd must be divisible by n_head"
-        
+      
         self.n_head = n_head
         self.head_dim = n_embd // n_head
         self.n_embd = n_embd

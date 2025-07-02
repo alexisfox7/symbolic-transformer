@@ -40,8 +40,6 @@ class VanillaTransformer(TransformerBase):
 
     def __init__(self, config):
         super().__init__(config)
-        assert config.vocab_size is not None, "vocab_size must be specified in config"
-        assert config.block_size is not None, "block_size must be specified in config"
         
         self.transformer = nn.ModuleDict(dict(
             wte=nn.Embedding(config.vocab_size, config.n_embd),

@@ -81,10 +81,12 @@ def create_base_parser(description="Train Transformer with Hook System"):
 
 def add_symbolic_args(parser):
     """Add symbolic-specific arguments to parser."""
-    parser.add_argument("--use_v", action='store_true', default=False,
-                       help="Use Kronecker-lifted V matrix in attention")
-    parser.add_argument("--use_proj", action='store_true', default=False,
-                       help="Use Kronecker-lifted output projection")
+    parser.add_argument("--use_v", type=str, default="none",
+                       choices=["none", "normal", "kronecker"],
+                       help="V matrix parameterization type in attention")
+    parser.add_argument("--use_proj", type=str, default="none",
+                       choices=["none", "normal", "kronecker"],
+                       help="Output projection parameterization type")
     return parser
 
 def setup_training_environment(output_dir, model_type="Transformer", trainer_type="simple"):

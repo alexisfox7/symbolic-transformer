@@ -4,7 +4,7 @@ Configuration settings for Symbolic Transformer with ALiBi positional encoding.
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Literal
 import torch
 import math
 
@@ -26,8 +26,8 @@ class TransformerConfig:
     max_position_embeddings: Optional[int] = None  # Max sequence length (None = 4x block_size)
     
     # Symbolic-specific parameters
-    use_v: bool = False                      # Use value projection constraints
-    use_proj: bool = False                   # Use output projection constraints
+    use_v: Literal["none", "normal", "kronecker"] = "none"     # V matrix parameterization type
+    use_proj: Literal["none", "normal", "kronecker"] = "none" # Output projection type
     
     # Attention parameters
     use_sparsemax: bool = False              # Use sparsemax instead of softmax in attention
@@ -50,6 +50,12 @@ class TransformerConfig:
         
         if self.max_position_embeddings is None:
             self.max_position_embeddings = self.block_size * 4
+        
+        valid_options = ["none", "normal", "kronecker"]
+        if self.use_v not in valid_options:
+            raise ValueError(f"use_v must be one of {valid_options}, got {self.use_v}")
+        if self.use_proj not in valid_options:
+            raise ValueError(f"use_proj must be one of {valid_options}, got {self.use_proj}")
     
     def update_from_tokenizer(self, tokenizer):
         """Update configuration from tokenizer."""
@@ -130,8 +136,8 @@ def print_config(config: TransformerConfig, dataset_name: str = None, model=None
     print(f"  Bias in Linear:      {config.bias}")
     
     print(f"\n🔬 SYMBOLIC FEATURES:")
-    print(f"  Kronecker V:         {config.use_v}")
-    print(f"  Kronecker Output:    {config.use_proj}")
+    print(f"  Value Matrix:         {config.use_v}")
+    print(f"  Projection Matrix:    {config.use_proj}")
     
     print(f"\n🏋️  TRAINING SETUP:")
     print(f"  Batch Size:          {config.batch_size}")
