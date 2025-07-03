@@ -36,7 +36,7 @@ class TFTTransformerBlock(nn.Module):
         
         # ffn
         ffn_out = self.ffn(xe, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
-        xe = ffn_out   
+        xe = xe + ffn_out   
 
         # output depends on whether or not cascading
         xt_out = xt_add

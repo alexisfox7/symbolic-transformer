@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/cascade_sparse_nonevproj"
+DIR="./outputs/cascade_sparse_connect"
 N=110000
 N_EMBD=384
 PRESET="small"
