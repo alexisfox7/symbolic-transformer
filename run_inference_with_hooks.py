@@ -134,6 +134,7 @@ def create_attention_matrices_visualization(attention_hook, output_dir=None, max
         #layer_head_pairs = layer_head_pairs[:16]  # Limit to 16 plots max
     
     fig, axes = plt.subplots(rows, cols, figsize=(cols * 4, rows * 4))
+
     if rows == 1 and cols == 1:
         axes = [axes]
     elif rows == 1 or cols == 1:
@@ -168,8 +169,8 @@ def create_attention_matrices_visualization(attention_hook, output_dir=None, max
         # Set ticks and labels
         ax.set_xticks(range(len(display_tokens)))
         ax.set_yticks(range(len(display_tokens)))
-        ax.set_xticklabels(display_tokens, rotation=90, ha='center')
-        ax.set_yticklabels(display_tokens)
+        ax.set_xticklabels(display_tokens, rotation=90, ha='center', fontsize = 8)
+        ax.set_yticklabels(display_tokens, fontsize = 8)
         
         # Labels and title
         ax.set_xlabel('Key Position')
@@ -193,8 +194,8 @@ def create_attention_matrices_visualization(attention_hook, output_dir=None, max
     for idx in range(len(layer_head_pairs), len(axes)):
         axes[idx].set_visible(False)
     
-    plt.suptitle('Attention Weight Matrices', fontsize=16, fontweight='bold')
-    plt.tight_layout()
+    plt.suptitle('Attention Weight Matrices', fontsize=16, fontweight='bold', y = 0.99)
+    plt.tight_layout(rect=[0, 0, 1, 0.99])
     
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
@@ -559,7 +560,7 @@ def main():
     parser.add_argument('--output-dir', type=str, default='vanilla',
                         help='Directory to save visualizations and analysis')
     parser.add_argument('--model-type', type=str, default='vanilla')
-    parser.add_argument('--prompt', type=str, default="Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. He smiled. Mia saw a cat. She", 
+    parser.add_argument('--prompt', type=str, default="There is someone outside. Mia saw a cat. She laughed. The ball moved. Mia saw a cat. She", 
                         help='Text prompt for generation') # "The door was open. Tim had a key to the door. Tim used", 
     parser.add_argument('--max-tokens', type=int, default=5,  
                         help='Maximum number of tokens to generate')
