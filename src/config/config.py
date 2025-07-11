@@ -28,6 +28,7 @@ class TransformerConfig:
     # Symbolic-specific parameters
     use_v: Literal["none", "normal", "kronecker"] = "none"     # V matrix parameterization type
     use_proj: Literal["none", "normal", "kronecker"] = "none" # Output projection type
+    cascade: bool = False
     
     # Attention parameters
     use_sparsemax: bool = False              # Use sparsemax instead of softmax in attention
