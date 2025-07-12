@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/cascade_connect_kronecker_sparse"
+DIR="./outputs/tft_kronecker_sparse"
 N=110000
 N_EMBD=384
 PRESET="small"
@@ -47,9 +47,9 @@ accelerate launch \
     --clip_grad_norm 1.0 \
     --val_ratio 0.1 \
     --validate_every 1 \
-    --cascade \
     --use_proj kronecker --use_v kronecker \
-    --use_sparsemax
+  #  --cascade \
+  #  --use_sparsemax
   #  --learnable_temperature \
   
 echo "TFT Training completed!"
