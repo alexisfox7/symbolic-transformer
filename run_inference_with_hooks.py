@@ -553,6 +553,29 @@ def analyze_attention_patterns(attention_hook, output_file=None):
             json.dump(data_to_save, f, indent=2, default=str)
         logger.info(f"\nDetailed attention data saved to: {output_file}")
 
+def analyze_embeddings_quick(model, tokenizer):
+    """Quick embedding analysis."""
+    embeddings = model.transformer.wte.weight.data
+    norms = torch.norm(embeddings, dim=1)
+    
+    print(f"\n=== EMBEDDING ANALYSIS ===")
+    print(f"Embedding shape: {embeddings.shape}")
+    print(f"Norm stats: min={norms.min():.6f}, max={norms.max():.6f}, mean={norms.mean():.6f}")
+    
+    # Check for near-zero embeddings
+    near_zero = (norms < 1e-6).sum().item()
+    print(f"Near-zero embeddings: {near_zero}")
+    
+    # Check specific tokens
+    test_tokens = ["Ben", "She", "the", ".", ","]
+    for token in test_tokens:
+        try:
+            token_id = tokenizer.encode(token, add_special_tokens=False)[0]
+            norm = norms[token_id].item()
+            print(f"'{token}' (ID {token_id}): norm = {norm:.6f}")
+        except:
+            pass
+
 
 def main():
     parser = argparse.ArgumentParser(description='Run inference with hooks and visualization')
@@ -663,6 +686,7 @@ def main():
             # Text analysis
             save_path = os.path.join(args.output_dir, 'attention_analysis.json') if args.save_attention else None
             analyze_attention_patterns(attention_hook, save_path)
+            analyze_embeddings_quick(model, tokenizer)
             
             # Generate visualizations
             if not args.no_graphs and not args.matrices_only:
