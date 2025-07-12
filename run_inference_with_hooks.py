@@ -583,7 +583,7 @@ def main():
     parser.add_argument('--output-dir', type=str, default='vanilla',
                         help='Directory to save visualizations and analysis')
     parser.add_argument('--model-type', type=str, default='vanilla')
-    parser.add_argument('--prompt', type=str, default="Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. She", 
+    parser.add_argument('--prompt', type=str, default="Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. Mia saw a cat. She", 
                         help='Text prompt for generation') # "The door was open. Tim had a key to the door. Tim used", 
     parser.add_argument('--max-tokens', type=int, default=2,  
                         help='Maximum number of tokens to generate')
