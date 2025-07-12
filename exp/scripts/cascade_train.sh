@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/tft_kronecker"
+DIR="./outputs/cascade_fullvp"
 N=110000
 N_EMBD=384
 PRESET="small"
@@ -47,8 +47,8 @@ accelerate launch \
     --clip_grad_norm 1.0 \
     --val_ratio 0.1 \
     --validate_every 1 \
-    --use_proj kronecker --use_v kronecker \
-  #  --cascade \
+    --use_proj normal --use_v normal \
+    --cascade
   #  --use_sparsemax
   #  --learnable_temperature \
   
