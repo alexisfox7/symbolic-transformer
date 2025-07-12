@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/tft_kronecker_sparse"
+DIR="./outputs/tft_kronecker"
 N=110000
 N_EMBD=384
 PRESET="small"
