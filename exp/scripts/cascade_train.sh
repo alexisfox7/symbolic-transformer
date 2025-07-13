@@ -34,7 +34,7 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 # training
 accelerate launch \
     --num_processes $NUM_GPUS \
-    --multi_gpu \1
+    --multi_gpu \
     --mixed_precision fp16 \
     exp/examples/train_tft.py \
     --preset $PRESET \
