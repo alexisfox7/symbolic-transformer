@@ -10,10 +10,6 @@ import warnings
 warnings.filterwarnings("ignore", message=".*kernel version.*")
 warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
-warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
-warnings.filterwarnings("ignore", category=FutureWarning, module="datasets")
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-warnings.filterwarnings("ignore", message=".*torch.utils._pytree._register_pytree_node.*")
 
 import torch
 from torch.utils.data import DataLoader
