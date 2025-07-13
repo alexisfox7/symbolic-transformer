@@ -19,8 +19,6 @@ JSON_LOG_STEPS=50
 
 echo "Symbolic Transformer Training: $NUM_EPOCHS epochs, $((BATCH_SIZE * NUM_GPUS)) batch size"
 
-# i dont think i need to make output directory
-
 # check GPU availability
 python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, GPUs: {torch.cuda.device_count()}')"
 

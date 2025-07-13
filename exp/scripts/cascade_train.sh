@@ -20,7 +20,7 @@ JSON_LOG_STEPS=50
 echo "Token-Factored Transformer Cascade Training: $NUM_EPOCHS epochs, $((BATCH_SIZE * NUM_GPUS)) batch size"
 echo "Architecture: Stream separation (Xt + Xe) without vocabulary constraints"
 
-# Check GPU availability
+# check GPU availability
 python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, GPUs: {torch.cuda.device_count()}')"
 
 if [ $? -ne 0 ]; then
@@ -28,7 +28,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Training
+# training
 accelerate launch \
     --num_processes $NUM_GPUS \
     --multi_gpu \

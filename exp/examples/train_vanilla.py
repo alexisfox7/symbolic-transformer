@@ -2,7 +2,7 @@ import sys
 import os
 import warnings
 
-# Suppress accelerate kernel version warnings globally
+# suppress accelerate kernel version warnings globally
 warnings.filterwarnings("ignore", message=".*kernel version.*")
 warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
