@@ -15,6 +15,13 @@ from src.config.config import TransformerConfig, get_preset_config
 from src.mytokenizers import create_tokenizer
 from src.utils.data_utils import load_and_prepare_data
 from datasets import load_dataset
+import warnings
+
+# suppress accelerate kernel version warnings globally
+warnings.filterwarnings("ignore", message=".*kernel version.*")
+warnings.filterwarnings("ignore", message=".*MPS.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
+
 
 def log_if_main(logger, message, trainer_type="simple"):
     """Log only from main process when using accelerate."""

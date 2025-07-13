@@ -9,6 +9,13 @@ from torch.utils.data import DataLoader
 from datasets import load_dataset
 from transformers import AutoTokenizer
 import logging
+import warnings
+
+# suppress accelerate kernel version warnings globally
+warnings.filterwarnings("ignore", message=".*kernel version.*")
+warnings.filterwarnings("ignore", message=".*MPS.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
+
 
 logger = logging.getLogger(__name__)
 
