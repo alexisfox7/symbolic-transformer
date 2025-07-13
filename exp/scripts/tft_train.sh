@@ -28,6 +28,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# add project root to PYTHONPATH
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+
 # Training
 accelerate launch \
     --num_processes $NUM_GPUS \
