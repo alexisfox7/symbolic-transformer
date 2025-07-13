@@ -10,11 +10,6 @@ import sys
 import torch
 import logging
 from torch.utils.data import DataLoader, random_split
-
-from src.config.config import TransformerConfig, get_preset_config
-from src.mytokenizers import create_tokenizer
-from src.utils.data_utils import load_and_prepare_data
-from datasets import load_dataset
 import warnings
 
 # suppress accelerate kernel version warnings globally
@@ -22,6 +17,8 @@ warnings.filterwarnings("ignore", message=".*kernel version.*")
 warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
+from src.config.config import get_preset_config
+from src.utils.data_utils import load_and_prepare_data
 
 def log_if_main(logger, message, trainer_type="simple"):
     """Log only from main process when using accelerate."""

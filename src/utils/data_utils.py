@@ -4,17 +4,22 @@ Simple data utilities for TFT-GPT.
 Handles TinyStories, Wikipedia, and code datasets.
 """
 
+import warnings
+
+# suppress warnings before importing libraries that might trigger them
+warnings.filterwarnings("ignore", message=".*kernel version.*")
+warnings.filterwarnings("ignore", message=".*MPS.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
+warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
+warnings.filterwarnings("ignore", category=FutureWarning, module="datasets")
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*torch.utils._pytree._register_pytree_node.*")
+
 import torch
 from torch.utils.data import DataLoader
 from datasets import load_dataset
 from transformers import AutoTokenizer
 import logging
-import warnings
-
-# suppress accelerate kernel version warnings globally
-warnings.filterwarnings("ignore", message=".*kernel version.*")
-warnings.filterwarnings("ignore", message=".*MPS.*")
-warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
 
 logger = logging.getLogger(__name__)
