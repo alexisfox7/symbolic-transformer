@@ -1,7 +1,7 @@
 #examples/training_utils.py
 """
 Shared utilities for training scripts.
-Reduces duplication between vanilla and symbolic training.
+Reduces duplication between vanilla and tft/symbolic training.
 """
 
 import argparse
@@ -74,8 +74,6 @@ def create_base_parser(description="Train Transformer with Hook System"):
     # attention parameters
     parser.add_argument("--use_sparsemax", action="store_true", default=False,
                        help="Use sparsemax instead of softmax in attention")
-    parser.add_argument("--learnable_temperature", action="store_true", default=False,
-                       help="Use learnable temperature in attention")
     
     return parser
 
@@ -119,7 +117,6 @@ def create_config_from_args(args, symbolic_features=None):
     if args.learning_rate: config.learning_rate = args.learning_rate
     config.num_epochs = args.num_epochs
     config.use_sparsemax = args.use_sparsemax
-    config.learnable_temperature = args.learnable_temperature
     
     if symbolic_features:
         for feature, value in symbolic_features.items():

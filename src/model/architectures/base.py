@@ -78,69 +78,63 @@ class TransformerBase(nn.Module):
         
         Args:
             input_ids: Starting sequence of token ids [batch_size, seq_len]
-            max_new_tokens: Number of new tokens to generate
-            temperature: Sampling temperature
-            top_k: If specified, only sample from top k tokens
-            tokenizer: Optional tokenizer for decoding tokens (needed for hooks)
-            
         Returns:
             Generated token ids [batch_size, seq_len + max_new_tokens]
         """
-        # Handle both 'input_ids' and 'idx' parameter names for compatibility
+
         if input_ids is None:
             raise ValueError("input_ids cannot be None")
         
-        # Prepare generation state for hooks
+        # prepare generation state for hooks
         generation_state = {
             'temperature': temperature,
             'top_k': top_k,
             'max_new_tokens': max_new_tokens
         }
         
-        # Get initial tokens for hooks
+        # get initial tokens for hooks
         tokens = []
         if tokenizer is not None and self.hook_manager is not None:
             tokens = [tokenizer.decode([t]) for t in input_ids[0].tolist()]
             self.hook_manager.on_generation_begin(tokens, generation_state)
             
         for position in range(max_new_tokens):
-            # Crop sequence if it exceeds block size
+            # crop sequence if it exceeds block size
             idx_cond = input_ids if input_ids.size(1) <= self.config.block_size else input_ids[:, -self.config.block_size:]
             
-            # Hook: before forward pass
+            # hook: before forward pass
             if self.hook_manager is not None:
                 self.hook_manager.on_forward_begin(idx_cond, position, generation_state)
             
-            # Get predictions
+            # get predictions
             outputs = self(idx_cond, hook_state={'position': position, 'tokens': tokens})
             logits = outputs['logits']
             
-            # Hook: after forward pass
+            # hook: after forward pass
             if self.hook_manager is not None:
                 self.hook_manager.on_forward_end(logits, position, generation_state)
             
-            # Focus on last time step
+            # focus on last time step
             logits = logits[:, -1, :] / temperature
-            
-            # Optionally apply top-k sampling
+
             if top_k is not None:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = -float('Inf')
             
-            # Apply softmax to get probabilities
+            # apply softmax to get probabilities
             probs = F.softmax(logits, dim=-1)
             
-            # Sample from distribution
+            # sample from distribution
             idx_next = torch.multinomial(probs, num_samples=1)
             
-            # Append to sequence
+            # append to sequence
             input_ids = torch.cat((input_ids, idx_next), dim=1)
             
-            # Update tokens for hooks
+            # update tokens for hooks
             if tokenizer is not None and self.hook_manager is not None:
                 tokens.append(tokenizer.decode([idx_next[0].item()]))
         
-        # Hook: generation complete
+        # hook: generation complete
         if self.hook_manager is not None and tokenizer is not None:
             final_tokens = [tokenizer.decode([t]) for t in input_ids[0].tolist()]
             self.hook_manager.on_generation_end(final_tokens, generation_state)
@@ -149,7 +143,6 @@ class TransformerBase(nn.Module):
 
     # UTILITY #
 
-    #REVIEW check that it doesn't count the shared embeddings
     def get_num_params(self, non_embedding=True):
         """Count model parameters."""
         n_params = sum(p.numel() for p in self.parameters())

@@ -1,10 +1,9 @@
 # src/inference/hooks.py
 """
 Inference hook system for extracting model internals during generation.
-Parallel to training hooks but focused on model activations and computations.
 """
 
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, List, Optional
 import torch
 import logging
 
@@ -13,16 +12,13 @@ logger = logging.getLogger(__name__)
 
 class InferenceHook:
     """
-    Base class for inference-time hooks that observe model internals.
-    
-    Unlike training hooks (which observe trainer state), inference hooks
-    observe model computations during forward passes.
+    Base class for inference-time hooks that observe model computations during forward passes.
     """
     
     def __init__(self, name: str):
         self.name = name
         self.enabled = True
-        self.data = []  # Most hooks will accumulate data
+        self.data = [] 
     
     def __repr__(self):
         return f"InferenceHook('{self.name}', enabled={self.enabled})"
@@ -31,7 +27,7 @@ class InferenceHook:
         """Clear accumulated data"""
         self.data = []
     
-    # Core inference events
+    # core inference events
     def on_generation_begin(self, prompt_tokens: List[str], state: Dict[str, Any]) -> None:
         """Called at start of generation"""
         pass
@@ -123,7 +119,7 @@ class InferenceHookManager:
             except Exception as e:
                 self.logger.error(f"Inference hook {hook.name}.{method_name} failed: {e}")
     
-    # Convenience methods for models to call
+    # convenience methods for models to call
     def on_generation_begin(self, prompt_tokens: List[str], state: Dict[str, Any]) -> None:
         self._call_hook_method('on_generation_begin', prompt_tokens, state)
     
@@ -151,9 +147,6 @@ class InferenceHookManager:
 class AttentionExtractionHook(InferenceHook):
     """
     Extracts attention patterns for knowledge graph construction.
-    
-    Stores significant attention edges that can later be used to build
-    attention-based knowledge graphs.
     """
     
     def __init__(self, threshold: float = 0.1, store_values: bool = False):
@@ -176,16 +169,15 @@ class AttentionExtractionHook(InferenceHook):
                             attention_weights: torch.Tensor, 
                             query: torch.Tensor, key: torch.Tensor, value: torch.Tensor,
                             tokens: List[str], position: int, state: Dict[str, Any]) -> None:
-        """Simple fix - just handle the index bounds properly"""
         
         att_matrix = attention_weights[0].detach().cpu()
         seq_len = att_matrix.shape[0]
         
-        # Ensure we have enough tokens
+        # ensure have enough tokens
         while len(tokens) < seq_len:
             tokens.append(f"<POS_{len(tokens)}>")
         
-        # Rest of your existing code...
+        # store edges above threshold for knowledge graph 
         significant_edges = []
         for i in range(seq_len):
             for j in range(seq_len):
@@ -195,12 +187,12 @@ class AttentionExtractionHook(InferenceHook):
                         'source_pos': j,
                         'target_pos': i,  
                         'weight': weight,
-                        'source_token': tokens[j],  # Now safe
-                        'target_token': tokens[i]   # Now safe
+                        'source_token': tokens[j], 
+                        'target_token': tokens[i]   
                     }
                     significant_edges.append(edge_data)
         
-        # Store record (your existing code)
+        # store record
         attention_record = {
             'layer': layer_idx,
             'head': head_idx,
@@ -255,39 +247,11 @@ class AttentionExtractionHook(InferenceHook):
             'total_given': sum(a['weight'] for a in given_attention)
         }
 
-
-# Factory functions
-def create_attention_extraction_hook(threshold: float = 0.1, store_values: bool = False) -> AttentionExtractionHook:
-    """Create an attention extraction hook"""
-    return AttentionExtractionHook(threshold, store_values)
-
-
-# Example of other hooks you might want:
-class SymbolicStreamHook(InferenceHook):
-    """Hook for tracking symbolic vs contextual stream activations"""
-    
-    def __init__(self):
-        super().__init__("symbolic_stream_tracker")
-        self.stream_data = []
-    
-    def on_attention_computed(self, layer_idx, head_idx, attention_weights, 
-                            query, key, value, tokens, position, state):
-        # For symbolic transformers, track which stream the attention operates on
-        if 'stream_type' in state:  # Assuming models provide this info
-            self.stream_data.append({
-                'layer': layer_idx,
-                'head': head_idx,
-                'position': position,
-                'stream_type': state['stream_type'],  # 'symbolic' or 'contextual'
-                'attention_norm': attention_weights.norm().item()
-            })
-
-
-class ActivationHook(InferenceHook):
-    """Hook for tracking intermediate activations"""
+class FFNActivationTracker(InferenceHook):
+    """Hook for tracking FFN activations and norms"""
     
     def __init__(self, layers_to_track: List[int] = None):
-        super().__init__("activation_tracker")
+        super().__init__("ffn_activation_tracker")
         self.layers_to_track = layers_to_track or []
         self.activations = []
     

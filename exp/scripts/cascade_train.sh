@@ -50,6 +50,5 @@ accelerate launch \
     --use_proj normal --use_v normal \
     --cascade
   #  --use_sparsemax
-  #  --learnable_temperature \
   
 echo "TFT Training completed!"

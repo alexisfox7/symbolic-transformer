@@ -4,6 +4,6 @@ from .tft import TFTTransformer
 
 __all__ = [
     'SymbolicTransformer',
-    'VanillaTransformer'
+    'VanillaTransformer',
     'TFTTransformer'
 ] 

@@ -4,6 +4,7 @@ Run inference with hooks on a saved checkpoint.
 Matrix visualization for attention patterns.
 """
 
+from collections import defaultdict
 import torch
 import argparse
 import os
@@ -14,64 +15,44 @@ from src.model import get_model
 from src.config import TransformerConfig
 from src.inference.generation import run_generation
 from src.inference.hooks import (
-    create_attention_extraction_hook,
     AttentionExtractionHook,
-    SymbolicStreamHook,
-    ActivationHook
+    FFNActivationTracker
 )
 from src.mytokenizers import create_tokenizer, from_pretrained
 import logging
 import json
 import matplotlib.pyplot as plt
-import networkx as nx
-import numpy as np
-from collections import defaultdict, Counter
-import seaborn as sns
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def load_model_from_checkpoint(checkpoint_path, device='cpu', arg_model_type = "vanilla"):
+def load_model_from_checkpoint(checkpoint_path, device, arg_model_type):
     """Load model from checkpoint."""
     logger.info(f"Loading checkpoint from: {checkpoint_path}")
     
-    # Load checkpoint
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     
-    # Extract config
+    # extract config
     if 'config' in checkpoint:
         config_data = checkpoint['config']
-        # Handle both dict and TransformerConfig object
+        # handle both dict and TransformerConfig object
         if hasattr(config_data, '__dict__'):
-            config = config_data  # Already a TransformerConfig
+            config = config_data 
         else:
             config = TransformerConfig(**config_data)
     else:
         raise ValueError("No config found in checkpoint")
     
-    # Determine model type from training_result or guess from structure
     model_type = arg_model_type 
-    if 'training_result' in checkpoint and 'model_type' in checkpoint['training_result']:
-        model_type = checkpoint['training_result']['model_type']
-    elif 'model_type' in checkpoint:
-        model_type = checkpoint['model_type']
-    else:
-        # Try to detect from model structure
-        state_dict = checkpoint.get('model_state_dict', {})
-        if any('alibi' in k.lower() or 'vocab_ffn' in k.lower() for k in state_dict.keys()):
-            model_type = 'symbolic'
-    
     logger.info(f"Model type: {model_type}")
-    
-    # Create model
     model = get_model(model_type, config)
     
-    # Load state dict
     if 'model_state_dict' in checkpoint:
         model.load_state_dict(checkpoint['model_state_dict'])
     else:
-        # Try loading directly if it's just the state dict
+        # try loading directly if it's just the state dict
         model.load_state_dict(checkpoint)
     
     model.to(device)
@@ -85,14 +66,6 @@ def load_model_from_checkpoint(checkpoint_path, device='cpu', arg_model_type = "
 def create_attention_matrices_visualization(attention_hook, output_dir=None, max_layers=3, max_heads=4):
     """
     Create simple matrix visualizations of attention patterns.
-    Shows actual attention weight matrices for selected layers/heads.
-    ONLY analyzes the final complete sequence (last generation step).
-    
-    Args:
-        attention_hook: AttentionExtractionHook with collected data
-        output_dir: Directory to save visualizations
-        max_layers: Maximum number of layers to visualize
-        max_heads: Maximum number of heads per layer to visualize
     """
     logger.info("Creating attention matrix visualizations (final sequence only)...")
     
@@ -100,11 +73,11 @@ def create_attention_matrices_visualization(attention_hook, output_dir=None, max
         logger.warning("No attention data available for matrix visualization")
         return
     
-    # Find the maximum position (final generation step)
+    # find the maximum position (final generation step)
     max_position = max(record['position'] for record in attention_hook.attention_data)
     logger.info(f"Analyzing final sequence at position {max_position}")
     
-    # Group attention data by layer and head - ONLY from final step
+    # group attention data by layer and head 
     attention_by_layer_head = defaultdict(list)
     for record in attention_hook.attention_data:
         if record['position'] == max_position and 'attention_matrix' in record:
@@ -115,10 +88,10 @@ def create_attention_matrices_visualization(attention_hook, output_dir=None, max
         logger.warning("No attention matrices found in data")
         return
     
-    # Select layers and heads to visualize
+    # select layers and heads to visualize
     layer_head_pairs = sorted(attention_by_layer_head.keys())[:max_layers * max_heads]
     
-    # Calculate grid dimensions
+    # calculate grid dimensions
     n_plots = len(layer_head_pairs)
     if n_plots == 1:
         rows, cols = 1, 1
@@ -148,48 +121,33 @@ def create_attention_matrices_visualization(attention_hook, output_dir=None, max
         ax = axes[idx]
         records = attention_by_layer_head[(layer, head)]
         
-        # Use the last record (final generation step) for this layer/head
+        # use the last record (final generation step) for this layer/head
         record = records[-1] if records else records[0]
         attention_matrix = record['attention_matrix'].numpy()
         tokens = record.get('tokens', [])
         
-        # Limit matrix size for readability
+        # limit matrix size for readability
         max_seq_len = attention_matrix.shape[0]
         attention_matrix = attention_matrix[:max_seq_len, :max_seq_len]
         display_tokens = tokens[:max_seq_len] if tokens else [f"pos_{i}" for i in range(max_seq_len)]
         
-        # Create heatmap
+        # create heatmap
         im = ax.imshow(attention_matrix, cmap='Blues', aspect='auto', vmin=0, vmax=1)
-        
-        # Add colorbar
         cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
         cbar.set_label('Attention Weight', rotation=270, labelpad=15)
         
-        # Set ticks and labels
         ax.set_xticks(range(len(display_tokens)))
         ax.set_yticks(range(len(display_tokens)))
         ax.set_xticklabels(display_tokens, rotation=90, ha='center', fontsize = 8)
         ax.set_yticklabels(display_tokens, fontsize = 8)
-        
-        # Labels and title
+
         ax.set_xlabel('Key Position')
         ax.set_ylabel('Query Position')
         ax.set_title(f'Layer {layer}, Head {head}\nFinal Sequence (pos {record["position"]})')
         
-        # Add grid for better readability
         ax.grid(True, alpha=0.3)
-        
-        # Highlight strong attention weights with text annotations
-        if attention_matrix.shape[0] <= 10 and attention_matrix.shape[1] <= 10:
-            for i in range(attention_matrix.shape[0]):
-                for j in range(attention_matrix.shape[1]):
-                    weight = attention_matrix[i, j]
-                    if weight > 0.1:  # Only show significant weights
-                        color = 'white' if weight > 0.5 else 'black'
-                        ax.text(j, i, f'{weight:.2f}', ha='center', va='center', 
-                               color=color, fontsize=8, fontweight='bold')
     
-    # Hide unused subplots
+    # hide unused subplots
     for idx in range(len(layer_head_pairs), len(axes)):
         axes[idx].set_visible(False)
     
@@ -207,7 +165,7 @@ def analyze_attention_patterns(attention_hook, output_file=None):
     """Analyze and optionally save attention patterns."""
     logger.info("\n=== Attention Pattern Analysis ===")
     
-    # Get unique tokens that received/gave attention
+    # get unique tokens that received/gave attention
     all_tokens = set()
     for record in attention_hook.attention_data:
         for edge in record['edges']:
@@ -216,7 +174,7 @@ def analyze_attention_patterns(attention_hook, output_file=None):
     
     logger.info(f"Unique tokens involved in attention: {len(all_tokens)}")
     
-    # Analyze attention by layer/head
+    # analyze attention by layer/head
     layer_head_stats = {}
     for record in attention_hook.attention_data:
         key = (record['layer'], record['head'])
@@ -242,7 +200,7 @@ def analyze_attention_patterns(attention_hook, output_file=None):
                    f"avg weight: {stats['avg_weight']:.4f}, "
                    f"max weight: {stats['max_weight']:.4f}")
     
-    # Find most attended tokens
+    # find most attended tokens
     token_attention = {}
     for record in attention_hook.attention_data:
         for edge in record['edges']:
@@ -256,7 +214,7 @@ def analyze_attention_patterns(attention_hook, output_file=None):
     for token, total_weight in top_attended:
         logger.info(f"  '{token}': {total_weight:.4f}")
     
-    # Save detailed data if requested
+    # save detailed data if wanted
     if output_file:
         data_to_save = {
             'attention_records': len(attention_hook.attention_data),
@@ -270,65 +228,35 @@ def analyze_attention_patterns(attention_hook, output_file=None):
             json.dump(data_to_save, f, indent=2, default=str)
         logger.info(f"\nDetailed attention data saved to: {output_file}")
 
-def analyze_embeddings_quick(model, tokenizer):
-    """Quick embedding analysis."""
-    embeddings = model.transformer.wte.weight.data
-    norms = torch.norm(embeddings, dim=1)
-    
-    print(f"\n=== EMBEDDING ANALYSIS ===")
-    print(f"Embedding shape: {embeddings.shape}")
-    print(f"Norm stats: min={norms.min():.6f}, max={norms.max():.6f}, mean={norms.mean():.6f}")
-    
-    # Check for near-zero embeddings
-    near_zero = (norms < 1e-6).sum().item()
-    print(f"Near-zero embeddings: {near_zero}")
-    
-    # Check specific tokens
-    test_tokens = ["Ben", "She", "the", ".", ","]
-    for token in test_tokens:
-        try:
-            token_id = tokenizer.encode(token, add_special_tokens=False)[0]
-            norm = norms[token_id].item()
-            print(f"'{token}' (ID {token_id}): norm = {norm:.6f}")
-        except:
-            pass
-
-
 def main():
     # basic args
     parser = argparse.ArgumentParser(description='Run inference with hooks and visualization')
     parser.add_argument('checkpoint', type=str, help='Path to model checkpoint')
     parser.add_argument('--output-dir', type=str, default='vanilla',
                         help='Directory to save visualizations and analysis')
-    parser.add_argument('--model-type', type=str, default='vanilla')
-    parser.add_argument('--prompt', type=str, default="Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. Mia saw a cat. She", 
-                        help='Text prompt for generation') # "The door was open. Tim had a key to the door. Tim used", 
-    parser.add_argument('--max-tokens', type=int, default=2,  
-                        help='Maximum number of tokens to generate')
-    parser.add_argument('--temperature', type=float, default=0.8, 
-                        help='Sampling temperature')
-    parser.add_argument('--top-k', type=int, default=50, 
-                        help='Top-k sampling')
-    parser.add_argument('--tokenizer', type=str, default='gpt2',
-                        help='Tokenizer type (character, gpt2, or path to pretrained)')
-    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
-                        help='Device to run on')
+    parser.add_argument('--model-type', type=str, default='vanilla', choices=['vanilla', 'tft', 'symbolic'])
+    parser.add_argument('--prompt', type=str, default="Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. Mia saw a cat. She") 
+    # "The door was open. Tim had a key to the door. Tim used", 
+    
+    parser.add_argument('--max-tokens', type=int, default=2)
+    parser.add_argument('--temperature', type=float, default=0.8)
+    parser.add_argument('--top-k', type=int, default=50)
+    parser.add_argument('--tokenizer', type=str, default='gpt2')
+    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     
     # settings for the functions
     parser.add_argument('--attention-threshold', type=float, default=0.1,
                         help='Threshold for attention extraction')
     parser.add_argument('--save-attention', type=str, default=None,
                         help='Path to save attention analysis JSON')
-    parser.add_argument('--track-activations', action='store_true',
-                        help='Track FFN activations')
     parser.add_argument('--max-matrix-layers', type=int, default=6,
                         help='Maximum layers to show in matrix visualization')
     parser.add_argument('--max-matrix-heads', type=int, default=6,
                         help='Maximum heads per layer in matrix visualization')
+    parser.add_argument('--track-ffn', action='store_true',
+                        help='Enable FFN hook tracking')
     
     args = parser.parse_args()
-    
-    # create output dir
     args.output_dir = os.path.join('outputs', 'inference', args.output_dir)
     os.makedirs(args.output_dir, exist_ok=True)
     
@@ -342,30 +270,21 @@ def main():
     else:
         tokenizer = create_tokenizer(args.tokenizer)
     
-    # Create hooks
+    # create hooks
     hooks = []
-    # Always add attention extraction
-    attention_hook = create_attention_extraction_hook(
+    attention_hook = AttentionExtractionHook(
         threshold=args.attention_threshold,
         store_values=False
     )
     hooks.append(attention_hook)
     
-    # Optionally add activation tracking
-    if args.track_activations:
-        activation_hook = ActivationHook()
-        hooks.append(activation_hook)
-    
-    # Add symbolic stream tracker if it's a symbolic model
-    if hasattr(model, 'transformer') and hasattr(model.transformer.h[0], 'ffn'):
-        if hasattr(model.transformer.h[0].ffn, 'vocab_embeddings_ref'):
-            symbolic_hook = SymbolicStreamHook()
-            hooks.append(symbolic_hook)
-            logger.info("Detected symbolic model, adding stream tracker")
-    
+    if args.track_ffn:
+        ffn_activation_tracker = FFNActivationTracker()
+        hooks.append(ffn_activation_tracker)
+ 
     logger.info(f"Running with {len(hooks)} hooks: {[h.name for h in hooks]}")
     
-    # Run generation
+    # run generation
     logger.info(f"\nGenerating text from prompt: '{args.prompt}'")
     logger.info(f"Parameters: max_tokens={args.max_tokens}, temp={args.temperature}, top_k={args.top_k}")
     
@@ -387,16 +306,14 @@ def main():
     print(generated_text)
     logger.info(f"{'='*60}\n")
     
-    # Analyze hooks
-    # Analyze attention patterns
+    # analyze hooks
     attention_hook = next((h for h in hooks if isinstance(h, AttentionExtractionHook)), None)
     if attention_hook:
-        # Text analysis
+        # text analysis
         save_path = os.path.join(args.output_dir, 'attention_analysis.json') if args.save_attention else None
         analyze_attention_patterns(attention_hook, save_path)
-        analyze_embeddings_quick(model, tokenizer)
         
-        # Generate matrix visualizations
+        # generate matrix visualizations
         logger.info("\n=== Creating Matrix Visualizations ===")
         try:
             create_attention_matrices_visualization(
@@ -409,13 +326,13 @@ def main():
         except Exception as e:
             logger.error(f"Error creating matrix visualizations: {e}")
     
-    # Report activation stats if tracked
-    if args.track_activations:
-        activation_hook = next((h for h in hooks if isinstance(h, ActivationHook)), None)
-        if activation_hook and activation_hook.activations:
-            logger.info(f"\nTracked {len(activation_hook.activations)} activation records")
-            avg_input_norm = sum(a['input_norm'] for a in activation_hook.activations) / len(activation_hook.activations)
-            avg_output_norm = sum(a['output_norm'] for a in activation_hook.activations) / len(activation_hook.activations)
+    # report activation stats if tracked
+    if args.track_ffn:
+        ffn_tracker = next((h for h in hooks if isinstance(h, FFNActivationTracker)), None)
+        if ffn_tracker and ffn_tracker.activations:
+            logger.info(f"\nTracked {len(ffn_tracker.activations)} FFN activation records")
+            avg_input_norm = sum(a['input_norm'] for a in ffn_tracker.activations) / len(ffn_tracker.activations)
+            avg_output_norm = sum(a['output_norm'] for a in ffn_tracker.activations) / len(ffn_tracker.activations)
             logger.info(f"Average FFN input norm: {avg_input_norm:.4f}")
             logger.info(f"Average FFN output norm: {avg_output_norm:.4f}")
     

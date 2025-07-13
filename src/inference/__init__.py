@@ -1,6 +1,6 @@
 #./inference/__init__.py
 """
-Inference module for cleanGPT
+Inference module
 Provides utilities for text generation and model inference
 """
 
@@ -10,7 +10,7 @@ from .generation import (
     get_generation_args
 )
 
-#export main functions
+# export main functions
 __all__ = [
     'run_generation',
     'batch_generate',

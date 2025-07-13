@@ -1,6 +1,6 @@
 #./config.py
 """
-Configuration settings for Symbolic Transformer with ALiBi positional encoding.
+Configuration settings
 """
 
 from dataclasses import dataclass
@@ -12,37 +12,36 @@ import math
 class TransformerConfig:
     """Configuration class for Symbolic Transformer models."""
     
-    # Model architecture
-    block_size: int = 128                    # Training sequence length
-    vocab_size: Optional[int] = None         # Vocabulary size (set by tokenizer)
-    n_layer: int = 6                         # Number of transformer layers
-    n_head: int = 6                          # Number of attention heads
-    n_embd: int = 384                        # Embedding dimension
-    dropout: float = 0.1                     # Dropout probability
-    bias: bool = False                       # Use bias in linear layers
+    # core model architecture
+    block_size: int = 128                    # training sequence length
+    vocab_size: Optional[int] = None         # vocabulary size (set by tokenizer)
+    n_layer: int = 6                         # # of transformer layers
+    n_head: int = 6                          # # of attention heads
+    n_embd: int = 384                        # embedding dimension
+    dropout: float = 0.1                     # dropout probability
+    bias: bool = False                       # use bias in linear layers
     
     # ALiBi parameters
     #REVIEW is this used properly
-    max_position_embeddings: Optional[int] = None  # Max sequence length (None = 4x block_size)
+    max_position_embeddings: Optional[int] = None  # max sequence length (None = 4x block_size)
     
-    # Symbolic-specific parameters
-    use_v: Literal["none", "normal", "kronecker"] = "none"     # V matrix parameterization type
+    # symbolic/tft-specific parameters
+    use_v: Literal["none", "normal", "kronecker"] = "none"    # V matrix parameterization type
     use_proj: Literal["none", "normal", "kronecker"] = "none" # Output projection type
     cascade: bool = False
     
-    # Attention parameters
-    use_sparsemax: bool = False              # Use sparsemax instead of softmax in attention
-    learnable_temperature: bool = False      # Use learnable temperature in attention
+    # attention parameters
+    use_sparsemax: bool = False              # use sparsemax instead of softmax in attention
 
-    # Training parameters
-    batch_size: int = 32                     # Batch size
-    num_epochs: int = 5                      # Training epochs
-    learning_rate: float = 3e-4              # Learning rate
-    weight_decay: float = 0.01               # Weight decay
+    # training parameters
+    batch_size: int = 32                     # batch size
+    num_epochs: int = 5                      # training epochs
+    learning_rate: float = 3e-4              # learning rate
+    weight_decay: float = 0.01               # weight decay
     
-    # Generation parameters
-    temperature: float = 0.8                 # Sampling temperature
-    top_k: int = 50                          # Top-k sampling
+    # generation parameters
+    temperature: float = 0.8                 # sampling temperature
+    top_k: int = 50                          # top-k sampling
     
     def __post_init__(self):
         """Post-initialization validation."""
@@ -100,10 +99,10 @@ def create_config_from_args(args) -> TransformerConfig:
         # symbolic flags
         'use_v', 'use_proj',
         
-        # Training parameters
+        # training parameters
         'batch_size', 'num_epochs', 'learning_rate', 'weight_decay',
         
-        # Generation parameters
+        # generation parameters
         'temperature', 'top_k',
     ]
 

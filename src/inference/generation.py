@@ -1,13 +1,12 @@
 #./inference/generation.py
 """
 Text Generation Utilities
-Provides functions for generating text with trained models
 """
 
 import torch
 import logging
 from tqdm.auto import tqdm
-from typing import Tuple, List, Dict, Optional, Union, Any
+from typing import Tuple, List, Dict, Optional, Any
 
 from mytokenizers import BaseTokenizer
 from inference.hooks import InferenceHookManager, InferenceHook
@@ -22,38 +21,23 @@ def run_generation(model: torch.nn.Module,
                   max_new_tokens: int = 50,
                   temperature: float = 1.0,
                   top_k: Optional[int] = None,
-                  top_p: Optional[float] = None, #keep in signature for compatibility if other parts use it
-                  show_progress: bool = True,
                   hooks: Optional[List[InferenceHook]] = None) -> Tuple[List[int], str]:
     """
     Generate text using the model starting from a prompt.
-    
-    Args:
-        model: The trained model with a generate method
-        tokenizer: Tokenizer for encoding/decoding text
-        prompt_text: Starting text for generation
-        device: Device to run generation on
-        max_new_tokens: Maximum number of new tokens to generate
-        temperature: Sampling temperature (1.0 = no change, <1.0 = less random, >1.0 = more random)
-        top_k: If set, restricts sampling to the top k most likely tokens
-        top_p: If set, restricts sampling to tokens with cumulative probability >= top_p. 
-               Note: This will only be passed to model.generate if the model supports it.
-        show_progress: Whether to show a progress bar
-        hooks: Optional list of InferenceHook objects to attach during generation
-        
+
     Returns:
         Tuple of (list of token IDs, generated text string)
     """
-    #ensure the model has a generate method
+    # ensure the model has a generate method
     if not hasattr(model, 'generate'):
         logger.error("Model does not have a 'generate' method required for this function.")
         raise AttributeError("Model must have a 'generate' method for text generation")
 
-    #set the model to evaluation mode
+    # set the model to evaluation mode
     model.eval()
     model.to(device)
     
-    # Set up hooks if provided
+    # set up hooks if provided
     hook_manager = None
     if hooks and hasattr(model, 'set_hook_manager'):
         hook_manager = InferenceHookManager()
@@ -67,14 +51,10 @@ def run_generation(model: torch.nn.Module,
     logger.info(f"  Max new tokens: {max_new_tokens}")
     logger.info(f"  Temperature: {temperature}")
     logger.info(f"  Top-k: {top_k if top_k is not None else 'Not Used'}")
-    #log top_p status based on whether it's provided and if we intend to use it
-    #for now, we will not pass top_p to the current models as they don't support it.
-    logger.info(f"  Top-p: {'Not Used (model does not support)' if top_p is not None else 'Not Used'}")
 
-
-    #encode the starting prompt
+    # encode the starting prompt
     try:
-        #add special tokens if needed (though model.generate usually handles context without BOS for prompt)
+        # add special tokens if needed (though model.generate usually handles context without BOS for prompt)
         start_ids = tokenizer.encode(prompt_text, add_special_tokens=True, return_tensors='pt')
         
         if not isinstance(start_ids, torch.Tensor):
@@ -84,7 +64,7 @@ def run_generation(model: torch.nn.Module,
         
         if start_ids.shape[1] == 0:
             logger.warning("Encoded prompt is empty. Using BOS token as fallback.")
-            #ensure bos_token_id is available and is an int
+            # ensure bos_token_id is available and is an int
             start_token_id = tokenizer.bos_token_id if hasattr(tokenizer, 'bos_token_id') and tokenizer.bos_token_id is not None else 0
             start_ids = torch.tensor([[start_token_id]], dtype=torch.long, device=device)
             
@@ -94,22 +74,18 @@ def run_generation(model: torch.nn.Module,
         logger.error(f"Error encoding prompt: {e}", exc_info=True)
         raise
 
-    if show_progress:
-        progress_bar = tqdm(total=max_new_tokens, desc="Generating tokens")
+
+    progress_bar = tqdm(total=max_new_tokens, desc="Generating tokens")
     
-    #prepare arguments for model.generate, excluding top_p as current models don't use it
+    # prepare arguments for model.generate
     generate_kwargs = {
         'input_ids': start_ids,
         'max_new_tokens': max_new_tokens,
         'temperature': temperature,
-        'tokenizer': tokenizer,  # Pass tokenizer for hooks
+        'tokenizer': tokenizer,  # pass tokenizer for hooks
     }
     if top_k is not None:
         generate_kwargs['top_k'] = top_k
-    
-    #if your models were updated to handle top_p, you would add it here:
-    #if top_p is not None:
-    #generate_kwargs['top_p'] = top_p
 
     try:
         generated_ids_tensor = model.generate(**generate_kwargs)
@@ -119,12 +95,11 @@ def run_generation(model: torch.nn.Module,
         else:
             generated_ids = generated_ids_tensor #type: ignore
             
-        if show_progress:
-            progress_bar.update(max_new_tokens)  
-            progress_bar.close()
+        progress_bar.update(max_new_tokens)  
+        progress_bar.close()
             
     except Exception as e:
-        if show_progress and 'progress_bar' in locals() and progress_bar: #check if progress_bar exists and is not None
+        if 'progress_bar' in locals() and progress_bar: # check if progress_bar exists and is not None
             progress_bar.close()
         logger.error(f"Error during model.generate(): {e}", exc_info=True)
         raise
@@ -138,28 +113,12 @@ def run_generation(model: torch.nn.Module,
     logger.info("Generation complete")
     logger.info(f"Generated text:\n---\n{generated_text}\n---")
     
-    # Clean up hooks
+    # clean up hooks
     if hook_manager and hasattr(model, 'set_hook_manager'):
         model.set_hook_manager(None)
         logger.info("Removed inference hooks")
 
     return generated_ids, generated_text
-
-
-def get_generation_args() -> Dict[str, Any]:
-    """
-    Get default arguments for generation.
-    
-    Returns:
-        Dictionary of default generation arguments
-    """
-    return {
-        'max_new_tokens': 50,
-        'temperature': 0.8,
-        'top_k': 50,
-        'top_p': None, #keep for consistency, but run_generation handles its non-usage by models
-        'show_progress': True
-    }
 
 
 def batch_generate(model: torch.nn.Module, 
@@ -172,21 +131,14 @@ def batch_generate(model: torch.nn.Module,
     Generate text for multiple prompts.
     
     Args:
-        model: The trained model with a generate method
-        tokenizer: Tokenizer for encoding/decoding text
         prompts: List of prompt texts
-        device: Device to run generation on
-        hooks: Optional list of InferenceHook objects to attach during generation
         **kwargs: Additional arguments for generation (max_new_tokens, temperature, top_k, top_p)
         
     Returns:
         List of (token IDs, generated text) tuples
     """
     results = []
-    
-    #top_p will be passed to run_generation, which will then decide not to pass it to model.generate
-    #if the model doesn't support it (which is the current case).
-    
+
     for i, prompt in enumerate(prompts):
         logger.info(f"\nGenerating text for prompt {i+1}/{len(prompts)}: '{prompt}'")
         

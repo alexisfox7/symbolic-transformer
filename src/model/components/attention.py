@@ -27,11 +27,6 @@ class VanillaAttention(nn.Module):
         if self.use_sparsemax:
             self.sparsemax = Sparsemax(dim=-1)
         
-        self.learnable_temperature = getattr(config, 'learnable_temperature', False)
-        if self.learnable_temperature:
-            # Per-head temperatures initialized to 2.0
-            #self.temperature = nn.Parameter(torch.ones(self.n_head) * 2)
-            self.temperature = nn.Parameter(torch.ones(1) * 2)
         
         self.register_buffer("causal_mask", torch.tril(torch.ones(config.block_size, config.block_size)).view(1, 1, config.block_size, config.block_size)) 
 
@@ -51,9 +46,6 @@ class VanillaAttention(nn.Module):
         scale = 1.0 / math.sqrt(self.head_dim)
         att = (q @ k.transpose(-2, -1)) * scale # (B, nh, hd, T) -> (B, nh, T, T)
         
-        # Apply learnable temperature if enabled
-        if self.learnable_temperature:
-            att = att / self.temperature
         
         # softmax or sparsemax, dropout, apply to values
         if self.use_sparsemax:
@@ -141,11 +133,6 @@ class SymbolicAttention(nn.Module):
         if self.use_sparsemax:
             self.sparsemax = Sparsemax(dim=-1)
         
-        self.learnable_temperature = getattr(config, 'learnable_temperature', False)
-        if self.learnable_temperature:
-            self.temperature = nn.Parameter(torch.ones(1) * 2)
-            # Per-head temperatures initialized to 2.0
-            #self.temperature = nn.Parameter(torch.ones(self.n_head) * 2)
 
         # ALiBi sl opes - computed once and cached
         slopes = self._get_alibi_slopes(config.n_head)
@@ -254,9 +241,6 @@ class SymbolicAttention(nn.Module):
         scale = 1.0 / math.sqrt(self.head_dim)
         att_scores = (q @ k.transpose(-2, -1)) * scale
         
-        # Apply learnable temperature if enabled
-        if self.learnable_temperature:
-            att_scores = att_scores / self.temperature
 
         # add ALiBi bias
         if T > 1:
@@ -353,9 +337,6 @@ class TFTAttention(SymbolicAttention):
         scale = 1.0 / math.sqrt(self.head_dim)
         att_scores = (q @ k.transpose(-2, -1)) * scale
         
-        # Apply learnable temperature if enabled
-        if self.learnable_temperature:
-            att_scores = att_scores / self.temperature
 
         # add ALiBi bias
         if T > 1:
