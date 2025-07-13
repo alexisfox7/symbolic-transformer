@@ -28,7 +28,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # add project root to PYTHONPATH
-export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+export PYTHONPATH="${PYTHONPATH}:$(pwd):$(pwd)/src"
 
 # training
 accelerate launch \
