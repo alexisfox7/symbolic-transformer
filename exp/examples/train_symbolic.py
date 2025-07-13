@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 from src.utils.training_utils import (
     create_base_parser, add_symbolic_args, setup_training_environment, 
     create_config_from_args, setup_data_loaders, setup_trainer_with_hooks, 
-    test_generation
+    test_generation, log_if_main
 )
 from src.config.config import print_config
 from src.mytokenizers import create_tokenizer
@@ -40,7 +40,7 @@ def main():
     
     # setup environment
     logger, device = setup_training_environment(args.output_dir, "Symbolic Transformer", args.trainer_type)
-    logger.info(f"Symbolic features: use_v={args.use_v}, use_proj={args.use_proj}, vocab_ffn={args.vocab_ffn}")
+    log_if_main(logger, f"Symbolic features: use_v={args.use_v}, use_proj={args.use_proj}, vocab_ffn={args.vocab_ffn}", args.trainer_type)
     
     # create config
     symbolic_features = {
@@ -60,17 +60,17 @@ def main():
     train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger, args.trainer_type)
     
     # create model
-    logger.info("Creating Symbolic Transformer...")
+    log_if_main(logger, "Creating Symbolic Transformer...", args.trainer_type)
     model = get_model("symbolic", config=config).to(device)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    logger.info(f"Model: {num_params/1e6:.2f}M parameters")
+    log_if_main(logger, f"Model: {num_params/1e6:.2f}M parameters", args.trainer_type)
     
     # report symbolic features in model
     if hasattr(model, 'transformer') and hasattr(model.transformer, 'h'):
         first_block = model.transformer.h[0]
         if hasattr(first_block, 'attn'):
-            logger.info(f"Attention features: use_v={getattr(first_block.attn, 'use_v', False)}, "
-                       f"use_proj={getattr(first_block.attn, 'use_proj', False)}")
+            log_if_main(logger, f"Attention features: use_v={getattr(first_block.attn, 'use_v', False)}, "
+                       f"use_proj={getattr(first_block.attn, 'use_proj', False)}", args.trainer_type)
     
     # setup optimizer
     optimizer = torch.optim.AdamW(
@@ -84,14 +84,14 @@ def main():
     )
     
     # train
-    logger.info("Starting symbolic transformer training...")
+    log_if_main(logger, "Starting symbolic transformer training...", args.trainer_type)
     training_result = trainer.train()
 
     # test generation
     test_generation(model, tokenizer, device, args, logger, "symbolic", args.trainer_type)
     
-    logger.info("Symbolic transformer training completed!")
-    logger.info(f"Symbolic features used: use_v={args.use_v}, use_proj={args.use_proj}, vocab_ffn={args.vocab_ffn}")
+    log_if_main(logger, "Symbolic transformer training completed!", args.trainer_type)
+    log_if_main(logger, f"Symbolic features used: use_v={args.use_v}, use_proj={args.use_proj}, vocab_ffn={args.vocab_ffn}", args.trainer_type)
 
 if __name__ == "__main__":
     main()
