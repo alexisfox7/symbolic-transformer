@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+"""
+Train Symbolic Transformer with Hook System
+
+Usage:
+    From repository root: python -m exp.examples.train_symbolic [args]
+"""
+
 import sys
 import os
 import warnings
@@ -7,16 +15,14 @@ warnings.filterwarnings("ignore", message=".*kernel version.*")
 warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
-
-from utils.training_utils import (
+from src.utils.training_utils import (
     create_base_parser, add_symbolic_args, setup_training_environment, 
     create_config_from_args, setup_data_loaders, setup_trainer_with_hooks, 
     test_generation
 )
-from config.config import print_config
-from mytokenizers import create_tokenizer
-from model import get_model
+from src.config.config import print_config
+from src.mytokenizers import create_tokenizer
+from src.model import get_model
 import torch
 
 def parse_args():

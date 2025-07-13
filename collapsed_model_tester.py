@@ -10,14 +10,13 @@ import numpy as np
 import sys
 import os
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Run with: python -m collapsed_model_tester [args] or set PYTHONPATH before running
 
 def load_model_and_tokenizer(checkpoint_path, model_type="vanilla"):
     """Load model and tokenizer from checkpoint."""
-    from model import get_model
-    from config import TransformerConfig
-    from mytokenizers import create_tokenizer
+    from src.model import get_model
+    from src.config import TransformerConfig
+    from src.mytokenizers import create_tokenizer
     
     print(f"Loading model from: {checkpoint_path}")
     

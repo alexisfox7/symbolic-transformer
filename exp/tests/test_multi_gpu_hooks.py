@@ -7,11 +7,10 @@ This simulates distributed training behavior.
 import sys
 import os
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+# Run with: python -m exp.tests.test_multi_gpu_hooks or set PYTHONPATH before running
 
 import torch
-from trainers.hooks import HookManager, ConsoleLogHook, JSONLogHook, CheckpointHook
+from src.trainers.hooks import HookManager, ConsoleLogHook, JSONLogHook, CheckpointHook
 
 class MockAccelerator:
     """Mock accelerator for testing distributed behavior."""

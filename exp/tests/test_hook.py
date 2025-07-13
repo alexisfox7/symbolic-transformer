@@ -14,13 +14,12 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import logging
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+# Run with: python -m exp.tests.test_hook or set PYTHONPATH before running
 
-from trainers import get_trainer
-from trainers.hooks import TrainingHook, create_console_log_hook, create_json_log_hook, create_checkpoint_hook
-from model.architectures.vanilla import VanillaTransformer
-from config.config import TransformerConfig
+from src.trainers import get_trainer
+from src.trainers.hooks import TrainingHook, create_console_log_hook, create_json_log_hook, create_checkpoint_hook
+from src.model.architectures.vanilla import VanillaTransformer
+from src.config.config import TransformerConfig
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')

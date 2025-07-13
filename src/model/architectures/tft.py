@@ -8,7 +8,7 @@ from ..components import ChannelNorm, TFTAttention, VanillaFFN
 
 class TFTTransformerBlock(nn.Module):
     """
-    Symbolic transformer block, FFN output is vocabulary-constrained.
+    TFT transformer block.
     Contains a symbolic stream and embedding stream. 
     """
     def __init__(self, config):

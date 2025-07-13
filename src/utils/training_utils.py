@@ -11,12 +11,9 @@ import torch
 import logging
 from torch.utils.data import DataLoader, random_split
 
-#add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from config.config import TransformerConfig, get_preset_config
-from mytokenizers import create_tokenizer
-from utils.data_utils import load_and_prepare_data
+from src.config.config import TransformerConfig, get_preset_config
+from src.mytokenizers import create_tokenizer
+from src.utils.data_utils import load_and_prepare_data
 from datasets import load_dataset
 
 def log_if_main(logger, message, trainer_type="simple"):
@@ -242,8 +239,7 @@ def test_generation(model, tokenizer, device, args, logger, model_type="", train
         try:
             _, generated_text = run_generation(
                 model=model, tokenizer=tokenizer, prompt_text=prompt,
-                device=device, max_new_tokens=args.generation_max_len,
-                show_progress=False
+                device=device, max_new_tokens=args.generation_max_len
             )
             log_if_main(logger, f"'{prompt}' → '{generated_text}'", trainer_type)
         except Exception as e:

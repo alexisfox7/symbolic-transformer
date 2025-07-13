@@ -4,12 +4,12 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 from .base import TransformerBase
-from ..components import ChannelNorm, SymbolicAttention, VocabFFN, VanillaFFN
+from ..components import ChannelNorm, SymbolicAttention, VocabFFN
 
 class SymbolicTransformerBlock(nn.Module):
     """
     Symbolic transformer block.
-    FFN output can be vocabulary-constrained (VocabFFN) or standard (VanillaFFN).
+    FFN output is vocabulary-constrained (VocabFFN)
     Maintains single symbolic stream.
     """
     def __init__(self, config, vocab_embeddings_ref):
@@ -20,12 +20,7 @@ class SymbolicTransformerBlock(nn.Module):
         self.ln_2 = ChannelNorm(config.n_embd, config.n_head, bias=config.bias)
 
         self.attn = SymbolicAttention(config)
-
-        # Use VocabFFN if vocab_ffn is True (default), otherwise use VanillaFFN
-        if getattr(config, 'vocab_ffn', True):
-            self.ffn = VocabFFN(config, vocab_embeddings_ref)
-        else:
-            self.ffn = VanillaFFN(config)
+        self.ffn = VocabFFN(config, vocab_embeddings_ref)
 
     #REVIEW check this is right order
     def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
@@ -64,7 +59,6 @@ class SymbolicTransformer(TransformerBase):
         self.apply(self._init_weights)
         self._apply_projection_init()
         
-        #REVIEW if needed init temperature
         print(f"SymbolicTransformerModel initialized with {self.get_num_params()/1e6:.2f}M parameters")
         print(f"Vocabulary size: {config.vocab_size}, Embedding dim: {config.n_embd}")
 

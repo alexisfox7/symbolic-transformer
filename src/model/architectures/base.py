@@ -114,24 +114,17 @@ class TransformerBase(nn.Module):
             if self.hook_manager is not None:
                 self.hook_manager.on_forward_end(logits, position, generation_state)
             
-            # focus on last time step
-            logits = logits[:, -1, :] / temperature
+            logits = logits[:, -1, :] / temperature # focus on last time step
 
             if top_k is not None:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = -float('Inf')
-            
-            # apply softmax to get probabilities
-            probs = F.softmax(logits, dim=-1)
-            
-            # sample from distribution
-            idx_next = torch.multinomial(probs, num_samples=1)
-            
-            # append to sequence
-            input_ids = torch.cat((input_ids, idx_next), dim=1)
-            
-            # update tokens for hooks
-            if tokenizer is not None and self.hook_manager is not None:
+           
+            probs = F.softmax(logits, dim=-1)  # apply softmax to get probabilities
+            idx_next = torch.multinomial(probs, num_samples=1) # sample from distribution    
+            input_ids = torch.cat((input_ids, idx_next), dim=1) # append to sequence
+             
+            if tokenizer is not None and self.hook_manager is not None: # update tokens for hooks
                 tokens.append(tokenizer.decode([idx_next[0].item()]))
         
         # hook: generation complete

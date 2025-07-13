@@ -1,7 +1,5 @@
 """
-Utilities package for the transformer training framework.
-
-This package provides common utilities for data handling and training operations.
+Utilities package for the transformer training framework (data handling and training operations).
 """
 
 from .data_utils import (

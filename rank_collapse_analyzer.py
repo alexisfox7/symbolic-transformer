@@ -15,8 +15,7 @@ from collections import defaultdict
 import argparse
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Run with: python -m rank_collapse_analyzer [args] or set PYTHONPATH before running
 
 class TokenRepresentationAnalyzer:
     """Analyze how token representations change through transformer layers."""
@@ -30,9 +29,9 @@ class TokenRepresentationAnalyzer:
         
     def load_model(self):
         """Load model and tokenizer."""
-        from model import get_model
-        from config import TransformerConfig
-        from mytokenizers import create_tokenizer
+        from src.model import get_model
+        from src.config import TransformerConfig
+        from src.mytokenizers import create_tokenizer
         
         print(f"Loading model from: {self.checkpoint_path}")
         

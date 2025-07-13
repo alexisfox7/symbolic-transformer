@@ -127,11 +127,3 @@ class VocabFFN(nn.Module):
         return self.sparsemax(vocab_similarities)
 
 
-
-
-# add flag for use_v and use_proj
-# add flag for kronecker (define function otuside since both ffn and attenion use it)
-# add option for channel norm i/o, everywhere, vanilla
-# add flag for residual
-
-# fix config

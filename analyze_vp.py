@@ -14,7 +14,7 @@ import seaborn as sns
 from collections import defaultdict
 import json
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Run with: python -m analyze_vp [args] or set PYTHONPATH before running
 
 from src.model import get_model
 from src.config import TransformerConfig
@@ -530,7 +530,6 @@ def main():
         max_new_tokens=args.max_tokens,
         temperature=args.temperature,
         top_k=args.top_k,
-        show_progress=True,
         hooks=hooks
     )
     

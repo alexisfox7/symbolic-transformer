@@ -2,6 +2,9 @@
 """
 Run inference with hooks on a saved checkpoint.
 Matrix visualization for attention patterns.
+
+Run with: python -m run_inference_with_hooks [args]
+Or set PYTHONPATH=/path/to/repo before running
 """
 
 from collections import defaultdict
@@ -9,7 +12,6 @@ import torch
 import argparse
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from src.model import get_model
 from src.config import TransformerConfig
@@ -296,7 +298,6 @@ def main():
         max_new_tokens=args.max_tokens,
         temperature=args.temperature,
         top_k=args.top_k,
-        show_progress=True,
         hooks=hooks
     )
     

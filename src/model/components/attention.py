@@ -103,27 +103,21 @@ class SymbolicAttention(nn.Module):
         self.use_v = getattr(config, 'use_v', 'none')
         self.use_proj = getattr(config, 'use_proj', 'none')
 
-        # Handle V matrix configuration
+        # handle V matrix configuration
         if self.use_v == 'none':
-            # No V matrix - only Q and K projections
             self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias)
         elif self.use_v == 'normal':
-            # Standard V matrix - Q, K, V projections
             self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias)
         elif self.use_v == 'kronecker':
-            # Kronecker-lifted V matrix
             self.c_attn = nn.Linear(config.n_embd, 2 * config.n_embd, bias=config.bias)
             self.v_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
         
         # Handle output projection configuration
         if self.use_proj == 'none':
-            # No output projection
             pass
         elif self.use_proj == 'normal':
-            # Standard output projection
             self.c_proj = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
         elif self.use_proj == 'kronecker':
-            # Kronecker-lifted output projection
             self.proj_tmp = nn.Parameter(torch.randn(config.n_head, config.n_head) * 0.02)
  
         self.attn_dropout = nn.Dropout(config.dropout)
@@ -132,9 +126,8 @@ class SymbolicAttention(nn.Module):
         self.use_sparsemax = getattr(config, 'use_sparsemax', False)
         if self.use_sparsemax:
             self.sparsemax = Sparsemax(dim=-1)
-        
-
-        # ALiBi sl opes - computed once and cached
+    
+        # ALiBi slopes - computed once and cached
         slopes = self._get_alibi_slopes(config.n_head)
         self.register_buffer("alibi_slopes", slopes, persistent=False)
 
@@ -198,7 +191,7 @@ class SymbolicAttention(nn.Module):
         if self.use_sparsemax:
             # Use large negative value instead of -inf for sparsemax
             alibi_bias = alibi_bias.masked_fill(~causal_mask[None, :, :], -1e9)
-            #STUB TRY THIS WITH
+            #STUB -1e9 MIGHT BE TOO HIGH
         else:
             alibi_bias = alibi_bias.masked_fill(~causal_mask[None, :, :], float('-inf'))
         
@@ -214,34 +207,30 @@ class SymbolicAttention(nn.Module):
         B, T, C = x.size()
 
         if self.use_v == 'none':
-            # No V matrix - Q, K only, V is just identity (copy of input)
             qk = self.c_attn(x)
             q, k = qk.split(self.n_embd, dim=2)
             v = x  # V is identity
         elif self.use_v == 'normal':
-            # Standard Q, K, V projections
             qkv = self.c_attn(x)
             q, k, v = qkv.split(self.n_embd, dim=2)
         elif self.use_v == 'kronecker':
-            # Separate Q, K from input and compute V using Kronecker lifting
             qk = self.c_attn(x)
             q, k = qk.split(self.n_embd, dim=2)
             
-            # Apply Kronecker-lifted V transformation
+            # apply Kronecker-lifted V 
             v_matrix = self._get_kronecker_lifted_tensor(self.v_tmp)
             x_flat = x.view(-1, C)
             v = torch.matmul(x_flat, v_matrix).view(B, T, C)
 
-        # Reshape for multi-head attention
+        # reshape for multi-head attention
         q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
         k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
         v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)  # (B, nh, T, hs)
 
-        # Compute attention scores with proper scaling
+        # compute attention scores with proper scaling
         scale = 1.0 / math.sqrt(self.head_dim)
         att_scores = (q @ k.transpose(-2, -1)) * scale
         
-
         # add ALiBi bias
         if T > 1:
             alibi_bias = self._get_alibi_bias(T, x.device)
@@ -256,14 +245,13 @@ class SymbolicAttention(nn.Module):
         att_weights_dropout = self.attn_dropout(att_weights)
         y = att_weights_dropout @ v  # (B, nh, T, hs)
         
-        # Call hooks if available
+        # call hooks if available
         if hook_manager is not None and layer_idx is not None and hook_state is not None:
             tokens = hook_state.get('tokens', [])
             position = hook_state.get('position', 0)
             state = hook_state.copy() if hook_state else {}
-            state['stream_type'] = 'symbolic'  # Mark this as symbolic stream
             
-            # Call hook for each attention head
+            # call hook for each attention head
             for head_idx in range(self.n_head):
                 hook_manager.on_attention_computed(
                     layer_idx=layer_idx,
@@ -357,7 +345,6 @@ class TFTAttention(SymbolicAttention):
             tokens = hook_state.get('tokens', [])
             position = hook_state.get('position', 0)
             state = hook_state.copy() if hook_state else {}
-            state['stream_type'] = 'tft'  # Mark this as symbolic stream
             
             # call hook for each attention head
             for head_idx in range(self.n_head):
