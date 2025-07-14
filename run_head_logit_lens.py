@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Run logit lens analysis on a trained model.
+Run head-wise logit lens analysis on a trained model.
 
 Usage:
-    python -m run_logit_lens --checkpoint path/to/checkpoint.pt --text "The cat sat on the"
+    python -m run_head_logit_lens --checkpoint path/to/checkpoint.pt --text "The cat sat on the"
 """
 
 import argparse
@@ -15,7 +15,12 @@ import logging
 from src.model import get_model
 from src.config import TransformerConfig
 from src.mytokenizers import create_tokenizer, from_pretrained
-from src.inference.logit_lens import run_logit_lens_analysis, plot_logit_lens, print_logit_lens_analysis
+from src.inference.head_logit_lens import (
+    run_head_logit_lens_analysis, 
+    plot_head_heatmap, 
+    print_head_analysis,
+    analyze_head_specialization
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -113,12 +118,13 @@ def load_model_from_checkpoint(checkpoint_path, device, model_type):
     model.eval()
     
     logger.info(f"Model loaded successfully with {model.get_num_params()/1e6:.2f}M parameters")
+    logger.info(f"Model has {model.config.n_head} attention heads")
     
     return model, config
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run logit lens analysis on a trained model')
+    parser = argparse.ArgumentParser(description='Run head-wise logit lens analysis on a trained model')
     parser.add_argument('--checkpoint', type=str, required=True, help='Path to model checkpoint')
     parser.add_argument('--model-type', type=str, default='vanilla', 
                        choices=['vanilla', 'symbolic', 'tft'],
@@ -129,10 +135,12 @@ def main():
                        help='Tokenizer type')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
                        help='Device to run on')
-    parser.add_argument('--output-dir', type=str, default='outputs/logit_lens',
+    parser.add_argument('--output-dir', type=str, default='outputs/head_logit_lens',
                        help='Directory to save results')
     parser.add_argument('--top-k', type=int, default=5,
-                       help='Number of top predictions to show')
+                       help='Number of top predictions to show per head')
+    parser.add_argument('--analyze-specialization', action='store_true',
+                       help='Run head specialization analysis')
     
     args = parser.parse_args()
     
@@ -150,33 +158,51 @@ def main():
     else:
         tokenizer = create_tokenizer(args.tokenizer)
     
-    # Run logit lens analysis
-    logger.info(f"Running logit lens analysis on: '{args.text}'")
-    predictions, final_prediction = run_logit_lens_analysis(model, tokenizer, args.text, device)
+    # Run head-wise logit lens analysis
+    logger.info(f"Running head-wise logit lens analysis on: '{args.text}'")
+    logger.info(f"Analyzing {model.config.n_head} attention heads across {model.config.n_layer} layers")
     
-    if not predictions:
-        logger.error("No predictions generated. Check if the model forward pass includes logit lens hooks.")
+    head_predictions, final_prediction = run_head_logit_lens_analysis(model, tokenizer, args.text, device)
+    
+    if not head_predictions:
+        logger.error("No head predictions generated. Check if the model forward pass includes logit lens hooks.")
         return
     
-    # Print results
-    print_logit_lens_analysis(predictions, final_prediction, args.text)
+    # Print detailed results
+    print_head_analysis(head_predictions, final_prediction, args.text)
     
-    # Create visualization
-    plot_save_path = os.path.join(args.output_dir, f'logit_lens_{args.model_type}.png')
-    plot_logit_lens(predictions, final_prediction, save_path=plot_save_path)
+    # Analyze head specialization if requested
+    if args.analyze_specialization:
+        analyze_head_specialization(head_predictions)
+    
+    # Create heatmap visualization
+    heatmap_save_path = os.path.join(args.output_dir, f'head_heatmap_{args.model_type}.png')
+    plot_head_heatmap(head_predictions, final_prediction, save_path=heatmap_save_path)
     
     # Save raw data
     import json
-    data_save_path = os.path.join(args.output_dir, f'logit_lens_data_{args.model_type}.json')
+    data_save_path = os.path.join(args.output_dir, f'head_logit_lens_data_{args.model_type}.json')
     with open(data_save_path, 'w') as f:
         json.dump({
             'text': args.text,
             'model_type': args.model_type,
-            'predictions': predictions,
+            'n_heads': model.config.n_head,
+            'n_layers': model.config.n_layer,
+            'head_predictions': head_predictions,
             'final_prediction': final_prediction
         }, f, indent=2)
     
     logger.info(f"Results saved to {args.output_dir}")
+    
+    # Summary statistics
+    total_head_predictions = len(head_predictions)
+    final_token = final_prediction['tokens'][0]
+    matching_heads = sum(1 for p in head_predictions if p['tokens'][0] == final_token)
+    
+    print(f"\n🎯 QUICK SUMMARY:")
+    print(f"   Model prediction: '{final_token}' ({final_prediction['probs'][0]:.1%})")
+    print(f"   Heads agreeing: {matching_heads}/{total_head_predictions} ({matching_heads/total_head_predictions:.1%})")
+    print(f"   Results saved to: {args.output_dir}")
 
 
 if __name__ == "__main__":

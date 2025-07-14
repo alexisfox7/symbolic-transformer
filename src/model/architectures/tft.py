@@ -42,7 +42,7 @@ class TFTTransformerBlock(nn.Module):
         xt_out = xt_add
         if self.config.cascade:
             xt_out = xt
-        return xt_out, xe, xe-xt
+        return xt_out, xe, xe
 
 class TFTTransformer(TransformerBase):
     """

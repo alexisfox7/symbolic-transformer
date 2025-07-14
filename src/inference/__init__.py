@@ -16,6 +16,14 @@ from .logit_lens import (
     print_logit_lens_analysis
 )
 
+from .head_logit_lens import (
+    HeadLogitLensHook,
+    run_head_logit_lens_analysis,
+    plot_head_heatmap,
+    print_head_analysis,
+    analyze_head_specialization
+)
+
 # export main functions
 __all__ = [
     'run_generation',
@@ -23,5 +31,10 @@ __all__ = [
     'LogitLensHook',
     'run_logit_lens_analysis', 
     'plot_logit_lens',
-    'print_logit_lens_analysis'
+    'print_logit_lens_analysis',
+    'HeadLogitLensHook',
+    'run_head_logit_lens_analysis',
+    'plot_head_heatmap', 
+    'print_head_analysis',
+    'analyze_head_specialization'
 ]

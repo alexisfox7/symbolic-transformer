@@ -237,7 +237,8 @@ def main():
     parser.add_argument('--output-dir', type=str, default='vanilla',
                         help='Directory to save visualizations and analysis')
     parser.add_argument('--model-type', type=str, default='vanilla', choices=['vanilla', 'tft', 'symbolic'])
-    parser.add_argument('--prompt', type=str, default="Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. Mia saw a cat. She") 
+    parser.add_argument('--prompt', type=str, default="Once upon a time there was a girl named") 
+    # Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. Mia saw a cat. She
     # "The door was open. Tim had a key to the door. Tim used", 
     
     parser.add_argument('--max-tokens', type=int, default=2)
