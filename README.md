@@ -5,22 +5,22 @@
 ```
 symbolic_transformer/
 ├── src/                        # SOURCE CODE 
-│   ├── config/                 # Model config management
-│   ├── inference/              # Generation & sampling utilities
-│   ├── model/                  # Model architectures & components
-│   │   ├── architectures/      # Different transformer variants (vanilla, symbolic, TFT)
-│   │   └── components/         # Model building blocks (attention, FFN, normalization)
-│   ├── mytokenizers/           # Custom tokenizer 
-│   ├── trainers/               # Trainers (i.e. accelerate)
-│   └── utils/                  # Training & dataloader utility functions
+│   ├── config/                     # Model config management
+│   ├── inference/                  # Generation & sampling utilities
+│   ├── model/                      # Model architectures & components
+│   │   ├── architectures/          # Different transformer variants (vanilla, symbolic, TFT)
+│   │   └── components/             # Model building blocks (attention, FFN, normalization)
+│   ├── mytokenizers/               # Custom tokenizer 
+│   ├── trainers/                   # Trainers (i.e. accelerate)
+│   └── utils/                      # Training & dataloader utility functions
 ├── exp/                        # EXPERIMENT FILES
-│   ├── examples/               # Training scripts
-│   └── scripts/                # Shell scripts for training runs
+│   ├── examples/                   # Training scripts
+│   └── scripts/                    # Shell scripts for training runs
 ├── outputs/                    # OUTPUTS
-│   └── inference/              # Inference results
-├── requirements.txt            # Requirements
-├── setup.py                    # Package installation configuration
-└── run_inference_with_hooks.py # Test out hooked inference + visualize attention matrices
+│   └── inference/                  # Inference results
+├── requirements.txt                # Requirements
+├── setup.py                        # Package installation configuration
+└── run_inference_with_hooks.py     # Test out hooked inference + visualize attention matrices
 ```
 
 ## Installation
