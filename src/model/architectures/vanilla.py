@@ -69,11 +69,19 @@ class VanillaTransformer(TransformerBase):
         tok_emb = self.transformer.wte(input_ids)  # (B, T, n_embd)
         pos = torch.arange(0, t, dtype=torch.long, device=device)  # (T,)
         pos_emb = self.transformer.wpe(pos)  # (T, n_embd)
-    
+        
         x = self.transformer.drop(tok_emb + pos_emb)
 
         for layer_idx, block in enumerate(self.transformer.h):
             x = block(x, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
+
+            # for logit lens
+            if self.hook_manager:
+                for hook in self.hook_manager.hooks:
+                    if hasattr(hook, 'analyze_layer') and hook.enabled:
+                        tokens = hook_state.get('tokens', []) if hook_state else []
+                        position = hook_state.get('position', 0) if hook_state else 0
+                        hook.analyze_layer(x, layer_idx, position, tokens)
 
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x)

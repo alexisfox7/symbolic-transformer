@@ -42,7 +42,7 @@ class TFTTransformerBlock(nn.Module):
         xt_out = xt_add
         if self.config.cascade:
             xt_out = xt
-        return xt_out, xe
+        return xt_out, xe, xe-xt
 
 class TFTTransformer(TransformerBase):
     """
@@ -105,7 +105,16 @@ class TFTTransformer(TransformerBase):
         xe = torch.zeros_like(xt)
 
         for layer_idx, block in enumerate(self.transformer.h):
-            xt, xe = block(xt, xe, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
+            xt, xe, xt_add = block(xt, xe, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
+
+            # for logit lens
+            if self.hook_manager:
+                for hook in self.hook_manager.hooks:
+                    if hasattr(hook, 'analyze_layer') and hook.enabled:
+                        tokens = hook_state.get('tokens', []) if hook_state else []
+                        position = hook_state.get('position', 0) if hook_state else 0
+                        hook.analyze_layer(xt_add, layer_idx, position, tokens)
+
 
         x_final = xe + xt
         x_final = self.transformer.ln_f(x_final)

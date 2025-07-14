@@ -9,9 +9,19 @@ from .generation import (
     batch_generate
 )
 
+from .logit_lens import (
+    LogitLensHook,
+    run_logit_lens_analysis,
+    plot_logit_lens,
+    print_logit_lens_analysis
+)
+
 # export main functions
 __all__ = [
     'run_generation',
     'batch_generate',
-    'get_generation_args'
+    'LogitLensHook',
+    'run_logit_lens_analysis', 
+    'plot_logit_lens',
+    'print_logit_lens_analysis'
 ]
