@@ -16,7 +16,7 @@ warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
 from src.utils.training_utils import (
-    create_base_parser, add_symbolic_args, setup_training_environment, 
+    create_base_parser, add_symbolic_args, setup_data_loaders_with_combined, setup_training_environment, 
     create_config_from_args, setup_data_loaders, setup_trainer_with_hooks, 
     test_generation, log_if_main
 )
@@ -57,7 +57,8 @@ def main():
     print_config(config, dataset_name=args.dataset)
     
     # setup data
-    train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger, args.trainer_type)
+    #train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger, args.trainer_type)
+    train_dataloader, val_dataloader, tokenizer = setup_data_loaders_with_combined(args, config, tokenizer, logger, args.trainer_type)
     
     # create model
     log_if_main(logger, "Creating Symbolic Transformer...", args.trainer_type)

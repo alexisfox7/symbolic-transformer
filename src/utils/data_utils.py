@@ -212,3 +212,53 @@ def get_dataset_info(dataset_name):
         }
     }
     return dataset_info.get(dataset_name, {"description": "Unknown dataset"})
+
+# Add this function to your existing src/utils/data_utils.py
+
+def load_combined_tinystories(dataset_path: str, tokenizer, max_samples: int, 
+                             max_seq_length: int, batch_size: int, 
+                             mlm: bool = False, split: str = 'train', shuffle: bool = True):
+    """
+    Load the combined TinyStories dataset (original + structured stories).
+    
+    This function works with your existing training pipeline without changes.
+    """
+    from datasets import load_from_disk
+    
+    log_if_main(logger, f"Loading combined dataset from: {dataset_path}")
+    
+    # Load the combined dataset
+    try:
+        dataset = load_from_disk(dataset_path)
+        log_if_main(logger, f"Loaded combined dataset: {len(dataset)} stories")
+    except Exception as e:
+        logger.error(f"Failed to load combined dataset: {e}")
+        return
+    
+    # Apply sampling if requested
+    if max_samples and max_samples < len(dataset):
+        dataset = dataset.select(range(max_samples))
+        log_if_main(logger, f"Sampled down to: {len(dataset)} stories")
+    
+
+    original_size = len(dataset)
+    filtered_size = len(dataset)
+    log_if_main(logger, f"Filtered dataset: {original_size} -> {filtered_size} stories")
+    
+    # Create collate function
+    def collate_wrapper(batch):
+        return simple_collate_fn(batch, tokenizer, max_seq_length)
+    
+    # Create DataLoader
+    from torch.utils.data import DataLoader
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=collate_wrapper,
+        drop_last=True,
+        num_workers=0
+    )
+    
+    log_if_main(logger, f"Created DataLoader with {len(dataloader)} batches of size {batch_size}")
+    return dataloader, tokenizer

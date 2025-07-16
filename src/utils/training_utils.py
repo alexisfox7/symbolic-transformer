@@ -134,6 +134,7 @@ def create_train_val_split(dataset, val_ratio=0.1, seed=42):
     generator = torch.Generator().manual_seed(seed)
     return random_split(dataset, [train_size, val_size], generator=generator)
 
+
 def setup_data_loaders(args, config, tokenizer, logger, trainer_type="simple"):
     """Setup training and validation data loaders."""
     log_if_main(logger, "Loading data...", trainer_type)
@@ -170,6 +171,60 @@ def setup_data_loaders(args, config, tokenizer, logger, trainer_type="simple"):
         log_if_main(logger, f"Training: {len(train_dataloader)} batches (no validation)", trainer_type)
     
     return train_dataloader, val_dataloader, tokenizer
+
+# Add this to your training scripts (train_vanilla.py, train_symbolic.py, etc.)
+
+def setup_data_loaders_with_combined(args, config, tokenizer, logger, trainer_type="simple"):
+    """
+    Setup data loaders - automatically uses combined dataset if available.
+    Falls back to standard TinyStories if combined dataset not found.
+    """
+    combined_dataset_path = "./outputs/combined_data"
+    
+    # Check if combined dataset exists
+    if os.path.exists(combined_dataset_path):
+        log_if_main(logger, "Using combined TinyStories + structured stories dataset", trainer_type)
+        try:
+            from src.utils.data_utils import load_combined_tinystories
+            
+            train_dataloader, tokenizer = load_combined_tinystories(
+                dataset_path=combined_dataset_path,
+                tokenizer=tokenizer,
+                max_samples=args.max_samples,
+                max_seq_length=config.block_size,
+                batch_size=config.batch_size,
+                mlm=False, split='train', shuffle=True
+            )
+            
+            # Create train/val split if needed
+            if not args.no_validation:
+                train_dataset, val_dataset = create_train_val_split(
+                    train_dataloader.dataset, args.val_ratio
+                )
+                
+                from torch.utils.data import DataLoader
+                train_dataloader = DataLoader(
+                    train_dataset, batch_size=config.batch_size, shuffle=True,
+                    collate_fn=train_dataloader.collate_fn, drop_last=True
+                )
+                val_dataloader = DataLoader(
+                    val_dataset, batch_size=config.batch_size, shuffle=False,
+                    collate_fn=train_dataloader.collate_fn, drop_last=False
+                )
+                log_if_main(logger, f"Train: {len(train_dataloader)} batches, Val: {len(val_dataloader)} batches", trainer_type)
+            else:
+                val_dataloader = None
+                log_if_main(logger, f"Training: {len(train_dataloader)} batches (no validation)", trainer_type)
+            
+            return train_dataloader, val_dataloader, tokenizer
+            
+        except Exception as e:
+            log_if_main(logger, f"Failed to load combined dataset: {e}. Using standard TinyStories.", trainer_type)
+    
+    # Fallback to standard data loading
+    log_if_main(logger, "Using standard TinyStories dataset", trainer_type)
+    return setup_data_loaders(args, config, tokenizer, logger, trainer_type)
+
 
 def run_validation(model, val_dataloader, device):
     """Run validation and return metrics."""
