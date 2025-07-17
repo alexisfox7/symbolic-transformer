@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/vanilla_sparse"
+DIR="./outputs/vanilla_reason"
 N=150000
 N_EMBD=384
 PRESET="small"
@@ -48,7 +48,7 @@ accelerate launch \
     --json_log_steps $JSON_LOG_STEPS \
     --clip_grad_norm 1.0 \
     --val_ratio 0.1 \
-    --validate_every 1 \
-    --use_sparsemax
+    --validate_every 1
+    #--use_sparsemax
 
-echo "Training completed!"
+echo "Training completed
