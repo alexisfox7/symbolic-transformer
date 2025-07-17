@@ -5,7 +5,7 @@ set -e
 
 # CONFIG
 DIR="./outputs/cascade_kronecker_reason"
-N=110000
+N=150000
 N_EMBD=384
 PRESET="small"
 

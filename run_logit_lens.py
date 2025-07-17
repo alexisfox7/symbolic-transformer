@@ -123,7 +123,7 @@ def main():
     parser.add_argument('--model-type', type=str, default='vanilla', 
                        choices=['vanilla', 'symbolic', 'tft'],
                        help='Type of model architecture')
-    parser.add_argument('--text', type=str, default="The cat sat on the",
+    parser.add_argument('--text', type=str, default="The young pretty girl was named",
                        help='Text to analyze')
     parser.add_argument('--tokenizer', type=str, default='gpt2',
                        help='Tokenizer type')
