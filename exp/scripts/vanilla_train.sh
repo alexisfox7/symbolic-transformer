@@ -51,4 +51,4 @@ accelerate launch \
     --validate_every 1
     #--use_sparsemax
 
-echo "Training completed
+echo "Training completed"
