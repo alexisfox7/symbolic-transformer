@@ -20,7 +20,7 @@ from src.utils.training_utils import (
     setup_data_loaders, setup_trainer_with_hooks, test_generation, log_if_main, setup_data_loaders_with_combined
 )
 from src.config.config import print_config
-from src.mytokenizers import create_tokenizer
+from src.mytokenizers import create_tokenizer, add_reasoning_tokens
 from src.model import get_model
 import torch
 
@@ -42,6 +42,7 @@ def main():
     
     # init tokenizer
     tokenizer = create_tokenizer(args.tokenizer_type)
+    tokenizer = add_reasoning_tokens(tokenizer)
     config.update_from_tokenizer(tokenizer)
     
     print_config(config, dataset_name=args.dataset)
