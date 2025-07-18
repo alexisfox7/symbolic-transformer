@@ -278,7 +278,7 @@ def main():
     parser.add_argument('--output-dir', type=str, default='vanilla',
                         help='Directory to save visualizations and analysis')
     parser.add_argument('--model-type', type=str, default='vanilla', choices=['vanilla', 'tft', 'symbolic'])
-    parser.add_argument('--prompt', type=str, default=" blah blah blah The name of the thing and are All cats are fluffy. Fluffy is a cat. So Fluffy is a") 
+    parser.add_argument('--prompt', type=str, default=" blah blah blah Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. He smiled. Mia saw a cat. She") 
     # Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. Mia saw a cat. She
     # "The door was open. Tim had a key to the door. Tim used", 
     

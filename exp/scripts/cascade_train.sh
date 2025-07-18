@@ -4,14 +4,14 @@
 set -e
 
 # CONFIG
-DIR="./outputs/cascade_kronecker_reason_batch32"
+DIR="./outputs/cascade_kronecker_reason_batch8"
 N=150000
 N_EMBD=384
 PRESET="small"
 
 NUM_GPUS=2
 
-BATCH_SIZE=32
+BATCH_SIZE=8
 NUM_EPOCHS=8
 LEARNING_RATE=0.0006
 LOG_INTERVAL=50
