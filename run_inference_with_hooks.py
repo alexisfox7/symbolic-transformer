@@ -15,6 +15,7 @@ import argparse
 import os
 import sys
 
+from mytokenizers.factory import add_reasoning_tokens
 from src.model import get_model
 from src.config import TransformerConfig
 from src.inference.generation import run_generation
@@ -278,7 +279,7 @@ def main():
     parser.add_argument('--output-dir', type=str, default='vanilla',
                         help='Directory to save visualizations and analysis')
     parser.add_argument('--model-type', type=str, default='vanilla', choices=['vanilla', 'tft', 'symbolic'])
-    parser.add_argument('--prompt', type=str, default="<story_type>Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. He smiled. Mia saw a cat.<\story_type> <class>") 
+    parser.add_argument('--prompt', type=str, default="<story_type>Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. He smiled. Mia saw a cat.</story_type> <class>") 
     # Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. Mia saw a cat. She
     # "The door was open. Tim had a key to the door. Tim used", 
     
@@ -312,7 +313,10 @@ def main():
     if os.path.exists(args.tokenizer):
         tokenizer = from_pretrained(args.tokenizer)
     else:
+        print("TOKEN")
         tokenizer = create_tokenizer(args.tokenizer)
+        tokenizer = add_reasoning_tokens(tokenizer)
+
     
     # create hooks
     hooks = []
