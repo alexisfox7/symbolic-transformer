@@ -143,7 +143,7 @@ class HookManager:
     def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
         self._call_hook_method('on_epoch_end', epoch, state)
     
-    def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
+    def on_batch_begin(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
         self._call_hook_method('on_batch_begin', batch_idx, loss, state)
 
     def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
