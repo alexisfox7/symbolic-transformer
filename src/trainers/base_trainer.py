@@ -33,6 +33,9 @@ class BaseTrainer(ABC):
         
         # Hook system
         self.hooks = HookManager()
+        
+        # Connect trainer's hook manager to model for analyze_layer callbacks
+        self.model.hook_manager = self.hooks
 
         self.hook_weights = model.config.hook_weights
         
@@ -89,8 +92,6 @@ class BaseTrainer(ABC):
     def add_early_exiting(self) -> None:
         from .hooks import EarlyExitHook
         self.add_hook(EarlyExitHook())
-        # Set trainer's hook manager on the model for early exit to work
-        self.model.hook_manager = self.hooks
         
     @abstractmethod
     def train(self) -> Dict[str, Any]:
