@@ -107,13 +107,16 @@ class TFTTransformer(TransformerBase):
         for layer_idx, block in enumerate(self.transformer.h):
             xt, xe, xt_add = block(xt, xe, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
 
-            # for logit lens
+            # for logit lens and early exit
             if self.hook_manager:
                 for hook in self.hook_manager.hooks:
                     if hasattr(hook, 'analyze_layer') and hook.enabled:
                         tokens = hook_state.get('tokens', []) if hook_state else []
                         position = hook_state.get('position', 0) if hook_state else 0
-                        hook.analyze_layer(xt_add, layer_idx, position, tokens)
+                        # For TFT, pass xe + xt as the representative hidden state for early exit
+                        # This matches the final layer computation: x_final = xe + xt
+                        representative_state = xe + xt
+                        hook.analyze_layer(representative_state, layer_idx, position, tokens)
 
 
         x_final = xe + xt

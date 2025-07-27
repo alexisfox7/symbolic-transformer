@@ -435,7 +435,10 @@ class EarlyExitHook(TrainingHook):
         if self.exit_layer_output is None:
             return
         
-        logits = self.lm_head(self.layer_norm(self.exit_layer_output)) # (B, T, vocab_size)
+        # Apply layer norm and compute logits
+        # For TFT models, we might need different processing
+        normalized_output = self.layer_norm(self.exit_layer_output)
+        logits = self.lm_head(normalized_output) # (B, T, vocab_size)
 
         loss_func = nn.CrossEntropyLoss() # expects (N, C) , (N)
 
