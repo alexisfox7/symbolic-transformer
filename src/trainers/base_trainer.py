@@ -74,8 +74,8 @@ class BaseTrainer(ABC):
             logger.warning("No output_dir set - JSON logging disabled")
             return
         
-        from .hooks import create_json_log_hook
-        self.add_hook(create_json_log_hook(self.output_dir, log_every_n_batches))
+        from .hooks import JSONLogHook
+        self.add_hook(JSONLogHook(self.output_dir, log_every_n_batches))
     
     def add_checkpointing(self, save_every_n_epochs: int = 1) -> None:
         """Add checkpointing hook."""

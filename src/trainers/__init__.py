@@ -9,7 +9,7 @@ from typing import Dict, Type, Any, List, Optional
 
 from .base_trainer import BaseTrainer
 from .simple_trainer import SimpleTrainer
-from .hooks import TrainingHook
+from .hooks import TrainingHook, HookManager
 from .accelerate_trainer import AccelerateTrainer
 
 
@@ -45,6 +45,6 @@ def get_trainer(trainer_type: str,
     )
 
 __all__ = [
-    'BaseTrainer', 'TrainingHook', 'SimpleTrainer', 'AccelerateTrainer'
+    'BaseTrainer', 'TrainingHook', 'HookManager', 'SimpleTrainer', 'AccelerateTrainer',
     'get_trainer'
 ]
