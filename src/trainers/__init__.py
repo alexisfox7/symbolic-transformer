@@ -10,23 +10,17 @@ from typing import Dict, Type, Any, List, Optional
 from .base_trainer import BaseTrainer
 from .simple_trainer import SimpleTrainer
 from .hooks import TrainingHook
+from .accelerate_trainer import AccelerateTrainer
 
-try:
-    from .accelerate_trainer import AccelerateTrainer
-    ACCELERATE_AVAILABLE = True
-except ImportError:
-    ACCELERATE_AVAILABLE = False
-    AccelerateTrainer = None
+
 
 logger = logging.getLogger(__name__)
 
 # registry of available trainer types
 TRAINER_REGISTRY: Dict[str, Type[BaseTrainer]] = {
     'simple': SimpleTrainer,
+    'accelerate': AccelerateTrainer
 }
-
-if ACCELERATE_AVAILABLE:
-    TRAINER_REGISTRY['accelerate'] = AccelerateTrainer
 
 def get_trainer(trainer_type: str,
                 model: torch.nn.Module,
@@ -50,19 +44,7 @@ def get_trainer(trainer_type: str,
         **kwargs
     )
 
-def register_trainer(name: str, trainer_class: Type[BaseTrainer]):
-    """Register new trainer type."""
-    if name in TRAINER_REGISTRY:
-        raise ValueError(f"Trainer type '{name}' is already registered.")
-    if not issubclass(trainer_class, BaseTrainer):
-        raise ValueError(f"Trainer class must inherit from BaseTrainer.")
-    TRAINER_REGISTRY[name] = trainer_class
-    logger.info(f"Registered trainer: '{name}'")
-
 __all__ = [
-    'BaseTrainer', 'TrainingHook', 'SimpleTrainer', 
-    'get_trainer', 'register_trainer', 'TRAINER_REGISTRY'
+    'BaseTrainer', 'TrainingHook', 'SimpleTrainer', 'AccelerateTrainer'
+    'get_trainer'
 ]
-
-if ACCELERATE_AVAILABLE:
-    __all__.append('AccelerateTrainer')

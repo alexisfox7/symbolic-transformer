@@ -33,6 +33,11 @@ class BaseTrainer(ABC):
         
         # Hook system
         self.hooks = HookManager()
+
+        self.hook_weights = {
+            'early_exit': 0.5,
+            'default': 0.5
+        }
         
         # Training state (what hooks can access/modify)
         self.trainer_state = {
@@ -63,8 +68,8 @@ class BaseTrainer(ABC):
     # Convenience methods for adding common hooks
     def add_console_logging(self, log_every_n_batches: int = 10) -> None:
         """Add console logging hook."""
-        from .hooks import create_console_log_hook
-        self.add_hook(create_console_log_hook(log_every_n_batches))
+        from .hooks import ConsoleLogHook
+        self.add_hook(ConsoleLogHook(log_every_n_batches))
     
     def add_json_logging(self, log_every_n_batches: int = 100) -> None:
         """Add JSON logging hook."""
@@ -81,9 +86,13 @@ class BaseTrainer(ABC):
             logger.warning("No output_dir set - checkpointing disabled")
             return
         
-        from .hooks import create_checkpoint_hook
-        self.add_hook(create_checkpoint_hook(self.output_dir, save_every_n_epochs))
+        from .hooks import CheckpointHook
+        self.add_hook(CheckpointHook(self.output_dir, save_every_n_epochs))
     
+    def add_early_exiting(self) -> None:
+        from .hooks import EarlyExitHook
+        self.add_hook(EarlyExitHook())
+        
     @abstractmethod
     def train(self) -> Dict[str, Any]:
         """
@@ -112,3 +121,14 @@ class BaseTrainer(ABC):
         
         logger.info(f"Checkpoint loaded from: {path}")
         return checkpoint
+    
+    def collect_aux_losses(self):
+        total_loss = 0
+
+        for hook in self.hooks.hooks:
+            if getattr(hook, 'get_aux_loss', None):
+                loss, info = hook.get_aux_los()
+                total_loss += self.hook_weights[info['loss_type']] * loss
+        
+        return total_loss
+        

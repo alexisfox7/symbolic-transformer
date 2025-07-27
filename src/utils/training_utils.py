@@ -280,6 +280,7 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
         trainer.add_json_logging(log_every_n_batches=args.json_log_steps)
         
     trainer.add_checkpointing(save_every_n_epochs=1)
+    trainer.add_early_exiting()
     
     return trainer
 

@@ -94,25 +94,22 @@ class SimpleTrainer(BaseTrainer):
 
             for batch_idx, batch_data in enumerate(progress_bar):
                 self.trainer_state['current_batch_idx'] = batch_idx
-                batch_logs = {'batch_data_keys': list(batch_data.keys())}
-                #FIX:remove _trigger_callbacks call for batch_begin - not needed
 
-                #move batch to device
+                # move batch to device
                 batch = {k: v.to(self.device) for k, v in batch_data.items() if isinstance(v, torch.Tensor)}
+                self.trainer_state['current_batch'] = batch
 
-                #forward pass
+                # forward pass
                 outputs = self.model(**batch)
                 loss = outputs.get('loss')
 
                 if loss is None:
                     logger.warning(f"Epoch {epoch}, Batch {batch_idx}: Loss is None. Skipping.")
-                    #FIX:remove _trigger_callbacks call
                     continue
                     
                 if torch.isnan(loss):
                     logger.error(f"Epoch {epoch}, Batch {batch_idx}: Loss is NaN. Stopping training.")
                     self.trainer_state['status'] = 'NaN Loss'
-                    #FIX:replace _trigger_callbacks with hooks.on_train_end
                     self.hooks.on_train_end(self.trainer_state)
                     training_metrics['training_time'] = time.time() - total_start_time
                     return training_metrics

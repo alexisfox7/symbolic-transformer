@@ -7,6 +7,8 @@ from typing import Dict, Any, List, Callable, Optional
 import logging
 import torch
 import math
+from random import randint
+import torch.nn as nn
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,10 @@ class TrainingHook:
         """Called at end of each epoch."""
         pass
     
+    def on_batch_begin(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
+        """Called after each training batch."""
+        pass
+
     def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
         """Called after each training batch."""
         pass
@@ -137,6 +143,9 @@ class HookManager:
     def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
         self._call_hook_method('on_epoch_end', epoch, state)
     
+    def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
+        self._call_hook_method('on_batch_begin', batch_idx, loss, state)
+
     def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
         self._call_hook_method('on_batch_end', batch_idx, loss, state)
 
@@ -391,17 +400,53 @@ class ValidationHook(TrainingHook):
                 )
 
 
-# Factory functions for easy hook creation
-def create_console_log_hook(log_every_n_batches: int = 10) -> ConsoleLogHook:
-    """Create a console logging hook."""
-    return ConsoleLogHook(log_every_n_batches)
+class EarlyExitHook:
+    """
+    Adds auxillary loss from randomly selecting layer output each batch to decode and test.
+    """
+
+    def __init__(self):
+        super.__init__("early_exit")
+
+    def on_batch_begin(self, batch_idx: int, state: Dict[str, Any]) -> None:
+        model = state.get('model')
+            
+        self.random_layer_idx = randint(0, model.config.layer)
+        self.exit_layer_output = None
+        self.lm_head = model.lm_head
+        self.layer_norm = model.transformer.ln_f
+        self.targets = state.get('current_batch')['targets'].clone()
+    
+    def analyze_layer(self, layer_idx, hidden_state, position, tokens):
+        "choose randomized layer, decode output"
+        if layer_idx == self.random_layer_idx:
+            self.exit_layer_output = hidden_state.clone() # (B, T, n_embd)
+        
+    def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
+        if self.exit_layer_output == None:
+            raise ValueError("exit_layer_output is None") 
+        
+        logits = self.lm_head(self.layer_norm(self.exit_layer_output)) # (B, T, vocab_size)
+
+        loss_func = nn.CrossEntropyLoss() # expects (N, C) , (N)
+
+        shift_logits = logits[:, :-1, :].contiguous().view(-1, logits.size(-1))
+        shift_target = self.targets[:, 1:].contiguous().view(-1)
+        
+        loss = loss_func(shift_logits, shift_target)
+        self.aux_loss = loss
+
+    def get_aux_loss(self):
+        if self.aux_loss == None:
+            raise ValueError("Auxiliary loss is empty")
+        
+        info = {
+            'loss_type': 'early_exit'
+        }
 
 
-def create_json_log_hook(output_dir: str, log_every_n_batches: int = 100) -> JSONLogHook:
-    """Create a JSON logging hook."""
-    return JSONLogHook(output_dir, log_every_n_batches)
 
 
-def create_checkpoint_hook(output_dir: str, save_every_n_epochs: int = 1) -> CheckpointHook:
-    """Create a checkpointing hook."""
-    return CheckpointHook(output_dir, save_every_n_epochs)
+        
+
+

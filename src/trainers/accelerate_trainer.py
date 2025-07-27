@@ -97,7 +97,8 @@ class AccelerateTrainer(BaseTrainer):
 
             for batch_idx, batch_data in enumerate(progress_bar):
                 self.trainer_state['current_batch_idx'] = batch_idx
-
+                self.trainer_state['current_batch'] = batch_data
+                
                 # Forward pass
                 outputs = self.model(**batch_data)
                 loss = outputs.get('loss')
@@ -114,7 +115,9 @@ class AccelerateTrainer(BaseTrainer):
                     return training_metrics
 
                 # Backward pass - accelerator handles gradient scaling
-                self.accelerator.backward(loss)
+                aux_loss = self.collect_aux_losses()
+                total_loss = aux_loss + self.hook_weights['default'] * loss
+                self.accelerator.backward(total_loss)
 
                 # Gradient clipping if specified
                 if self.clip_grad_norm is not None:
@@ -125,13 +128,13 @@ class AccelerateTrainer(BaseTrainer):
                 self.optimizer.zero_grad()
 
                 # Track metrics
-                batch_loss_item = loss.item()
+                batch_loss_item = total_loss.item()
                 epoch_loss += batch_loss_item
                 num_batches += 1
                 global_batch += 1
 
                 # Update progress bar
-                progress_bar.set_postfix({"loss": f"{batch_loss_item:.4f}"})
+                progress_bar.set_postfix({"loss": f"{batch_loss_item:.4f}", "aux_loss": })
 
                 # Calculate batch metrics for every batch
                 batch_size = batch_data.get('input_ids', next(iter(batch_data.values()))).shape[0]
