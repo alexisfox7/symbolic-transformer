@@ -34,10 +34,7 @@ class BaseTrainer(ABC):
         # Hook system
         self.hooks = HookManager()
 
-        self.hook_weights = {
-            'early_exit': 0.5,
-            'default': 0.5
-        }
+        self.hook_weights = model.config.hook_weights
         
         # Training state (what hooks can access/modify)
         self.trainer_state = {
@@ -131,4 +128,23 @@ class BaseTrainer(ABC):
                 total_loss += self.hook_weights[info['loss_type']] * loss
         
         return total_loss
+    
+    def calculate_loss(self, loss):
+        "Calculates loss + adds any auxiliary ones. Returns total loss and printable dict"
+
+        final_layer_loss = loss * self.hook_weights['final_layer']
+        total_loss = final_layer_loss.clone()
         
+        losses = {
+            "total_loss": total_loss.item(),
+            "final_layer_loss": final_layer_loss.item()
+        }
+
+        if self.model.config.use_early_exit:
+            aux_loss = self.collect_aux_losses()
+            total_loss += aux_loss
+
+            losses["total_loss"] = total_loss.item()
+            losses["aux_loss"] = aux_loss.item()
+
+        return total_loss, losses

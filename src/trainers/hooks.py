@@ -406,7 +406,7 @@ class EarlyExitHook(TrainingHook):
     """
 
     def __init__(self):
-        super.__init__("early_exit")
+        super().__init__("early_exit")
 
     def on_batch_begin(self, batch_idx: int, state: Dict[str, Any]) -> None:
         model = state.get('model')
@@ -441,9 +441,7 @@ class EarlyExitHook(TrainingHook):
         if self.aux_loss == None:
             raise ValueError("Auxiliary loss is empty")
         
-        info = {
-            'loss_type': 'early_exit'
-        }
+        info = {'loss_type': 'early_exit'}
 
         return self.aux_loss, info
 

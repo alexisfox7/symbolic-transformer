@@ -75,6 +75,8 @@ def create_base_parser(description="Train Transformer with Hook System"):
     # attention parameters
     parser.add_argument("--use_sparsemax", action="store_true", default=False,
                        help="Use sparsemax instead of softmax in attention")
+    parser.add_argument("--use_early_exit", action="store_true", default=False,
+                       help="Use early exiting aux loss")
     
     return parser
 
@@ -118,6 +120,7 @@ def create_config_from_args(args, symbolic_features=None):
     if args.learning_rate: config.learning_rate = args.learning_rate
     config.num_epochs = args.num_epochs
     config.use_sparsemax = args.use_sparsemax
+    config.use_early_exit = args.use_early_exit
     
     if symbolic_features:
         for feature, value in symbolic_features.items():
@@ -280,7 +283,9 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
         trainer.add_json_logging(log_every_n_batches=args.json_log_steps)
         
     trainer.add_checkpointing(save_every_n_epochs=1)
-    trainer.add_early_exiting()
+
+    if config.use_early_exit:
+        trainer.add_early_exiting()
     
     return trainer
 

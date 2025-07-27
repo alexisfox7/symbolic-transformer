@@ -4,7 +4,7 @@ Configuration settings
 """
 
 from dataclasses import dataclass
-from typing import Optional, Literal
+from typing import Optional, Literal, Dict
 import torch
 import math
 
@@ -43,6 +43,9 @@ class TransformerConfig:
     temperature: float = 0.8                 # sampling temperature
     top_k: int = 50                          # top-k sampling
     
+    use_early_exit: bool = False             # whether or not to add early exit hook 
+    hook_weights: Dict[str, int] = {"early_exit": 0.5, "final_layer": 0.5}  # hook weights
+
     def __post_init__(self):
         """Post-initialization validation."""
         assert self.n_embd % self.n_head == 0, \

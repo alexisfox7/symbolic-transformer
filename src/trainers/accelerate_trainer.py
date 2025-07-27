@@ -102,13 +102,13 @@ class AccelerateTrainer(BaseTrainer):
                 
                 # Forward pass
                 outputs = self.model(**batch_data)
-                loss = outputs.get('loss')
+                total_loss, loss_dict = self.calculate_loss(outputs.get('loss'))
 
-                if loss is None:
+                if total_loss is None:
                     logger.warning(f"Epoch {epoch}, Batch {batch_idx}: Loss is None. Skipping.")
                     continue
                     
-                if torch.isnan(loss):
+                if torch.isnan(total_loss):
                     logger.error(f"Epoch {epoch}, Batch {batch_idx}: Loss is NaN. Stopping training.")
                     self.trainer_state['status'] = 'NaN Loss'
                     self.hooks.on_train_end(self.trainer_state)
@@ -116,8 +116,6 @@ class AccelerateTrainer(BaseTrainer):
                     return training_metrics
 
                 # Backward pass - accelerator handles gradient scaling
-                aux_loss = self.collect_aux_losses()
-                total_loss = aux_loss + self.hook_weights['default'] * loss
                 self.accelerator.backward(total_loss)
 
                 # Gradient clipping if specified
@@ -135,15 +133,11 @@ class AccelerateTrainer(BaseTrainer):
                 global_batch += 1
 
                 # Update progress bar
-                progress_bar.set_postfix({"total loss": f"{batch_loss_item:.4f}", "aux_loss": f"{aux_loss.item():.4f}", "loss": f"{loss.item():.4f}"})
-
+                progress_bar.set_postfix(loss_dict)
+    
                 # Calculate batch metrics for every batch
                 batch_size = batch_data.get('input_ids', next(iter(batch_data.values()))).shape[0]
-                samples_processed = (batch_idx + 1) * batch_size * self.accelerator.num_processes
-
-                # Remove duplicate logging - hooks will handle this
-                
-                # Trigger batch end hook with global batch info
+       
                 self.trainer_state.update({
                     'latest_loss': batch_loss_item,
                     'global_batch': global_batch
@@ -157,7 +151,6 @@ class AccelerateTrainer(BaseTrainer):
             training_metrics['total_samples'] += len(self.dataloader.dataset)
 
             epoch_duration = time.time() - epoch_start_time
-            # Remove duplicate logging - hooks will handle this
 
             epoch_end_logs = {
                 'loss': avg_epoch_loss, 
