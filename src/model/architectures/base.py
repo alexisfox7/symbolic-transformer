@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from typing import Optional
+from typing import Optional, Union
 from inference.hooks import InferenceHookManager
 
 class TransformerBase(nn.Module):
@@ -17,7 +17,7 @@ class TransformerBase(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.hook_manager: Optional[InferenceHookManager] = None
+        self.hook_manager: Optional[Union[InferenceHookManager, "HookManager"]] = None
     
     #REVIEW what are good default values for these?
     def _init_weights(self, module):
