@@ -123,11 +123,11 @@ class BaseTrainer(ABC):
         return checkpoint
     
     def collect_aux_losses(self):
-        total_loss = 0
+        total_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
 
         for hook in self.hooks.hooks:
             if getattr(hook, 'get_aux_loss', None):
-                loss, info = hook.get_aux_los()
+                loss, info = hook.get_aux_loss()
                 total_loss += self.hook_weights[info['loss_type']] * loss
         
         return total_loss

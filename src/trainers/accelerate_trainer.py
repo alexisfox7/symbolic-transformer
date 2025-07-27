@@ -98,6 +98,7 @@ class AccelerateTrainer(BaseTrainer):
             for batch_idx, batch_data in enumerate(progress_bar):
                 self.trainer_state['current_batch_idx'] = batch_idx
                 self.trainer_state['current_batch'] = batch_data
+                self.hooks.on_batch_begin(batch_idx, self.trainer_state)
                 
                 # Forward pass
                 outputs = self.model(**batch_data)
@@ -134,7 +135,7 @@ class AccelerateTrainer(BaseTrainer):
                 global_batch += 1
 
                 # Update progress bar
-                progress_bar.set_postfix({"loss": f"{batch_loss_item:.4f}", "aux_loss": })
+                progress_bar.set_postfix({"total loss": f"{batch_loss_item:.4f}", "aux_loss": f"{aux_loss.item():.4f}", "loss": f"{loss.item():.4f}"})
 
                 # Calculate batch metrics for every batch
                 batch_size = batch_data.get('input_ids', next(iter(batch_data.values()))).shape[0]

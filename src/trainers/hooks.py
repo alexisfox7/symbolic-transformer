@@ -400,7 +400,7 @@ class ValidationHook(TrainingHook):
                 )
 
 
-class EarlyExitHook:
+class EarlyExitHook(TrainingHook):
     """
     Adds auxillary loss from randomly selecting layer output each batch to decode and test.
     """
@@ -411,13 +411,13 @@ class EarlyExitHook:
     def on_batch_begin(self, batch_idx: int, state: Dict[str, Any]) -> None:
         model = state.get('model')
             
-        self.random_layer_idx = randint(0, model.config.layer)
+        self.random_layer_idx = randint(0, model.config.n_layer-1)
         self.exit_layer_output = None
         self.lm_head = model.lm_head
         self.layer_norm = model.transformer.ln_f
         self.targets = state.get('current_batch')['targets'].clone()
     
-    def analyze_layer(self, layer_idx, hidden_state, position, tokens):
+    def analyze_layer(self, hidden_state, layer_idx: int, position, tokens):
         "choose randomized layer, decode output"
         if layer_idx == self.random_layer_idx:
             self.exit_layer_output = hidden_state.clone() # (B, T, n_embd)
@@ -437,12 +437,15 @@ class EarlyExitHook:
         self.aux_loss = loss
 
     def get_aux_loss(self):
+        "Return auxiliary loss + what type it is"
         if self.aux_loss == None:
             raise ValueError("Auxiliary loss is empty")
         
         info = {
             'loss_type': 'early_exit'
         }
+
+        return self.aux_loss, info
 
 
 
