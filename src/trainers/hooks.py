@@ -407,6 +407,13 @@ class EarlyExitHook(TrainingHook):
 
     def __init__(self):
         super().__init__("early_exit")
+        # Initialize attributes to avoid AttributeError
+        self.aux_loss = None
+        self.exit_layer_output = None
+        self.random_layer_idx = None
+        self.lm_head = None
+        self.layer_norm = None
+        self.targets = None
 
     def on_batch_begin(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
         model = state.get('model')
