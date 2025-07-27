@@ -427,11 +427,12 @@ class EarlyExitHook(TrainingHook):
         "choose randomized layer, decode output"
         if layer_idx == self.random_layer_idx:
             self.exit_layer_output = hidden_state.clone() # (B, T, n_embd)
+            # Compute aux loss immediately after capture
+            self._compute_aux_loss()
         
-    def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
+    def _compute_aux_loss(self):
+        """Compute auxiliary loss from captured layer output."""
         if self.exit_layer_output is None:
-            # Skip if no layer output was captured (e.g., random layer wasn't hit)
-            self.aux_loss = torch.tensor(0.0, device=state.get('device'), requires_grad=True)
             return
         
         logits = self.lm_head(self.layer_norm(self.exit_layer_output)) # (B, T, vocab_size)
@@ -443,6 +444,12 @@ class EarlyExitHook(TrainingHook):
         
         aux_loss = loss_func(shift_logits, shift_target)
         self.aux_loss = aux_loss
+
+    def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
+        # Aux loss should already be computed in analyze_layer
+        if self.aux_loss is None:
+            # Fallback: set zero loss if nothing was captured
+            self.aux_loss = torch.tensor(0.0, device=state.get('device'), requires_grad=True)
 
     def get_aux_loss(self):
         "Return auxiliary loss + what type it is"
