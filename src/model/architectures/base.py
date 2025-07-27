@@ -147,8 +147,17 @@ class TransformerBase(nn.Module):
         pass
     
     def set_hook_manager(self, hook_manager: Optional[InferenceHookManager]) -> None:
-        """Set the inference hook manager for this model."""
+        """Set the hook manager for this model. Stores previous hook manager for restoration."""
+        # Store the previous hook manager so it can be restored later
+        if not hasattr(self, '_previous_hook_manager'):
+            self._previous_hook_manager = self.hook_manager
         self.hook_manager = hook_manager
+    
+    def restore_hook_manager(self) -> None:
+        """Restore the previous hook manager (useful after inference)."""
+        if hasattr(self, '_previous_hook_manager'):
+            self.hook_manager = self._previous_hook_manager
+            self._previous_hook_manager = None
 
 
     

@@ -125,8 +125,11 @@ def run_logit_lens_analysis(model, tokenizer, text, device):
         'predicted_next': final_top_tokens[0]
     }
     
-    # Clean up
-    model.set_hook_manager(None)
+    # Clean up - restore previous hook manager if it exists
+    if hasattr(model, 'restore_hook_manager'):
+        model.restore_hook_manager()
+    else:
+        model.set_hook_manager(None)
     
     return logit_hook.predictions, final_prediction
 

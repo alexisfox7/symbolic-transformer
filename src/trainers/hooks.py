@@ -417,9 +417,11 @@ class EarlyExitHook(TrainingHook):
 
     def on_batch_begin(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
         model = state.get('model')
+        self.model = model  # Store model reference
             
         self.random_layer_idx = randint(0, model.config.n_layer-1)
         self.exit_layer_output = None
+        self.aux_loss = None  # Reset aux loss for this batch
         self.lm_head = model.lm_head
         self.layer_norm = model.transformer.ln_f
         batch_data = state.get('current_batch', {})
@@ -436,6 +438,13 @@ class EarlyExitHook(TrainingHook):
             self.exit_layer_output = hidden_state.clone() # (B, T, n_embd)
             # Compute aux loss immediately after capture
             self._compute_aux_loss()
+        
+        # Also set a fallback zero loss if this is the last layer and nothing was captured
+        # This handles the case where random_layer_idx is beyond actual layers
+        if hasattr(self, 'model') and self.model and layer_idx == self.model.config.n_layer - 1:
+            if self.aux_loss is None:
+                device = hidden_state.device
+                self.aux_loss = torch.tensor(0.0, device=device, requires_grad=True)
         
     def _compute_aux_loss(self):
         """Compute auxiliary loss from captured layer output."""
@@ -457,9 +466,10 @@ class EarlyExitHook(TrainingHook):
 
     def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
         # Aux loss should already be computed in analyze_layer
+        # But if no layer was captured (random layer outside range), set zero loss
         if self.aux_loss is None:
-            # Fallback: set zero loss if nothing was captured
-            self.aux_loss = torch.tensor(0.0, device=state.get('device'), requires_grad=True)
+            device = state.get('device', torch.device('cpu'))
+            self.aux_loss = torch.tensor(0.0, device=device, requires_grad=True)
 
     def get_aux_loss(self):
         "Return auxiliary loss + what type it is"
