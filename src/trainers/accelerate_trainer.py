@@ -98,7 +98,7 @@ class AccelerateTrainer(BaseTrainer):
             for batch_idx, batch_data in enumerate(progress_bar):
                 self.trainer_state['current_batch_idx'] = batch_idx
                 self.trainer_state['current_batch'] = batch_data
-                self.hooks.on_batch_begin(batch_idx, self.trainer_state)
+                self.hooks.on_batch_begin(batch_idx, 0.0, self.trainer_state)
                 
                 # Forward pass
                 outputs = self.model(**batch_data)

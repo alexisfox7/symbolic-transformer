@@ -3,7 +3,7 @@
 Configuration settings
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Literal, Dict
 import torch
 import math
@@ -44,7 +44,7 @@ class TransformerConfig:
     top_k: int = 50                          # top-k sampling
     
     use_early_exit: bool = False             # whether or not to add early exit hook 
-    hook_weights: Dict[str, int] = {"early_exit": 0.5, "final_layer": 0.5}  # hook weights
+    hook_weights: Dict[str, float] = field(default_factory=lambda: {"early_exit": 0.5, "final_layer": 0.5})  # hook weights
 
     def __post_init__(self):
         """Post-initialization validation."""

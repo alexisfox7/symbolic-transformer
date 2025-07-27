@@ -89,6 +89,8 @@ class BaseTrainer(ABC):
     def add_early_exiting(self) -> None:
         from .hooks import EarlyExitHook
         self.add_hook(EarlyExitHook())
+        # Set trainer's hook manager on the model for early exit to work
+        self.model.hook_manager = self.hooks
         
     @abstractmethod
     def train(self) -> Dict[str, Any]:
@@ -125,7 +127,8 @@ class BaseTrainer(ABC):
         for hook in self.hooks.hooks:
             if getattr(hook, 'get_aux_loss', None):
                 loss, info = hook.get_aux_loss()
-                total_loss += self.hook_weights[info['loss_type']] * loss
+                weighted_loss = self.hook_weights[info['loss_type']] * loss
+                total_loss = total_loss + weighted_loss
         
         return total_loss
     
@@ -142,7 +145,7 @@ class BaseTrainer(ABC):
 
         if self.model.config.use_early_exit:
             aux_loss = self.collect_aux_losses()
-            total_loss += aux_loss
+            total_loss = total_loss + aux_loss
 
             losses["total_loss"] = total_loss.item()
             losses["aux_loss"] = aux_loss.item()

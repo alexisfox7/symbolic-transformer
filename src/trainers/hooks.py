@@ -408,14 +408,20 @@ class EarlyExitHook(TrainingHook):
     def __init__(self):
         super().__init__("early_exit")
 
-    def on_batch_begin(self, batch_idx: int, state: Dict[str, Any]) -> None:
+    def on_batch_begin(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
         model = state.get('model')
             
         self.random_layer_idx = randint(0, model.config.n_layer-1)
         self.exit_layer_output = None
         self.lm_head = model.lm_head
         self.layer_norm = model.transformer.ln_f
-        self.targets = state.get('current_batch')['targets'].clone()
+        batch_data = state.get('current_batch', {})
+        if 'targets' in batch_data:
+            self.targets = batch_data['targets'].clone()
+        elif 'input_ids' in batch_data:
+            self.targets = batch_data['input_ids'].clone()
+        else:
+            raise ValueError("No targets or input_ids found in batch")
     
     def analyze_layer(self, hidden_state, layer_idx: int, position, tokens):
         "choose randomized layer, decode output"
@@ -423,8 +429,10 @@ class EarlyExitHook(TrainingHook):
             self.exit_layer_output = hidden_state.clone() # (B, T, n_embd)
         
     def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
-        if self.exit_layer_output == None:
-            raise ValueError("exit_layer_output is None") 
+        if self.exit_layer_output is None:
+            # Skip if no layer output was captured (e.g., random layer wasn't hit)
+            self.aux_loss = torch.tensor(0.0, device=state.get('device'), requires_grad=True)
+            return
         
         logits = self.lm_head(self.layer_norm(self.exit_layer_output)) # (B, T, vocab_size)
 
@@ -433,12 +441,12 @@ class EarlyExitHook(TrainingHook):
         shift_logits = logits[:, :-1, :].contiguous().view(-1, logits.size(-1))
         shift_target = self.targets[:, 1:].contiguous().view(-1)
         
-        loss = loss_func(shift_logits, shift_target)
-        self.aux_loss = loss
+        aux_loss = loss_func(shift_logits, shift_target)
+        self.aux_loss = aux_loss
 
     def get_aux_loss(self):
         "Return auxiliary loss + what type it is"
-        if self.aux_loss == None:
+        if self.aux_loss is None:
             raise ValueError("Auxiliary loss is empty")
         
         info = {'loss_type': 'early_exit'}
