@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/cascade_kronecker_reason_batch8"
+DIR="./outputs/cascade_kronecker_reason_batch8_earlyexit"
 N=150000
 N_EMBD=384
 PRESET="small"
@@ -51,7 +51,8 @@ accelerate launch \
     --val_ratio 0.1 \
     --validate_every 1 \
     --use_proj kronecker --use_v kronecker \
-    --cascade
+    --cascade \
+    --use_early_exit
   #  --use_sparsemax
   
 echo "TFT Training completed!"
