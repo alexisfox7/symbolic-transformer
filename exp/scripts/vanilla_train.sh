@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/vanilla_reason_batch16_earlyexit"
+DIR="./outputs/vanilla_reason_batch16_earlyexit_1585"
 N=150000
 N_EMBD=384
 PRESET="small"
@@ -49,7 +49,8 @@ accelerate launch \
     --clip_grad_norm 1.0 \
     --val_ratio 0.1 \
     --validate_every 1 \
-    --use_early_exit
+    --use_early_exit \
+    --hook_weights "early_exit:0.15,final_layer:0.85"
     #--use_sparsemax
 
 echo "Training completed"

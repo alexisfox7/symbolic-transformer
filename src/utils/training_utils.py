@@ -74,6 +74,10 @@ def create_base_parser(description="Train Transformer with Hook System"):
     parser.add_argument("--use_early_exit", action="store_true", default=False,
                        help="Use early exiting aux loss")
     
+    # hook parameters
+    parser.add_argument("--hook_weights", type=str, default=None,
+                       help="Hook weights as comma-separated key:value pairs (e.g., 'early_exit:0.3,final_layer:0.7')")
+    
     return parser
 
 def add_symbolic_args(parser):
@@ -113,6 +117,14 @@ def create_config_from_args(args, symbolic_features=None):
     config.num_epochs = args.num_epochs
     config.use_sparsemax = args.use_sparsemax
     config.use_early_exit = args.use_early_exit
+    
+    # parse hook weights if provided
+    if args.hook_weights:
+        hook_weights = {}
+        for pair in args.hook_weights.split(','):
+            key, value = pair.split(':')
+            hook_weights[key.strip()] = float(value.strip())
+        config.hook_weights = hook_weights
     
     if symbolic_features:
         for feature, value in symbolic_features.items():
