@@ -57,28 +57,21 @@ class HeadLogitLensHook(InferenceHook):
     def on_attention_computed(self, layer_idx: int, attention_outputs: Dict[str, Any], state: Dict[str, Any]) -> None:
         """Analyze predictions from each attention head using attention outputs."""
         with torch.no_grad():
-            # Get the attention output which is the combined output from all heads
-            attention_output = attention_outputs.get('output')  # [batch, seq_len, n_embd]
-            if attention_output is None:
+            # Get the per-head outputs before concatenation
+            y = attention_outputs.get('output')  # [batch, n_head, seq_len, head_dim]
+            if y is None:
                 return
                 
-            # Apply layer norm if available
-            if self.layer_norm:
-                h = self.layer_norm(attention_output)
-            else:
-                h = attention_output
+            B, n_heads, T, head_dim = y.shape
             
-            # Focus on last position for generation: [batch, seq, n_embd] -> [n_embd]
-            last_hidden = h[0, -1, :]  # Shape: [n_embd]
-            
-            # Split hidden state into head-specific chunks
-            head_states = last_hidden.view(self.n_heads, self.head_dim)  # [n_heads, head_dim]
+            # Focus on last position for generation: [batch, n_head, seq_len, head_dim] -> [batch, n_head, head_dim]
+            last_head_outputs = y[0, :, -1, :]  # Shape: [n_heads, head_dim]
             
             layer_head_predictions = []
             
             # Analyze each head separately
-            for head_idx in range(self.n_heads):
-                head_state = head_states[head_idx]  # [head_dim]
+            for head_idx in range(n_heads):
+                head_state = last_head_outputs[head_idx]  # [head_dim]
                 head_embedding = self.head_embeddings[head_idx]  # [vocab_size, head_dim]
                 
                 # Compute logits using only this head's portion of the embedding
@@ -102,7 +95,7 @@ class HeadLogitLensHook(InferenceHook):
                 head_prediction = {
                     'layer': layer_idx,
                     'head': head_idx,
-                    'position': attention_output.shape[1] - 1,  # Last position
+                    'position': T - 1,  # Last position
                     'tokens': top_tokens,
                     'probs': top_probs.tolist(),
                     'token_ids': top_indices.tolist(),
