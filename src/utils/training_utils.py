@@ -265,7 +265,7 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
     if not args.disable_json_logging:
         trainer.add_json_logging(log_every_n_batches=args.json_log_steps)
         
-    #trainer.add_checkpointing(save_every_n_epochs=1)
+    trainer.add_checkpointing(save_every_n_epochs=1)
 
     if config.use_early_exit:
         trainer.add_early_exiting()

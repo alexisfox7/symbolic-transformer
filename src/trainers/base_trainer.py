@@ -86,7 +86,7 @@ class BaseTrainer(ABC):
             logger.warning("No output_dir set - checkpointing disabled")
             return
         
-        from old.hooks import CheckpointHook
+        from src.hooks.training import CheckpointHook
         self.add_hook(CheckpointHook(self.output_dir, save_every_n_epochs))
     
     def add_early_exiting(self) -> None:
