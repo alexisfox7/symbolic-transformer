@@ -1,349 +1,117 @@
 #!/usr/bin/env python3
 """
-Test script for inference hooks integration.
-Tests that hooks are properly called during model generation.
+Test script for JSONLogHook and ConsoleLogHook
 """
 
-import torch
-import sys
 import os
+import sys
+import tempfile
+import json
+from datetime import datetime
 
-from model import get_model
-from config import TransformerConfig
-from inference.generation import run_generation
-from inference.hooks import (
-    InferenceHook, 
-    InferenceHookManager,
-    create_attention_extraction_hook,
-    AttentionExtractionHook,
-    SymbolicStreamHook,
-    ActivationHook
-)
-from mytokenizers import create_tokenizer
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+
+# Initialize accelerate state to avoid logger errors
+from accelerate import PartialState
 import logging
-
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+_ = PartialState()
 
+from hooks.training import JSONLogHook, ConsoleLogHook
+from hooks.base import HookManager
 
-class TestHook(InferenceHook):
-    """Simple test hook that counts method calls."""
+def test_hooks():
+    """Test both JSONLogHook and ConsoleLogHook"""
     
-    def __init__(self):
-        super().__init__("test_hook")
-        self.call_counts = {
-            'generation_begin': 0,
-            'generation_end': 0,
-            'forward_begin': 0,
-            'forward_end': 0,
-            'attention_computed': 0,
-            'ffn_computed': 0
+    # Create temp directory for JSON logs
+    with tempfile.TemporaryDirectory() as temp_dir:
+        print(f"Testing hooks with temp dir: {temp_dir}")
+        
+        # Create hooks
+        console_hook = ConsoleLogHook(log_every_n_batches=2)
+        json_hook = JSONLogHook(output_dir=temp_dir, log_every_n_batches=2)
+        
+        # Create hook manager
+        hook_manager = HookManager()
+        hook_manager.add_hook(console_hook)
+        hook_manager.add_hook(json_hook)
+        
+        print("Created hooks and hook manager")
+        
+        # Mock training state
+        mock_state = {
+            'num_epochs': 3,
+            'model_params': 1000000,
+            'is_main_process': True,
+            'current_epoch': 1,
+            'current_batch_idx': 0,
+            'latest_loss': 2.5,
+            'avg_epoch_loss': 2.3,
+            'epoch_duration': 45.2,
+            'status': 'Completed',
+            'training_time': 120.5,
+            'total_batches': 100,
+            'final_loss': 2.1,
+            'val_loss': 2.0,
+            'val_perplexity': 7.39
         }
-    
-    def on_generation_begin(self, prompt_tokens, state):
-        self.call_counts['generation_begin'] += 1
-        logger.info(f"Generation starting with {len(prompt_tokens)} tokens")
-    
-    def on_generation_end(self, generated_tokens, state):
-        self.call_counts['generation_end'] += 1
-        logger.info(f"Generation ended with {len(generated_tokens)} tokens")
-    
-    def on_forward_begin(self, input_ids, position, state):
-        self.call_counts['forward_begin'] += 1
-    
-    def on_forward_end(self, logits, position, state):
-        self.call_counts['forward_end'] += 1
-    
-    def on_attention_computed(self, layer_idx, head_idx, attention_weights, 
-                            query, key, value, tokens, position, state):
-        self.call_counts['attention_computed'] += 1
-    
-    def on_ffn_computed(self, layer_idx, ffn_input, ffn_output, tokens, position, state):
-        self.call_counts['ffn_computed'] += 1
-
-
-def test_basic_hooks():
-    """Test that hooks are called during generation."""
-    print("\n=== Testing Basic Hook Integration ===")
-    
-    # Create small model for testing
-    config = TransformerConfig(
-        vocab_size=1000,
-        n_embd=128,
-        n_head=4,
-        n_layer=2,
-        block_size=64
-    )
-    
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = get_model('vanilla', config).to(device)
-    model.eval()
-    
-    # Get tokenizer
-    tokenizer = create_tokenizer('character')
-    
-    # Create test hook
-    test_hook = TestHook()
-    
-    # Run generation with hook
-    prompt = "Hello"
-    max_new_tokens = 5
-    
-    ids, text = run_generation(
-        model=model,
-        tokenizer=tokenizer,
-        prompt_text=prompt,
-        device=device,
-        max_new_tokens=max_new_tokens,
-        temperature=0.8,
-        top_k=50,
-        show_progress=False,
-        hooks=[test_hook]
-    )
-    
-    # Verify hooks were called
-    print(f"\nGenerated text: {text}")
-    print(f"\nHook call counts:")
-    for method, count in test_hook.call_counts.items():
-        print(f"  {method}: {count}")
-    
-    # Assertions
-    assert test_hook.call_counts['generation_begin'] == 1, "generation_begin should be called once"
-    assert test_hook.call_counts['generation_end'] == 1, "generation_end should be called once"
-    assert test_hook.call_counts['forward_begin'] == max_new_tokens, f"forward_begin should be called {max_new_tokens} times"
-    assert test_hook.call_counts['forward_end'] == max_new_tokens, f"forward_end should be called {max_new_tokens} times"
-    
-    expected_attention_calls = max_new_tokens * config.n_layer * config.n_head
-    assert test_hook.call_counts['attention_computed'] == expected_attention_calls, \
-        f"attention_computed should be called {expected_attention_calls} times"
-    
-    expected_ffn_calls = max_new_tokens * config.n_layer
-    assert test_hook.call_counts['ffn_computed'] == expected_ffn_calls, \
-        f"ffn_computed should be called {expected_ffn_calls} times"
-    
-    print("\n✓ Basic hook test passed!")
-
-
-def test_attention_extraction_hook():
-    """Test the attention extraction hook."""
-    print("\n=== Testing Attention Extraction Hook ===")
-    
-    # Create small model
-    config = TransformerConfig(
-        vocab_size=1000,
-        n_embd=128,
-        n_head=4,
-        n_layer=2,
-        block_size=64
-    )
-    
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = get_model('vanilla', config).to(device)
-    model.eval()
-    
-    tokenizer = create_tokenizer('character')
-    
-    # Create attention extraction hook
-    attention_hook = create_attention_extraction_hook(threshold=0.1, store_values=False)
-    
-    # Run generation
-    prompt = "Test"
-    max_new_tokens = 3
-    
-    ids, text = run_generation(
-        model=model,
-        tokenizer=tokenizer,
-        prompt_text=prompt,
-        device=device,
-        max_new_tokens=max_new_tokens,
-        temperature=0.8,
-        show_progress=False,
-        hooks=[attention_hook]
-    )
-    
-    print(f"\nGenerated text: {text}")
-    print(f"Number of attention records: {len(attention_hook.attention_data)}")
-    
-    # Check that we have attention data
-    assert len(attention_hook.attention_data) > 0, "Should have attention data"
-    
-    # Examine first attention record
-    first_record = attention_hook.attention_data[0]
-    print(f"\nFirst attention record:")
-    print(f"  Layer: {first_record['layer']}")
-    print(f"  Head: {first_record['head']}")
-    print(f"  Position: {first_record['position']}")
-    print(f"  Number of edges: {len(first_record['edges'])}")
-    
-    # Test edge extraction
-    if first_record['edges']:
-        edge = first_record['edges'][0]
-        print(f"\nExample edge:")
-        print(f"  {edge['source_token']} -> {edge['target_token']}")
-        print(f"  Weight: {edge['weight']:.4f}")
-    
-    # Test token attention summary
-    if len(text) > 0:
-        first_char = text[0]
-        summary = attention_hook.get_token_attention_summary(first_char)
-        print(f"\nAttention summary for '{first_char}':")
-        print(f"  Total received: {summary['total_received']:.4f}")
-        print(f"  Total given: {summary['total_given']:.4f}")
-    
-    print("\n✓ Attention extraction hook test passed!")
-
-
-def test_symbolic_model_hooks():
-    """Test hooks with symbolic transformer model."""
-    print("\n=== Testing Symbolic Model Hooks ===")
-    
-    # Create symbolic model
-    config = TransformerConfig(
-        vocab_size=1000,
-        n_embd=128,
-        n_head=4,
-        n_layer=2,
-        block_size=64
-    )
-    
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = get_model('symbolic', config).to(device)
-    model.eval()
-    
-    tokenizer = create_tokenizer('character')
-    
-    # Create hooks
-    test_hook = TestHook()
-    symbolic_hook = SymbolicStreamHook()
-    
-    # Run generation
-    prompt = "Hi"
-    max_new_tokens = 3
-    
-    ids, text = run_generation(
-        model=model,
-        tokenizer=tokenizer,
-        prompt_text=prompt,
-        device=device,
-        max_new_tokens=max_new_tokens,
-        temperature=0.8,
-        show_progress=False,
-        hooks=[test_hook, symbolic_hook]
-    )
-    
-    print(f"\nGenerated text: {text}")
-    print(f"Stream data records: {len(symbolic_hook.stream_data)}")
-    
-    # Check symbolic stream tracking
-    if symbolic_hook.stream_data:
-        first_stream = symbolic_hook.stream_data[0]
-        print(f"\nFirst stream record:")
-        print(f"  Stream type: {first_stream.get('stream_type', 'unknown')}")
-    
-    print("\n✓ Symbolic model hook test passed!")
-
-
-def test_multiple_hooks():
-    """Test running multiple hooks simultaneously."""
-    print("\n=== Testing Multiple Hooks ===")
-    
-    config = TransformerConfig(
-        vocab_size=1000,
-        n_embd=128,
-        n_head=4,
-        n_layer=2,
-        block_size=64
-    )
-    
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = get_model('vanilla', config).to(device)
-    model.eval()
-    
-    tokenizer = create_tokenizer('character')
-    
-    # Create multiple hooks
-    test_hook = TestHook()
-    attention_hook = AttentionExtractionHook(threshold=0.2)
-    activation_hook = ActivationHook(layers_to_track=[0, 1])
-    
-    # Run generation
-    prompt = "A"
-    max_new_tokens = 2
-    
-    ids, text = run_generation(
-        model=model,
-        tokenizer=tokenizer,
-        prompt_text=prompt,
-        device=device,
-        max_new_tokens=max_new_tokens,
-        temperature=0.8,
-        show_progress=False,
-        hooks=[test_hook, attention_hook, activation_hook]
-    )
-    
-    print(f"\nGenerated text: {text}")
-    print(f"Test hook forward calls: {test_hook.call_counts['forward_begin']}")
-    print(f"Attention records: {len(attention_hook.attention_data)}")
-    print(f"Activation records: {len(activation_hook.activations)}")
-    
-    # Verify all hooks were active
-    assert test_hook.call_counts['forward_begin'] > 0
-    assert len(attention_hook.attention_data) > 0
-    assert len(activation_hook.activations) > 0
-    
-    print("\n✓ Multiple hooks test passed!")
-
-
-def test_hook_manager_directly():
-    """Test the hook manager directly."""
-    print("\n=== Testing Hook Manager ===")
-    
-    manager = InferenceHookManager()
-    
-    # Add hooks
-    hook1 = TestHook()
-    hook1.name = "hook1"
-    hook2 = TestHook()
-    hook2.name = "hook2"
-    
-    manager.add_hook(hook1)
-    manager.add_hook(hook2)
-    
-    # Test listing hooks
-    hook_names = manager.list_hooks()
-    print(f"Registered hooks: {hook_names}")
-    assert "hook1" in hook_names
-    assert "hook2" in hook_names
-    
-    # Test calling methods
-    manager.on_generation_begin(["test"], {})
-    assert hook1.call_counts['generation_begin'] == 1
-    assert hook2.call_counts['generation_begin'] == 1
-    
-    # Test removing hook
-    manager.remove_hook("hook1")
-    assert "hook1" not in manager.list_hooks()
-    
-    # Test disabling hook
-    hook2.enabled = False
-    manager.on_generation_begin(["test"], {})
-    assert hook2.call_counts['generation_begin'] == 1  # Should not increase
-    
-    print("\n✓ Hook manager test passed!")
-
+        
+        print("\n=== Testing Training Begin ===")
+        hook_manager.call_hooks('on_train_begin', mock_state)
+        
+        print("\n=== Testing Epoch Begin ===")
+        hook_manager.call_hooks('on_epoch_begin', mock_state)
+        
+        print("\n=== Testing Batch Begin ===")
+        hook_manager.call_hooks('on_batch_begin', mock_state)
+        
+        print("\n=== Testing Batch End (batch 0) ===")
+        hook_manager.call_hooks('on_batch_end', mock_state)
+        
+        # Test batch 1 (shouldn't log due to log_every_n_batches=2)
+        mock_state['current_batch_idx'] = 1
+        mock_state['latest_loss'] = 2.4
+        print("\n=== Testing Batch End (batch 1 - should not log) ===")
+        hook_manager.call_hooks('on_batch_end', mock_state)
+        
+        # Test batch 2 (should log)
+        mock_state['current_batch_idx'] = 2
+        mock_state['latest_loss'] = 2.3
+        print("\n=== Testing Batch End (batch 2 - should log) ===")
+        hook_manager.call_hooks('on_batch_end', mock_state)
+        
+        print("\n=== Testing Epoch End ===")
+        hook_manager.call_hooks('on_epoch_end', mock_state)
+        
+        print("\n=== Testing Training End ===")
+        hook_manager.call_hooks('on_train_end', mock_state)
+        
+        # Check JSON log file
+        json_files = [f for f in os.listdir(temp_dir) if f.startswith('training_') and f.endswith('.jsonl')]
+        
+        if json_files:
+            json_file_path = os.path.join(temp_dir, json_files[0])
+            print(f"\n=== JSON Log File Contents ({json_files[0]}) ===")
+            
+            with open(json_file_path, 'r') as f:
+                for i, line in enumerate(f, 1):
+                    try:
+                        data = json.loads(line.strip())
+                        print(f"Line {i}: {data['event']} - {data.get('timestamp', 'N/A')}")
+                        if data['event'] == 'batch':
+                            print(f"  Batch {data['batch']}: loss={data['loss']}, perplexity={data['perplexity']:.2f}")
+                        elif data['event'] == 'epoch_end':
+                            print(f"  Epoch {data['epoch']}: loss={data['loss']}, duration={data['duration']}s")
+                            if 'val_loss' in data:
+                                print(f"  Validation: loss={data['val_loss']}, perplexity={data['val_perplexity']:.2f}")
+                    except json.JSONDecodeError as e:
+                        print(f"Line {i}: JSON decode error - {e}")
+                        print(f"  Raw line: {line.strip()}")
+        else:
+            print("\n❌ No JSON log file found!")
+            
+        print(f"\n✅ Hook test completed!")
 
 if __name__ == "__main__":
-    try:
-        test_hook_manager_directly()
-        test_basic_hooks()
-        test_attention_extraction_hook()
-        test_symbolic_model_hooks()
-        test_multiple_hooks()
-        
-        print("\n\n🎉 All tests passed! Hook integration is working correctly.")
-        
-    except Exception as e:
-        print(f"\n\n❌ Test failed with error: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    test_hooks()

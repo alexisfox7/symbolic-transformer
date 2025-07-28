@@ -32,29 +32,29 @@ class HookManager:
     def __init__(self):
         self.hooks: List[Hook] = []
     
-    def add_hook(self, hook):
+    def add_hook(self, hook: Hook) -> None:
         self.remove_hook(hook.name)
         self.hooks.append(hook)
     
-    def remove_hook(self, name):
+    def remove_hook(self, name: str) -> bool:
         hook = self.get_hook(name)
         if hook:
             self.hooks.remove(hook)
             return True
         return False
 
-    def get_hook(self, name):
+    def get_hook(self, name: str) -> Optional[Hook]:
         for hook in self.hooks:
             if hook.name == name:
                 return hook
         return None
     
-    def enable_hook(self, name):
+    def enable_hook(self, name: str) -> None:
         hook = self.get_hook(name)
         if hook:
             hook.enabled = True
 
-    def disable_hook(self, name):
+    def disable_hook(self, name: str) -> None:
         hook = self.get_hook(name)
         if hook:
             hook.enabled = False
@@ -65,7 +65,7 @@ class HookManager:
     def call_hooks(self, method_name, *args, **kwargs):
         for hook in self.hooks:
             if not hook.enabled:
-                return
+                continue
             
             method = getattr(hook, method_name, None)
             if method:
@@ -82,15 +82,14 @@ class TrainingHook(Hook):
     def on_train_end(self, state: Dict[str, Any]) -> None:
         pass
     
-    def on_epoch_begin(self, epoch: int, state: Dict[str, Any]) -> None:
+    def on_epoch_begin(self, state: Dict[str, Any]) -> None:
         pass
     
-    def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
+    def on_epoch_end(self, state: Dict[str, Any]) -> None:
         pass
     
-    def on_batch_begin(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
+    def on_batch_begin(self, state: Dict[str, Any]) -> None:
         pass
 
-    def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
+    def on_batch_end(self, state: Dict[str, Any]) -> None:
         pass
-

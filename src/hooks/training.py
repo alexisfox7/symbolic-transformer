@@ -1,4 +1,5 @@
 from typing import Any, Dict
+
 from accelerate.logging import get_logger # type: ignore
 from .base import TrainingHook
 import os
@@ -20,25 +21,28 @@ class ConsoleLogHook(TrainingHook):
     def on_train_end(self, state: Dict[str, Any]) -> None:
         logger.info("Training ended!")
     
-    def on_epoch_begin(self, epoch: int, state: Dict[str, Any]) -> None:
+    def on_epoch_begin(self, state: Dict[str, Any]) -> None:
         epoch_idx = state.get("current_epoch")
         total = state.get("num_epochs")
         logger.info(f"Epoch {epoch_idx}/{total}")
 
-    def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
+    def on_epoch_end(self, state: Dict[str, Any]) -> None:
         epoch_idx = state.get("current_epoch")
         avg_loss = state.get("avg_epoch_loss", 0.0)
         epoch_duration = state.get("epoch_duration", 0.0)
         logger.info(f"Epoch {epoch_idx} completed: avg_loss={avg_loss:.4f}, duration={epoch_duration:.2f}s")
     
-    def on_batch_begin(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
+    def on_batch_begin(self, state: Dict[str, Any]) -> None:
+        batch_idx = state.get("current_batch_idx")
         current_epoch = state.get("current_epoch")
         total_epochs = state.get("num_epochs")
 
         if batch_idx % self.log_every_n_batches == 0:
             logger.info(f"Epoch {current_epoch}/{total_epochs}, Batch {batch_idx}")
 
-    def on_batch_end(self, batch_idx: int, loss: float, state: Dict[str, Any]) -> None:
+    def on_batch_end(self, state: Dict[str, Any]) -> None:
+        batch_idx = state.get("current_batch_idx")
+        loss = state.get("latest_loss")
         if batch_idx % self.log_every_n_batches == 0:
             current_epoch = state.get("current_epoch")
             total_epochs = state.get("num_epochs")
@@ -75,15 +79,15 @@ class JSONLogHook(TrainingHook):
                  if not callable(v) and k not in ['model', 'optimizer', 'dataloader', 'accelerator']}
         self._write({"event": "train_begin", "config": config})
     
-    def on_epoch_end(self, epoch: int, state: Dict[str, Any]) -> None:
+    def on_epoch_end(self, state: Dict[str, Any]) -> None:
         if not state.get('is_main_process', True):
             return
         
         # training metrics
-        avg_loss = state.get('avg_loss', state.get('loss'))
+        avg_loss = state.get('avg_epoch_loss', state.get('loss'))
         epoch_data = {
             "event": "epoch_end",
-            "epoch": epoch,
+            "epoch": state.get('current_epoch'),
             "loss": avg_loss,
             "duration": state.get('epoch_duration')
         }
@@ -99,9 +103,22 @@ class JSONLogHook(TrainingHook):
         
         self._write(epoch_data)
     
+    def on_train_end(self, state: Dict[str, Any]) -> None:
+        if not state.get('is_main_process', True):
+            return
+        
+        final_data = {
+            "event": "train_end",
+            "status": state.get('status', 'Unknown'),
+            "training_time": state.get('training_time', 0.0),
+            "total_batches": state.get('total_batches', 0),
+            "final_loss": state.get('final_loss')
+        }
+        self._write(final_data)
+    
     def on_batch_end(self, state: Dict[str, Any]) -> None:
         batch_idx = state.get("current_batch_idx")
-        loss = state.get("latest_batch_loss")
+        loss = state.get("latest_loss")
 
         if batch_idx % self.log_every_n_batches == 0:
             if not state.get('is_main_process', True):
