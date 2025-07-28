@@ -4,14 +4,14 @@ Text Generation Utilities
 """
 
 import torch
-from accelerate.logging import get_logger
+import logging
 from tqdm.auto import tqdm
 from typing import Tuple, List, Dict, Optional, Any
 
 from mytokenizers import BaseTokenizer
-from inference.hooks import InferenceHookManager, InferenceHook
+from src.hooks.base import HookManager, InferenceHook
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 @torch.no_grad()
 def run_generation(model: torch.nn.Module, 
@@ -40,7 +40,7 @@ def run_generation(model: torch.nn.Module,
     # set up hooks if provided
     hook_manager = None
     if hooks and hasattr(model, 'set_hook_manager'):
-        hook_manager = InferenceHookManager()
+        hook_manager = HookManager()
         for hook in hooks:
             hook_manager.add_hook(hook)
         model.set_hook_manager(hook_manager)

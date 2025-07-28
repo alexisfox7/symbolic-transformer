@@ -1,3 +1,5 @@
 validation is messed up since loss is diff
 add checkpointing hook
 add attention hook
+add logitlens hook
+make logging flexible

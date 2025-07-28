@@ -6,7 +6,7 @@ Simple logit lens implementation that works with existing hook system.
 import torch
 import torch.nn.functional as F
 from typing import List, Dict, Any, Optional
-from .hooks import InferenceHook
+from src.hooks.base import InferenceHook
 import matplotlib.pyplot as plt
 import os
 
@@ -33,15 +33,20 @@ class LogitLensHook(InferenceHook):
     def clear(self):
         """Clear stored predictions."""
         self.predictions = []
-        self.data = []
+        self.data = {}
     
-    def analyze_layer(self, hidden_state, layer_idx, position, tokens):
-        """Analyze predictions at a specific layer."""
+    def on_layer_end(self, layer_idx: int, outputs: Any, state: Dict[str, Any]) -> None:
+        """Analyze predictions at each layer using logit lens."""
         with torch.no_grad():
+            # Get input_ids from state for context
+            input_ids = state.get('input_ids')
+            
+            # outputs is the hidden state after this layer
+            hidden_state = outputs  # Shape: [batch, seq, hidden_dim]
+            
             # Apply layer norm if available (like original logit lens)
             if self.layer_norm:
                 h = self.layer_norm(hidden_state)
-                print("Layer norm applied for logit lens analysis")
             else:
                 h = hidden_state
             
@@ -56,19 +61,26 @@ class LogitLensHook(InferenceHook):
             top_probs, top_indices = torch.topk(probs, self.top_k)
             
             # Decode tokens
-            top_tokens = [self.tokenizer.decode([idx.item()]) for idx in top_indices]
+            top_tokens = []
+            for idx in top_indices:
+                try:
+                    token_text = self.tokenizer.decode([idx.item()], skip_special_tokens=False)
+                    token_text = repr(token_text) if '\n' in token_text or len(token_text.strip()) == 0 else token_text.strip()
+                    top_tokens.append(token_text)
+                except:
+                    top_tokens.append(f"ID_{idx.item()}")
             
             # Store prediction
             prediction = {
                 'layer': layer_idx,
-                'position': position,
+                'position': hidden_state.shape[1] - 1,  # Last position
                 'tokens': top_tokens,
                 'probs': top_probs.tolist(),
+                'token_ids': top_indices.tolist(),
                 'perplexity': torch.exp(-(probs * torch.log(probs + 1e-10)).sum()).item()
             }
             
             self.predictions.append(prediction)
-            return prediction
 
 
 def run_logit_lens_analysis(model, tokenizer, text, device):
@@ -84,13 +96,13 @@ def run_logit_lens_analysis(model, tokenizer, text, device):
     Returns:
         Tuple of (predictions per layer, final prediction info)
     """
-    from .hooks import InferenceHookManager
+    from src.hooks.base import HookManager
     
     # Create logit lens hook
     logit_hook = LogitLensHook(model, tokenizer, top_k=5)
     
     # Set up hook manager
-    hook_manager = InferenceHookManager()
+    hook_manager = HookManager()
     hook_manager.add_hook(logit_hook)
     model.set_hook_manager(hook_manager)
     
@@ -100,24 +112,35 @@ def run_logit_lens_analysis(model, tokenizer, text, device):
         input_ids = torch.tensor([input_ids], dtype=torch.long)
     input_ids = input_ids.to(device)
     
-    # Prepare hook state
-    tokens = [tokenizer.decode([t]) for t in input_ids[0]]
-    hook_state = {'tokens': tokens, 'position': 0}
-    
     # Run forward pass
     model.eval()
     with torch.no_grad():
-        outputs = model(input_ids, hook_state=hook_state)
+        outputs = model(input_ids)
     
     # Get final prediction from the model's actual output
-    final_logits = outputs['logits'][0, -1, :]  # Last position logits
+    # Handle both dict and tensor returns
+    if isinstance(outputs, dict):
+        logits = outputs['logits']
+    else:
+        logits = outputs
+    
+    final_logits = logits[0, -1, :]  # Last position logits
     final_probs = F.softmax(final_logits, dim=-1)
     final_top_probs, final_top_indices = torch.topk(final_probs, 5)
-    final_top_tokens = [tokenizer.decode([idx.item()]) for idx in final_top_indices]
+    
+    # Decode tokens with error handling
+    final_top_tokens = []
+    for idx in final_top_indices:
+        try:
+            token_text = tokenizer.decode([idx.item()], skip_special_tokens=False)
+            token_text = repr(token_text) if '\n' in token_text or len(token_text.strip()) == 0 else token_text.strip()
+            final_top_tokens.append(token_text)
+        except:
+            final_top_tokens.append(f"ID_{idx.item()}")
     
     final_prediction = {
         'layer': 'FINAL',
-        'position': len(tokens) - 1,
+        'position': input_ids.shape[1] - 1,  # Last position
         'tokens': final_top_tokens,
         'probs': final_top_probs.tolist(),
         'perplexity': torch.exp(-(final_probs * torch.log(final_probs + 1e-10)).sum()).item(),
@@ -125,11 +148,8 @@ def run_logit_lens_analysis(model, tokenizer, text, device):
         'predicted_next': final_top_tokens[0]
     }
     
-    # Clean up - restore previous hook manager if it exists
-    if hasattr(model, 'restore_hook_manager'):
-        model.restore_hook_manager()
-    else:
-        model.set_hook_manager(None)
+    # Clean up hook manager
+    model.set_hook_manager(None)
     
     return logit_hook.predictions, final_prediction
 

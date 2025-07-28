@@ -12,11 +12,16 @@ class HookableComponent(nn.Module):
         super().__init__()
         self._hook_manager = None
         self._current_layer_idx = None
+        self._parent_state = {}
         
     def set_hook_context(self, hook_manager, layer_idx: Optional[int] = None):
         """Set the hook manager and current layer index."""
         self._hook_manager = hook_manager
         self._current_layer_idx = layer_idx
+        
+    def set_parent_state(self, parent_state: Dict[str, Any]):
+        """Set parent state containing input_ids and other context."""
+        self._parent_state = parent_state
         
     def call_hooks(self, method_name: str, *args, **kwargs):
         """Call hooks if hook manager is available."""

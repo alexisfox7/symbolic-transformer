@@ -68,7 +68,11 @@ class VanillaAttention(HookableComponent):
                 'query': q, 'key': k, 'value': v,  # [B, n_head, T, head_dim]
                 'output': y  # [B, n_head, T, head_dim]
             }
-            state = {'layer_idx': self.current_layer_idx, 'input_shape': x.shape}
+            state = {
+                'layer_idx': self.current_layer_idx, 
+                'input_shape': x.shape,
+                'input_ids': self._parent_state.get('input_ids')
+            }
             self.call_hooks('on_attention_computed', self.current_layer_idx, attention_outputs, state)
         
         # concatenate heads and project
@@ -243,7 +247,11 @@ class SymbolicAttention(HookableComponent):
                 'query': q, 'key': k, 'value': v,  # [B, n_head, T, head_dim]
                 'output': y  # [B, n_head, T, head_dim]
             }
-            state = {'layer_idx': self.current_layer_idx, 'input_shape': x.shape}
+            state = {
+                'layer_idx': self.current_layer_idx, 
+                'input_shape': x.shape,
+                'input_ids': self._parent_state.get('input_ids')
+            }
             self.call_hooks('on_attention_computed', self.current_layer_idx, attention_outputs, state)
 
         # Concatenate heads
@@ -328,7 +336,11 @@ class TFTAttention(SymbolicAttention):
                 'query': q, 'key': k, 'value': v,  # [B, n_head, T, head_dim]
                 'output': y  # [B, n_head, T, head_dim]
             }
-            state = {'layer_idx': self.current_layer_idx, 'input_shape': x.shape}
+            state = {
+                'layer_idx': self.current_layer_idx, 
+                'input_shape': x.shape,
+                'input_ids': self._parent_state.get('input_ids')
+            }
             self.call_hooks('on_attention_computed', self.current_layer_idx, attention_outputs, state)
 
         # concatenate heads

@@ -6,7 +6,7 @@ Head-wise logit lens implementation that analyzes predictions from individual at
 import torch
 import torch.nn.functional as F
 from typing import List, Dict, Any, Optional
-from .hooks import InferenceHook
+from src.hooks.base import InferenceHook
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -119,13 +119,13 @@ def run_head_logit_lens_analysis(model, tokenizer, text, device):
     Returns:
         Tuple of (head predictions, final prediction info)
     """
-    from .hooks import InferenceHookManager
+    from src.hooks.base import HookManager
     
     # Create head logit lens hook
     head_logit_hook = HeadLogitLensHook(model, tokenizer, top_k=5)
     
     # Set up hook manager
-    hook_manager = InferenceHookManager()
+    hook_manager = HookManager()
     hook_manager.add_hook(head_logit_hook)
     model.set_hook_manager(hook_manager)
     

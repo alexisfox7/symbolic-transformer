@@ -8,16 +8,17 @@ class AttentionExtractionHook(InferenceHook):
     Extracts attention patterns for knowledge graph construction.
     """
     
-    def __init__(self, threshold: float = 0.1, store_values: bool = False):
+    def __init__(self, threshold: float = 0.1, store_values: bool = False, tokenizer=None):
         super().__init__("attention_extractor")
         self.threshold = threshold
         self.store_values = store_values
+        self.tokenizer = tokenizer
         self.attention_data = []
     
     def clear(self):
         """Clear accumulated attention data"""
         self.attention_data = []
-        self.data = []
+        self.data = {}
     
     def on_generation_begin(self, prompt_tokens: List[str], state: Dict[str, Any]) -> None:
         """Store prompt context"""
@@ -39,20 +40,44 @@ class AttentionExtractionHook(InferenceHook):
         if attention_weights is None:
             return
             
-        # Extract tokens and position from state
-        tokens = state.get('tokens', [])
+        # Extract input_ids and create token representations
+        input_ids = state.get('input_ids')
         position = state.get('position', 0)
         
         # Process each attention head
         batch_size, num_heads, seq_len, _ = attention_weights.shape
         
-        for head_idx in range(num_heads):
-            head_weights = attention_weights[0, head_idx].detach().cpu()  # [seq_len, seq_len]
+        # Create token representations from input_ids
+        if input_ids is not None and self.tokenizer is not None:
+            # Take first batch and decode individual tokens
+            token_ids = input_ids[0].tolist() if input_ids.dim() > 1 else input_ids.tolist()
+            current_tokens = []
+            for token_id in token_ids[:seq_len]:
+                try:
+                    # Decode individual token
+                    token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
+                    # Clean up token text (remove spaces, newlines)
+                    token_text = repr(token_text) if '\n' in token_text or len(token_text.strip()) == 0 else token_text.strip()
+                    current_tokens.append(token_text)
+                except:
+                    # Fallback to token ID if decoding fails
+                    current_tokens.append(f"ID_{token_id}")
             
-            # Ensure have enough tokens
-            current_tokens = tokens.copy()
+            # Pad if needed
             while len(current_tokens) < seq_len:
                 current_tokens.append(f"<POS_{len(current_tokens)}>")
+        elif input_ids is not None:
+            # Fallback to token IDs if no tokenizer
+            token_ids = input_ids[0].tolist() if input_ids.dim() > 1 else input_ids.tolist()
+            current_tokens = [f"ID_{token_id}" for token_id in token_ids[:seq_len]]
+            while len(current_tokens) < seq_len:
+                current_tokens.append(f"<POS_{len(current_tokens)}>")
+        else:
+            # Fallback to position tokens if no input_ids
+            current_tokens = [f"<POS_{i}>" for i in range(seq_len)]
+        
+        for head_idx in range(num_heads):
+            head_weights = attention_weights[0, head_idx].detach().cpu()  # [seq_len, seq_len]
             
             # Store edges above threshold for knowledge graph 
             significant_edges = []
@@ -84,7 +109,6 @@ class AttentionExtractionHook(InferenceHook):
             }
             
             self.attention_data.append(attention_record)
-            self.data.append(attention_record)
 
     def get_edges_for_layer_head(self, layer: int, head: int) -> List[Dict]:
         """Get all edges for a specific layer/head combination"""

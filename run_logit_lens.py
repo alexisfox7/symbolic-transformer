@@ -119,7 +119,7 @@ def load_model_from_checkpoint(checkpoint_path, device, model_type):
 
 def main():
     parser = argparse.ArgumentParser(description='Run logit lens analysis on a trained model')
-    parser.add_argument('--checkpoint', type=str, required=True, help='Path to model checkpoint')
+    parser.add_argument('checkpoint', type=str, help='Path to model checkpoint')
     parser.add_argument('--model-type', type=str, default='vanilla', 
                        choices=['vanilla', 'symbolic', 'tft'],
                        help='Type of model architecture')

@@ -25,7 +25,7 @@ from src.model import get_model
 from src.config import TransformerConfig
 from src.mytokenizers import create_tokenizer, from_pretrained
 from src.inference.generation import run_generation
-from src.inference.hooks import InferenceHook, InferenceHookManager
+from src.hooks.base import InferenceHook, HookManager
 import logging
 
 logging.basicConfig(level=logging.INFO)

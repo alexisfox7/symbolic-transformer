@@ -6,6 +6,14 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
 import torch
 from accelerate.logging import get_logger # type: ignore
+from accelerate import PartialState
+
+# Initialize accelerate state for logging
+try:
+    PartialState()
+except RuntimeError:
+    # Already initialized
+    pass
 
 logger = get_logger(__name__)
 

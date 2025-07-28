@@ -14,14 +14,14 @@ import torch
 import argparse
 import os
 import sys
+from accelerate import PartialState
 
 from mytokenizers.factory import add_reasoning_tokens
 from src.model import get_model
 from src.config import TransformerConfig
 from src.inference.generation import run_generation
-from src.inference.hooks import (
-    AttentionExtractionHook,
-    FFNActivationTracker
+from src.hooks.inference import (
+    AttentionExtractionHook
 )
 from src.mytokenizers import create_tokenizer, from_pretrained
 import logging
@@ -302,6 +302,9 @@ def main():
                         help='Enable FFN hook tracking')
     
     args = parser.parse_args()
+    
+    # Initialize accelerate state for logging
+    PartialState()
     args.output_dir = os.path.join('outputs', 'inference', args.output_dir)
     os.makedirs(args.output_dir, exist_ok=True)
     
@@ -322,7 +325,8 @@ def main():
     hooks = []
     attention_hook = AttentionExtractionHook(
         threshold=args.attention_threshold,
-        store_values=False
+        store_values=False,
+        tokenizer=tokenizer
     )
     hooks.append(attention_hook)
     

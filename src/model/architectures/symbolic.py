@@ -89,7 +89,7 @@ class SymbolicTransformer(TransformerBase):
         b, t = input_ids.size()
 
         # Hook: on_forward_begin
-        state = {'targets': targets, 'model': self}
+        state = {'targets': targets, 'model': self, 'input_ids': input_ids}
         self.hook_manager.call_hooks('on_forward_begin', input_ids, state)
 
         tok_emb = self.transformer.wte(input_ids)
@@ -100,6 +100,10 @@ class SymbolicTransformer(TransformerBase):
             # Set hook context for this layer
             block.attn.set_hook_context(self.hook_manager, layer_idx)
             block.ffn.set_hook_context(self.hook_manager, layer_idx)
+            
+            # Set parent state with input_ids for hooks
+            block.attn.set_parent_state(state)
+            block.ffn.set_parent_state(state)
             
             # Hook: on_layer_begin
             self.hook_manager.call_hooks('on_layer_begin', layer_idx, xt, state)
