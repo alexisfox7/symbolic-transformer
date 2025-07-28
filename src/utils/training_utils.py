@@ -11,6 +11,14 @@ import torch
 from torch.utils.data import DataLoader, random_split
 import warnings
 from accelerate.logging import get_logger
+from accelerate import PartialState
+
+# Initialize accelerate state for logging
+try:
+    PartialState()
+except RuntimeError:
+    # Already initialized
+    pass
 
 # suppress accelerate kernel version warnings globally
 warnings.filterwarnings("ignore", message=".*kernel version.*")
