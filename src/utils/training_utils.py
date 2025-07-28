@@ -8,9 +8,9 @@ import argparse
 import os
 import sys
 import torch
-import logging
 from torch.utils.data import DataLoader, random_split
 import warnings
+from accelerate.logging import get_logger
 
 # suppress accelerate kernel version warnings globally
 warnings.filterwarnings("ignore", message=".*kernel version.*")
@@ -98,7 +98,7 @@ def setup_training_environment(output_dir, model_type="Transformer", trainer_typ
     if not logging.getLogger().handlers:
         logging.basicConfig(level=logging.INFO)
     
-    logger = logging.getLogger(__name__)
+    logger = get_logger(__name__)
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     

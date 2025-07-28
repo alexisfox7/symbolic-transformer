@@ -6,7 +6,6 @@ Updated to use the hook system instead of callbacks.
 """
 
 import time
-import logging
 import warnings
 from typing import Dict, Any, Optional, List
 import os
@@ -20,10 +19,11 @@ warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
 from accelerate import Accelerator
+from accelerate.logging import get_logger
 
 from .base_trainer import BaseTrainer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class AccelerateTrainer(BaseTrainer):
     """Accelerate trainer without gradient accumulation complexity - FIXED with hooks."""
@@ -51,7 +51,7 @@ class AccelerateTrainer(BaseTrainer):
         # Add accelerator-specific items to trainer_state for hooks
         self.trainer_state['accelerator'] = self.accelerator
         self.trainer_state['is_main_process'] = self.accelerator.is_main_process
-        
+
         self.start_epoch = start_epoch
         self.num_epochs = num_epochs
         self.clip_grad_norm = clip_grad_norm
@@ -139,7 +139,7 @@ class AccelerateTrainer(BaseTrainer):
                 batch_size = batch_data.get('input_ids', next(iter(batch_data.values()))).shape[0]
        
                 self.trainer_state.update({
-                    'latest_loss': batch_loss_item,
+                    'latest_batch_loss': batch_loss_item,
                     'global_batch': global_batch
                 })
                 self.hooks.on_batch_end(batch_idx, batch_loss_item, self.trainer_state)
@@ -153,7 +153,7 @@ class AccelerateTrainer(BaseTrainer):
             epoch_duration = time.time() - epoch_start_time
 
             epoch_end_logs = {
-                'loss': avg_epoch_loss, 
+                'avg_epoch_loss': avg_epoch_loss, 
                 'epoch_duration': epoch_duration,
                 'batches': num_batches,
                 'global_batch': global_batch
@@ -173,49 +173,6 @@ class AccelerateTrainer(BaseTrainer):
         self.hooks.on_train_end(self.trainer_state)
 
         return training_metrics
-
-    def log_batch(self,
-                  batch_idx: int,
-                  loss: float,
-                  epoch: Optional[int] = None,
-                  metrics: Optional[Dict[str, Any]] = None):
-        """
-        Log information about a training batch.
-
-        Args:
-            batch_idx (int): Index of the current batch.
-            loss (float): Training loss for the batch.
-            epoch (int, optional): Current epoch number.
-            metrics (dict, optional): Additional metrics to log.
-        """
-        metrics_str = ""
-        if metrics:
-            metrics_str = ", ".join(f"{k}: {v}" for k, v in metrics.items())
-
-        epoch_str = f"Epoch {epoch}, " if epoch is not None else ""
-        # Only log at intervals to avoid spam
-        if batch_idx % self.log_interval == 0:
-            logger.info(f"{epoch_str}Batch {batch_idx}, Loss: {loss:.4f}" +
-                       (f", {metrics_str}" if metrics_str else ""))
-
-    def log_epoch(self,
-                  epoch: int,
-                  avg_loss: float,
-                  metrics: Optional[Dict[str, Any]] = None):
-        """
-        Log information about a completed epoch.
-
-        Args:
-            epoch (int): Epoch number.
-            avg_loss (float): Average training loss for the epoch.
-            metrics (dict, optional): Additional metrics to log.
-        """
-        metrics_str = ""
-        if metrics:
-            metrics_str = ", ".join(f"{k}: {v}" for k, v in metrics.items())
-
-        logger.info(f"Epoch {epoch} complete: avg_loss={avg_loss:.4f}" +
-                   (f", {metrics_str}" if metrics_str else ""))
 
     def evaluate(self, eval_dataloader: Optional[DataLoader] = None) -> Dict[str, Any]:
         """Evaluate with accelerator."""
@@ -252,16 +209,16 @@ class AccelerateTrainer(BaseTrainer):
                 num_batches_processed += 1
 
         avg_loss = total_loss / total_samples if total_samples > 0 else float('nan')
-        eval_metrics = {'loss': avg_loss}
+        eval_metrics = {'val_loss': avg_loss}
         
         if avg_loss is not None and not torch.isnan(torch.tensor(avg_loss)):
-            eval_metrics['perplexity'] = torch.exp(torch.tensor(avg_loss)).item()
+            eval_metrics['val_perplexity'] = torch.exp(torch.tensor(avg_loss)).item()
         else:
-            eval_metrics['perplexity'] = float('nan')
+            eval_metrics['val_perplexity'] = float('nan')
 
         self.model.train()
 
-        logger.info(f"Evaluation results: Loss: {eval_metrics['loss']:.6f}, Perplexity: {eval_metrics['perplexity']:.6f}")
+        logger.info(f"Evaluation results: Loss: {eval_metrics['val_loss']:.6f}, Perplexity: {eval_metrics['val_perplexity']:.6f}")
         self.trainer_state.update(eval_metrics)
         self.hooks.on_evaluate_end(self.trainer_state)
 

@@ -15,10 +15,10 @@ import torch
 from torch.utils.data import DataLoader
 from datasets import load_dataset
 from transformers import AutoTokenizer
-import logging
+from accelerate.logging import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 def log_if_main(logger, message):
     """Log only from main process when using accelerate."""

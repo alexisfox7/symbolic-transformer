@@ -5,17 +5,17 @@ Basic training loop with progress tracking and callback integration.
 """
 
 import time
-import logging
 from typing import Dict, Any, Optional, List
 import os
 import torch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
+from accelerate.logging import get_logger
 
 #FIX:remove callback import, keep only basetrainer
 from .base_trainer import BaseTrainer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class SimpleTrainer(BaseTrainer):
     """

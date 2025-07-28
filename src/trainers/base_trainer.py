@@ -4,15 +4,15 @@ Updated base trainer with simple hook integration.
 """
 
 import os
-import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
 import torch
 from torch.utils.data import DataLoader
+from accelerate.logging import get_logger
 
 from .hooks import HookManager, TrainingHook
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class BaseTrainer(ABC):

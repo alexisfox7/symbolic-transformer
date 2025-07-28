@@ -4,13 +4,13 @@ Enhanced hook system with perplexity calculation and validation JSON logging.
 """
 
 from typing import Dict, Any, List, Callable, Optional
-import logging
 import torch
 import math
 from random import randint
 import torch.nn as nn
+from accelerate.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TrainingHook:

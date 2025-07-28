@@ -7,12 +7,12 @@ Provides a consistent interface to the Hugging Face GPT-2 tokenizer
 import os
 from typing import List, Dict, Union, Optional, Any
 import torch
-import logging
+from accelerate.logging import get_logger
 from transformers import GPT2Tokenizer as HfGPT2Tokenizer, GPT2TokenizerFast
 
 from .base_tokenizer import BaseTokenizer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 #REVIEW whats the point of wrapping this
 class GPT2Tokenizer(BaseTokenizer):

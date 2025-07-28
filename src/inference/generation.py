@@ -4,14 +4,14 @@ Text Generation Utilities
 """
 
 import torch
-import logging
+from accelerate.logging import get_logger
 from tqdm.auto import tqdm
 from typing import Tuple, List, Dict, Optional, Any
 
 from mytokenizers import BaseTokenizer
 from inference.hooks import InferenceHookManager, InferenceHook
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 @torch.no_grad()
 def run_generation(model: torch.nn.Module, 

@@ -4,8 +4,8 @@ Trainers module for cleanGPT.
 """
 
 import torch
-import logging
 from typing import Dict, Type, Any, List, Optional
+from accelerate.logging import get_logger
 
 from .base_trainer import BaseTrainer
 from .simple_trainer import SimpleTrainer
@@ -14,7 +14,7 @@ from .accelerate_trainer import AccelerateTrainer
 
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # registry of available trainer types
 TRAINER_REGISTRY: Dict[str, Type[BaseTrainer]] = {

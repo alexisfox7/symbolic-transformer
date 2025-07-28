@@ -5,9 +5,9 @@ Inference hook system for extracting model internals during generation.
 
 from typing import Dict, Any, List, Optional
 import torch
-import logging
+from accelerate.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class InferenceHook:

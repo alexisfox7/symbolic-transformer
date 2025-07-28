@@ -6,10 +6,10 @@ Provides functions for various token sampling approaches
 
 import torch
 import torch.nn.functional as F
-import logging
+from accelerate.logging import get_logger
 from typing import List, Dict, Optional, Union, Callable
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 def greedy_sampling(logits: torch.Tensor) -> torch.Tensor:
     """

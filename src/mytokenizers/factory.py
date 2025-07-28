@@ -3,11 +3,11 @@
 Simple tokenizer factory
 """
 
-import logging
+from accelerate.logging import get_logger
 from .gpt2_tokenizer import GPT2Tokenizer
 from .character_tokenizer import CharacterTokenizer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 TOKENIZERS = {
     'gpt2': GPT2Tokenizer,
