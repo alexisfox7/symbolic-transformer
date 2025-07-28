@@ -66,7 +66,7 @@ class AccelerateTrainer(BaseTrainer):
     def train(self) -> Dict[str, Any]:
         """Execute training loop with accelerate."""
         self.trainer_state['num_epochs'] = self.num_epochs
-        self.hooks.on_train_begin(self.trainer_state)
+        self.hooks.call_hooks('on_train_begin', self.trainer_state)
 
         total_start_time = time.time()
         training_metrics = {
@@ -82,7 +82,7 @@ class AccelerateTrainer(BaseTrainer):
 
         for epoch in range(self.start_epoch, self.num_epochs + 1):
             self.trainer_state['current_epoch'] = epoch
-            self.hooks.on_epoch_begin(self.trainer_state)
+            self.hooks.call_hooks('on_epoch_begin', self.trainer_state)
             epoch_start_time = time.time()
             
             epoch_loss = 0.0
@@ -98,7 +98,7 @@ class AccelerateTrainer(BaseTrainer):
             for batch_idx, batch_data in enumerate(progress_bar):
                 self.trainer_state['current_batch_idx'] = batch_idx
                 self.trainer_state['current_batch'] = batch_data
-                self.hooks.on_batch_begin(self.trainer_state)
+                self.hooks.call_hooks('on_batch_begin', self.trainer_state)
                 
                 # Forward pass
                 outputs = self.model(**batch_data)
@@ -111,7 +111,7 @@ class AccelerateTrainer(BaseTrainer):
                 if torch.isnan(total_loss):
                     logger.error(f"Epoch {epoch}, Batch {batch_idx}: Loss is NaN. Stopping training.")
                     self.trainer_state['status'] = 'NaN Loss'
-                    self.hooks.on_train_end(self.trainer_state)
+                    self.hooks.call_hooks('on_train_end', self.trainer_state)
                     training_metrics['training_time'] = time.time() - total_start_time
                     return training_metrics
 
@@ -143,7 +143,7 @@ class AccelerateTrainer(BaseTrainer):
                     'global_batch': global_batch,
                     'current_batch_idx': batch_idx
                 })
-                self.hooks.on_batch_end(self.trainer_state)
+                self.hooks.call_hooks('on_batch_end', self.trainer_state)
 
             # Calculate epoch metrics
             avg_epoch_loss = epoch_loss / num_batches if num_batches > 0 else float('nan')
@@ -160,7 +160,7 @@ class AccelerateTrainer(BaseTrainer):
                 'global_batch': global_batch
             }
             self.trainer_state.update(epoch_end_logs)
-            self.hooks.on_epoch_end(self.trainer_state)
+            self.hooks.call_hooks('on_epoch_end', self.trainer_state)
 
         # Final metrics
         if training_metrics['epoch_losses']:
@@ -171,7 +171,7 @@ class AccelerateTrainer(BaseTrainer):
 
         self.trainer_state['status'] = 'Completed'
         self.trainer_state.update(training_metrics)
-        self.hooks.on_train_end(self.trainer_state)
+        self.hooks.call_hooks('on_train_end', self.trainer_state)
 
         return training_metrics
 

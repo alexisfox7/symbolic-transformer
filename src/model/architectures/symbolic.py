@@ -23,13 +23,13 @@ class SymbolicTransformerBlock(nn.Module):
         self.ffn = VocabFFN(config, vocab_embeddings_ref)
 
     #REVIEW check this is right order
-    def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
+    def forward(self, x): # , layer_idx=None, hook_manager=None, hook_state=None):
         x_norm = self.ln_1(x)
-        attn_out = self.attn(x_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        attn_out = self.attn(x_norm) # , layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
         x = x + attn_out
         
         x_norm = self.ln_2(x)
-        ffn_out = self.ffn(x_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        ffn_out = self.ffn(x_norm) # , layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
         x = x + ffn_out
         return x
 
@@ -81,27 +81,30 @@ class SymbolicTransformer(TransformerBase):
             if module.channel_biases is not None:
                 torch.nn.init.zeros_(module.channel_biases)
 
-    def forward(self, input_ids, targets=None, hook_state=None):
+    def forward(self, input_ids, targets=None): # , hook_state=None):
         """
         Forward pass for the SymbolicTransformer.
         """
         device = input_ids.device
         b, t = input_ids.size()
 
+        # Hook: on_forward_begin
+        state = {'targets': targets, 'model': self}
+        self.hook_manager.call_hooks('on_forward_begin', input_ids, state)
+
         tok_emb = self.transformer.wte(input_ids)
         
         xt = self.transformer.drop(tok_emb)
 
         for layer_idx, block in enumerate(self.transformer.h):
-            xt = block(xt, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
+            # Hook: on_layer_begin
+            self.hook_manager.call_hooks('on_layer_begin', layer_idx, xt, state)
             
-            if self.hook_manager:
-                for hook in self.hook_manager.hooks:
-                    if hasattr(hook, 'analyze_layer') and hook.enabled:
-                        tokens = hook_state.get('tokens', []) if hook_state else []
-                        position = hook_state.get('position', 0) if hook_state else 0
-                        hook.analyze_layer(xt, layer_idx, position, tokens)
-
+            xt = block(xt) # , layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
+            
+            # Hook: on_layer_end
+            self.hook_manager.call_hooks('on_layer_end', layer_idx, xt, state)
+        
         x_final = self.transformer.ln_f(xt)
         logits = self.lm_head(x_final)
 
@@ -120,4 +123,9 @@ class SymbolicTransformer(TransformerBase):
             loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 
-        return {'loss': loss, 'logits': logits}
+        outputs = {'loss': loss, 'logits': logits}
+        
+        # Hook: on_forward_end
+        self.hook_manager.call_hooks('on_forward_end', outputs, state)
+        
+        return outputs

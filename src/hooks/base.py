@@ -70,7 +70,7 @@ class HookManager:
             method = getattr(hook, method_name, None)
             if method:
                 method(*args, **kwargs)
-
+    
 class TrainingHook(Hook):
     def __init__(self, name):
         super().__init__(name)
@@ -92,4 +92,44 @@ class TrainingHook(Hook):
         pass
 
     def on_batch_end(self, state: Dict[str, Any]) -> None:
+        pass
+
+class ModelHook(Hook):
+    """Base class for model computation hooks (training or inference)."""
+    
+    def on_forward_begin(self, input_ids: torch.Tensor, state: Dict[str, Any]) -> None:
+        """Called before model forward pass."""
+        pass
+    
+    def on_forward_end(self, outputs: Dict[str, Any], state: Dict[str, Any]) -> None:
+        """Called after model forward pass."""
+        pass
+    
+    def on_layer_begin(self, layer_idx: int, inputs: Any, state: Dict[str, Any]) -> None:
+        """Called before processing a layer."""
+        pass
+    
+    def on_layer_end(self, layer_idx: int, outputs: Any, state: Dict[str, Any]) -> None:
+        """Called after processing a layer."""
+        pass
+    
+    def on_attention_computed(self, layer_idx: int, attention_outputs: Dict[str, Any], state: Dict[str, Any]) -> None:
+        """
+        Called after attention computation.
+        
+        attention_outputs contains:
+        - attention_weights: [batch, heads, seq_len, seq_len]
+        - value_vectors: [batch, heads, seq_len, head_dim]
+        - output: [batch, seq_len, hidden_dim]
+        """
+        pass
+    
+    def on_ffn_computed(self, layer_idx: int, ffn_outputs: Dict[str, Any], state: Dict[str, Any]) -> None:
+        """
+        Called after FFN computation.
+        
+        ffn_outputs contains:
+        - input: [batch, seq_len, hidden_dim]
+        - output: [batch, seq_len, hidden_dim]
+        """
         pass

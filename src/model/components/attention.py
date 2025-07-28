@@ -30,7 +30,7 @@ class VanillaAttention(nn.Module):
         
         self.register_buffer("causal_mask", torch.tril(torch.ones(config.block_size, config.block_size)).view(1, 1, config.block_size, config.block_size)) 
 
-    def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
+    def forward(self, x): # , layer_idx=None, hook_manager=None, hook_state=None):
         B, T, C = x.size() # T = block_size, C = n_embd
 
         # calc Q, K, V for all heads in batch
@@ -61,24 +61,24 @@ class VanillaAttention(nn.Module):
         y = att_dropout @ v  # (B, nh, T, hd)
         
         # Call hooks if available
-        if hook_manager is not None and layer_idx is not None and hook_state is not None:
-            tokens = hook_state.get('tokens', [])
-            position = hook_state.get('position', 0)
-            state = hook_state.copy() if hook_state else {}
-            
-            # Call hook for each attention head
-            for head_idx in range(self.n_head):
-                hook_manager.on_attention_computed(
-                    layer_idx=layer_idx,
-                    head_idx=head_idx,
-                    attention_weights=att[:, head_idx, :, :],  # [B, T, T]
-                    query=q[:, head_idx, :, :],  # [B, T, hd]
-                    key=k[:, head_idx, :, :],  # [B, T, hd]
-                    value=v[:, head_idx, :, :],  # [B, T, hd]
-                    tokens=tokens,
-                    position=position,
-                    state=state
-                )
+        # if hook_manager is not None and layer_idx is not None and hook_state is not None:
+        #     tokens = hook_state.get('tokens', [])
+        #     position = hook_state.get('position', 0)
+        #     state = hook_state.copy() if hook_state else {}
+        #     
+        #     # Call hook for each attention head
+        #     for head_idx in range(self.n_head):
+        #         hook_manager.on_attention_computed(
+        #             layer_idx=layer_idx,
+        #             head_idx=head_idx,
+        #             attention_weights=att[:, head_idx, :, :],  # [B, T, T]
+        #             query=q[:, head_idx, :, :],  # [B, T, hd]
+        #             key=k[:, head_idx, :, :],  # [B, T, hd]
+        #             value=v[:, head_idx, :, :],  # [B, T, hd]
+        #             tokens=tokens,
+        #             position=position,
+        #             state=state
+        #         )
         
         # concatenate heads and project
         y = y.transpose(1, 2).contiguous().view(B, T, C)
@@ -197,7 +197,7 @@ class SymbolicAttention(nn.Module):
         
         return alibi_bias
 
-    def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
+    def forward(self, x): # , layer_idx=None, hook_manager=None, hook_state=None):
         """
         Forward pass with optional Kronecker-lifted V matrix.
         
@@ -246,24 +246,24 @@ class SymbolicAttention(nn.Module):
         y = att_weights_dropout @ v  # (B, nh, T, hs)
         
         # call hooks if available
-        if hook_manager is not None and layer_idx is not None and hook_state is not None:
-            tokens = hook_state.get('tokens', [])
-            position = hook_state.get('position', 0)
-            state = hook_state.copy() if hook_state else {}
-            
-            # call hook for each attention head
-            for head_idx in range(self.n_head):
-                hook_manager.on_attention_computed(
-                    layer_idx=layer_idx,
-                    head_idx=head_idx,
-                    attention_weights=att_weights[:, head_idx, :, :],  # [B, T, T]
-                    query=q[:, head_idx, :, :],  # [B, T, hd]
-                    key=k[:, head_idx, :, :],  # [B, T, hd]
-                    value=v[:, head_idx, :, :],  # [B, T, hd]
-                    tokens=tokens,
-                    position=position,
-                    state=state
-                )
+        # if hook_manager is not None and layer_idx is not None and hook_state is not None:
+        #     tokens = hook_state.get('tokens', [])
+        #     position = hook_state.get('position', 0)
+        #     state = hook_state.copy() if hook_state else {}
+        #     
+        #     # call hook for each attention head
+        #     for head_idx in range(self.n_head):
+        #         hook_manager.on_attention_computed(
+        #             layer_idx=layer_idx,
+        #             head_idx=head_idx,
+        #             attention_weights=att_weights[:, head_idx, :, :],  # [B, T, T]
+        #             query=q[:, head_idx, :, :],  # [B, T, hd]
+        #             key=k[:, head_idx, :, :],  # [B, T, hd]
+        #             value=v[:, head_idx, :, :],  # [B, T, hd]
+        #             tokens=tokens,
+        #             position=position,
+        #             state=state
+        #         )
 
         # Concatenate heads
         y = y.transpose(1, 2).contiguous().view(B, T, C)
@@ -292,7 +292,7 @@ class TFTAttention(SymbolicAttention):
     def __init__(self, config):
         super().__init__(config) 
 
-    def forward(self, x, xt, layer_idx=None, hook_manager=None, hook_state=None):
+    def forward(self, x, xt): # , layer_idx=None, hook_manager=None, hook_state=None):
         B, T, C = x.size()
 
         if self.use_v == 'none':
@@ -341,24 +341,24 @@ class TFTAttention(SymbolicAttention):
         y = att_weights_dropout @ v  # (B, nh, T, hs)
         
         # call hooks if available
-        if hook_manager is not None and layer_idx is not None and hook_state is not None:
-            tokens = hook_state.get('tokens', [])
-            position = hook_state.get('position', 0)
-            state = hook_state.copy() if hook_state else {}
-            
-            # call hook for each attention head
-            for head_idx in range(self.n_head):
-                hook_manager.on_attention_computed(
-                    layer_idx=layer_idx,
-                    head_idx=head_idx,
-                    attention_weights=att_weights[:, head_idx, :, :],  # [B, T, T]
-                    query=q[:, head_idx, :, :],  # [B, T, hd]
-                    key=k[:, head_idx, :, :],  # [B, T, hd]
-                    value=v[:, head_idx, :, :],  # [B, T, hd]
-                    tokens=tokens,
-                    position=position,
-                    state=state
-                )
+        # if hook_manager is not None and layer_idx is not None and hook_state is not None:
+        #     tokens = hook_state.get('tokens', [])
+        #     position = hook_state.get('position', 0)
+        #     state = hook_state.copy() if hook_state else {}
+        #     
+        #     # call hook for each attention head
+        #     for head_idx in range(self.n_head):
+        #         hook_manager.on_attention_computed(
+        #             layer_idx=layer_idx,
+        #             head_idx=head_idx,
+        #             attention_weights=att_weights[:, head_idx, :, :],  # [B, T, T]
+        #             query=q[:, head_idx, :, :],  # [B, T, hd]
+        #             key=k[:, head_idx, :, :],  # [B, T, hd]
+        #             value=v[:, head_idx, :, :],  # [B, T, hd]
+        #             tokens=tokens,
+        #             position=position,
+        #             state=state
+        #         )
 
         # concatenate heads
         y = y.transpose(1, 2).contiguous().view(B, T, C)

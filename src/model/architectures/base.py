@@ -7,7 +7,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from typing import Optional, Union
-from inference.hooks import InferenceHookManager
 
 class TransformerBase(nn.Module):
     """Shared foundation for all transformer variants."""
@@ -17,7 +16,9 @@ class TransformerBase(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.hook_manager: Optional[Union[InferenceHookManager, "HookManager"]] = None
+
+        from hooks import HookManager
+        self.hook_manager = HookManager()
     
     #REVIEW what are good default values for these?
     def _init_weights(self, module):
@@ -94,25 +95,23 @@ class TransformerBase(nn.Module):
         
         # get initial tokens for hooks
         tokens = []
-        if tokenizer is not None and self.hook_manager is not None:
-            tokens = [tokenizer.decode([t]) for t in input_ids[0].tolist()]
-            self.hook_manager.on_generation_begin(tokens, generation_state)
+        # if tokenizer is not None and self.hook_manager is not None:
+        #     tokens = [tokenizer.decode([t]) for t in input_ids[0].tolist()]
+        #     self.hook_manager.on_generation_begin(tokens, generation_state)
             
         for position in range(max_new_tokens):
             # crop sequence if it exceeds block size
             idx_cond = input_ids if input_ids.size(1) <= self.config.block_size else input_ids[:, -self.config.block_size:]
             
             # hook: before forward pass
-            if self.hook_manager is not None:
-                self.hook_manager.on_forward_begin(idx_cond, position, generation_state)
+            # self.hook_manager.on_forward_begin(idx_cond, position, generation_state)
             
             # get predictions
-            outputs = self(idx_cond, hook_state={'position': position, 'tokens': tokens})
+            outputs = self(idx_cond) # , hook_state={'position': position, 'tokens': tokens})
             logits = outputs['logits']
             
             # hook: after forward pass
-            if self.hook_manager is not None:
-                self.hook_manager.on_forward_end(logits, position, generation_state)
+            # self.hook_manager.on_forward_end(logits, position, generation_state)
             
             logits = logits[:, -1, :] / temperature # focus on last time step
 
@@ -124,13 +123,13 @@ class TransformerBase(nn.Module):
             idx_next = torch.multinomial(probs, num_samples=1) # sample from distribution    
             input_ids = torch.cat((input_ids, idx_next), dim=1) # append to sequence
              
-            if tokenizer is not None and self.hook_manager is not None: # update tokens for hooks
-                tokens.append(tokenizer.decode([idx_next[0].item()]))
+            # if tokenizer is not None: # update tokens for hooks
+            #     tokens.append(tokenizer.decode([idx_next[0].item()]))
         
         # hook: generation complete
-        if self.hook_manager is not None and tokenizer is not None:
-            final_tokens = [tokenizer.decode([t]) for t in input_ids[0].tolist()]
-            self.hook_manager.on_generation_end(final_tokens, generation_state)
+        # if tokenizer is not None:
+        #     final_tokens = [tokenizer.decode([t]) for t in input_ids[0].tolist()]
+        #     self.hook_manager.on_generation_end(final_tokens, generation_state)
             
         return input_ids
 
@@ -146,18 +145,18 @@ class TransformerBase(nn.Module):
         # print comprehensive model info
         pass
     
-    def set_hook_manager(self, hook_manager: Optional[InferenceHookManager]) -> None:
+    def set_hook_manager(self, hook_manager) -> None:
         """Set the hook manager for this model. Stores previous hook manager for restoration."""
         # Store the previous hook manager so it can be restored later
         if not hasattr(self, '_previous_hook_manager'):
             self._previous_hook_manager = self.hook_manager
         self.hook_manager = hook_manager
     
-    def restore_hook_manager(self) -> None:
-        """Restore the previous hook manager (useful after inference)."""
-        if hasattr(self, '_previous_hook_manager'):
-            self.hook_manager = self._previous_hook_manager
-            self._previous_hook_manager = None
+    # def restore_hook_manager(self) -> None:
+    #     """Restore the previous hook manager (useful after inference)."""
+    #     if hasattr(self, '_previous_hook_manager'):
+    #         self.hook_manager = self._previous_hook_manager
+    #         self._previous_hook_manager = None
 
 
     

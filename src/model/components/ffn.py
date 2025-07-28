@@ -14,7 +14,7 @@ class VanillaFFN(nn.Module):
         self.dropout = nn.Dropout(config.dropout)
 
     #TODO: old code
-    def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
+    def forward(self, x): # , layer_idx=None, hook_manager=None, hook_state=None):
         ffn_input = x
         x = self.c_fc(x)
         x = F.gelu(x)
@@ -22,19 +22,19 @@ class VanillaFFN(nn.Module):
         x = self.dropout(x)
         
         # Call hooks if available
-        if hook_manager is not None and layer_idx is not None and hook_state is not None:
-            tokens = hook_state.get('tokens', [])
-            position = hook_state.get('position', 0)
-            state = hook_state.copy() if hook_state else {}
-            
-            hook_manager.on_ffn_computed(
-                layer_idx=layer_idx,
-                ffn_input=ffn_input,
-                ffn_output=x,
-                tokens=tokens,
-                position=position,
-                state=state
-            )
+        # if layer_idx is not None and hook_state is not None:
+        #     tokens = hook_state.get('tokens', [])
+        #     position = hook_state.get('position', 0)
+        #     state = hook_state.copy() if hook_state else {}
+        #     
+        #     hook_manager.on_ffn_computed(
+        #         layer_idx=layer_idx,
+        #         ffn_input=ffn_input,
+        #         ffn_output=x,
+        #         tokens=tokens,
+        #         position=position,
+        #         state=state
+        #     )
         
         return x
     
@@ -68,7 +68,7 @@ class VocabFFN(nn.Module):
         self.prob_threshold = 0.1 # max 10 
         self.sparsemax = Sparsemax(dim=-1)
         
-    def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
+    def forward(self, x): # , layer_idx=None, hook_manager=None, hook_state=None):
         """
         Forward pass with differentiable sparse thresholding.
         
@@ -84,7 +84,7 @@ class VocabFFN(nn.Module):
         ffn_input = x
         
         # Pass hook parameters to nested FFN
-        z = self.ffn(x, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)  # (B, T, n_embd)
+        z = self.ffn(x) # , layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)  # (B, T, n_embd)
         z_norm = self.ffn_norm(z)  # (B, T, n_embd)
         
         vocab_similarities = torch.matmul(z_norm, self.vocab_embeddings_ref.weight.T)  # (B, T, vocab_size)

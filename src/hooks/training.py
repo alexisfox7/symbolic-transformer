@@ -75,8 +75,9 @@ class JSONLogHook(TrainingHook):
     def on_train_begin(self, state: Dict[str, Any]) -> None:
         if not state.get('is_main_process', True):
             return
-        config = {k: v for k, v in state.items() 
-                 if not callable(v) and k not in ['model', 'optimizer', 'dataloader', 'accelerator']}
+        config = {k: str(v) if not isinstance(v, (int, float, str, bool, list, dict, type(None))) else v 
+                 for k, v in state.items() 
+                 if not callable(v) and k not in ['model', 'optimizer', 'dataloader', 'accelerator', 'current_batch']}
         self._write({"event": "train_begin", "config": config})
     
     def on_epoch_end(self, state: Dict[str, Any]) -> None:

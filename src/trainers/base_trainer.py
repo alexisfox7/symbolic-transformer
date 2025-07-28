@@ -10,7 +10,7 @@ import torch
 from torch.utils.data import DataLoader
 from accelerate.logging import get_logger
 
-from .hooks import HookManager, TrainingHook
+from src.hooks import HookManager, TrainingHook
 
 logger = get_logger(__name__)
 
@@ -68,7 +68,7 @@ class BaseTrainer(ABC):
     # Convenience methods for adding common hooks
     def add_console_logging(self, log_every_n_batches: int = 10) -> None:
         """Add console logging hook."""
-        from .hooks import ConsoleLogHook
+        from src.hooks.training import ConsoleLogHook
         self.add_hook(ConsoleLogHook(log_every_n_batches))
     
     def add_json_logging(self, log_every_n_batches: int = 100) -> None:
@@ -77,7 +77,7 @@ class BaseTrainer(ABC):
             logger.warning("No output_dir set - JSON logging disabled")
             return
         
-        from .hooks import JSONLogHook
+        from src.hooks.training import JSONLogHook
         self.add_hook(JSONLogHook(self.output_dir, log_every_n_batches))
     
     def add_checkpointing(self, save_every_n_epochs: int = 1) -> None:
@@ -86,12 +86,12 @@ class BaseTrainer(ABC):
             logger.warning("No output_dir set - checkpointing disabled")
             return
         
-        from .hooks import CheckpointHook
+        from src.trainers.hooks import CheckpointHook
         self.add_hook(CheckpointHook(self.output_dir, save_every_n_epochs))
     
     def add_early_exiting(self) -> None:
-        from .hooks import EarlyExitHook
-        self.add_hook(EarlyExitHook())
+        from src.hooks.modeling import EarlyExitAnalysisHook
+        self.add_hook(EarlyExitAnalysisHook())
         
     @abstractmethod
     def train(self) -> Dict[str, Any]:

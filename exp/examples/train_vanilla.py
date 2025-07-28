@@ -16,6 +16,7 @@ warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
 # Initialize accelerate state for logging
+# NOTE logging fed up
 from accelerate import PartialState
 _ = PartialState()
 

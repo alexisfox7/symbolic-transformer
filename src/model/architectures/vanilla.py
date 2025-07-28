@@ -16,14 +16,14 @@ class VanillaTransformerBlock(nn.Module):
         self.ln_2 = VanillaNorm(config.n_embd, bias=config.bias)
         self.ffn = VanillaFFN(config)
 
-    def forward(self, x, layer_idx=None, hook_manager=None, hook_state=None):
+    def forward(self, x): # , layer_idx=None, hook_manager=None, hook_state=None):
         # using pre-layer norm
         x_norm = self.ln_1(x)
-        attn_out = self.attn(x_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        attn_out = self.attn(x_norm) # , layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
         x = x + attn_out
         
         x_norm = self.ln_2(x)
-        ffn_out = self.ffn(x_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        ffn_out = self.ffn(x_norm) # , layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
         x = x + ffn_out
         return x
 
@@ -60,11 +60,15 @@ class VanillaTransformer(TransformerBase):
         print(f"VanillaTransformerModel initialized with {self.get_num_params()/1e6:.2f}M parameters")
         print(f"Architecture: vocab_size={config.vocab_size}, n_embd={config.n_embd}, n_head={config.n_head}, n_layer={config.n_layer}")
 
-    def forward(self, input_ids, targets=None, hook_state=None):
+    def forward(self, input_ids, targets=None): # , hook_state=None):
         device = input_ids.device
         b, t = input_ids.size()
 
         assert t <= self.config.block_size, f"Sequence length {t} exceeds block size {self.config.block_size}"
+
+        # Hook: on_forward_begin
+        state = {'targets': targets, 'model': self}
+        self.hook_manager.call_hooks('on_forward_begin', input_ids, state)
 
         tok_emb = self.transformer.wte(input_ids)  # (B, T, n_embd)
         pos = torch.arange(0, t, dtype=torch.long, device=device)  # (T,)
@@ -73,16 +77,14 @@ class VanillaTransformer(TransformerBase):
         x = self.transformer.drop(tok_emb + pos_emb)
 
         for layer_idx, block in enumerate(self.transformer.h):
-            x = block(x, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
-
-            # for logit lens
-            if self.hook_manager:
-                for hook in self.hook_manager.hooks:
-                    if hasattr(hook, 'analyze_layer') and hook.enabled:
-                        tokens = hook_state.get('tokens', []) if hook_state else []
-                        position = hook_state.get('position', 0) if hook_state else 0
-                        hook.analyze_layer(x, layer_idx, position, tokens)
-
+            # Hook: on_layer_begin
+            self.hook_manager.call_hooks('on_layer_begin', layer_idx, x, state)
+            
+            x = block(x) # , layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
+            
+            # Hook: on_layer_end
+            self.hook_manager.call_hooks('on_layer_end', layer_idx, x, state)
+            
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x)
 
@@ -101,6 +103,11 @@ class VanillaTransformer(TransformerBase):
             loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 
-        return {'loss': loss, 'logits': logits}
+        outputs = {'loss': loss, 'logits': logits}
+        
+        # Hook: on_forward_end
+        self.hook_manager.call_hooks('on_forward_end', outputs, state)
+        
+        return outputs
 
    

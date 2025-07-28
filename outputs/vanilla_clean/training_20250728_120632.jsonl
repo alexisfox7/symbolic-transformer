@@ -1,0 +1,2 @@
+{"event": "train_start", "log_file": "./outputs/vanilla_clean/training_20250728_120632.jsonl", "timestamp": "2025-07-28T12:06:32.316450"}
+{"event": "train_begin", "config": {"device": 

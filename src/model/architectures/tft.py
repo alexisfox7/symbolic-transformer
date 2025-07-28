@@ -23,19 +23,19 @@ class TFTTransformerBlock(nn.Module):
 
         self.ffn = VanillaFFN(config)
 
-    def forward(self, xt, xe, layer_idx=None, hook_manager=None, hook_state=None):
+    def forward(self, xt, xe): # , layer_idx=None, hook_manager=None, hook_state=None):
         x_comb = self.ln_1(xt + xe)
         xt_norm = self.ln_2(xt)
         
         # attention
-        attn_out = self.attn(x_comb, xt_norm, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        attn_out = self.attn(x_comb, xt_norm) # , layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
         xt_add = xt + attn_out
        
         xe = xt_add + xe
         xe = self.ln_3(xe)
         
         # ffn
-        ffn_out = self.ffn(xe, layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        ffn_out = self.ffn(xe) # , layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
         xe = xe + ffn_out   
 
         # output depends on whether or not cascading
@@ -92,12 +92,16 @@ class TFTTransformer(TransformerBase):
             if module.channel_biases is not None:
                 torch.nn.init.zeros_(module.channel_biases)
 
-    def forward(self, input_ids, targets=None, hook_state=None):
+    def forward(self, input_ids, targets=None): # , hook_state=None):
         """
         Forward pass for the SymbolicTransformer.
         """
         device = input_ids.device
         b, t = input_ids.size()
+
+        # Hook: on_forward_begin
+        state = {'targets': targets, 'model': self}
+        self.hook_manager.call_hooks('on_forward_begin', input_ids, state)
 
         tok_emb = self.transformer.wte(input_ids)
         
@@ -105,19 +109,19 @@ class TFTTransformer(TransformerBase):
         xe = torch.zeros_like(xt)
 
         for layer_idx, block in enumerate(self.transformer.h):
-            xt, xe, xt_add = block(xt, xe, layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
-
-            # for logit lens and early exit
-            if self.hook_manager:
-                for hook in self.hook_manager.hooks:
-                    if hasattr(hook, 'analyze_layer') and hook.enabled:
-                        tokens = hook_state.get('tokens', []) if hook_state else []
-                        position = hook_state.get('position', 0) if hook_state else 0
-                        # For TFT, pass xe + xt as the representative hidden state for early exit
-                        # This matches the final layer computation: x_final = xe + xt
-                        representative_state = xe + xt
-                        hook.analyze_layer(representative_state, layer_idx, position, tokens)
-
+            # For TFT, the representative state is xe + xt
+            representative_state = xe + xt
+            
+            # Hook: on_layer_begin
+            self.hook_manager.call_hooks('on_layer_begin', layer_idx, representative_state, state)
+            
+            xt, xe, xt_add = block(xt, xe) # , layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
+            
+            # Update representative state after block
+            representative_state = xe + xt
+            
+            # Hook: on_layer_end  
+            self.hook_manager.call_hooks('on_layer_end', layer_idx, representative_state, state)
 
         x_final = xe + xt
         x_final = self.transformer.ln_f(x_final)
@@ -138,4 +142,9 @@ class TFTTransformer(TransformerBase):
             loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 
-        return {'loss': loss, 'logits': logits}
+        outputs = {'loss': loss, 'logits': logits}
+        
+        # Hook: on_forward_end
+        self.hook_manager.call_hooks('on_forward_end', outputs, state)
+        
+        return outputs

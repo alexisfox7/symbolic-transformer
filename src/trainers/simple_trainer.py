@@ -66,7 +66,7 @@ class SimpleTrainer(BaseTrainer):
         self.trainer_state['num_epochs'] = self.num_epochs
         self.trainer_state['is_main_process'] = True  # Simple trainer always runs on main process
         #FIX:replace _trigger_callbacks with hooks.on_train_begin
-        self.hooks.on_train_begin(self.trainer_state)
+        self.hooks.call_hooks('on_train_begin', self.trainer_state)
 
         total_start_time = time.time()
         training_metrics = {
@@ -80,7 +80,7 @@ class SimpleTrainer(BaseTrainer):
         for epoch in range(1, self.num_epochs + 1):
             self.trainer_state['current_epoch'] = epoch
             #FIX:replace _trigger_callbacks with hooks.on_epoch_begin
-            self.hooks.on_epoch_begin(epoch, self.trainer_state)
+            self.hooks.call_hooks('on_epoch_begin', self.trainer_state)
             epoch_start_time = time.time()
             
             epoch_loss = 0.0
@@ -110,7 +110,7 @@ class SimpleTrainer(BaseTrainer):
                 if torch.isnan(loss):
                     logger.error(f"Epoch {epoch}, Batch {batch_idx}: Loss is NaN. Stopping training.")
                     self.trainer_state['status'] = 'NaN Loss'
-                    self.hooks.on_train_end(self.trainer_state)
+                    self.hooks.call_hooks('on_train_end', self.trainer_state)
                     training_metrics['training_time'] = time.time() - total_start_time
                     return training_metrics
 
@@ -144,7 +144,7 @@ class SimpleTrainer(BaseTrainer):
 
                 #FIX:replace _trigger_callbacks with hooks.on_batch_end and update state
                 self.trainer_state['latest_loss'] = batch_loss_item
-                self.hooks.on_batch_end(batch_idx, batch_loss_item, self.trainer_state)
+                self.hooks.call_hooks('on_batch_end', self.trainer_state)
 
             #calculate epoch metrics
             avg_epoch_loss = epoch_loss / num_batches if num_batches > 0 else float('nan')
@@ -160,7 +160,7 @@ class SimpleTrainer(BaseTrainer):
                 'batches': num_batches
             }
             self.trainer_state.update(epoch_end_logs)
-            self.hooks.on_epoch_end(epoch, self.trainer_state)
+            self.hooks.call_hooks('on_epoch_end', self.trainer_state)
 
         #final metrics
         if training_metrics['epoch_losses']:
@@ -171,7 +171,7 @@ class SimpleTrainer(BaseTrainer):
         self.trainer_state['status'] = 'Completed'
         self.trainer_state.update(training_metrics)
         #FIX:replace _trigger_callbacks with hooks.on_train_end
-        self.hooks.on_train_end(self.trainer_state)
+        self.hooks.call_hooks('on_train_end', self.trainer_state)
 
         return training_metrics
 
@@ -214,7 +214,7 @@ class SimpleTrainer(BaseTrainer):
 
         self.trainer_state['eval_dataloader_len'] = len(eval_dataloader)
         #FIX:replace _trigger_callbacks with hooks.on_evaluate_begin
-        self.hooks.on_evaluate_begin(self.trainer_state)
+        self.hooks.call_hooks('on_evaluate_begin', self.trainer_state)
 
         self.model.eval()
 
@@ -256,6 +256,6 @@ class SimpleTrainer(BaseTrainer):
         logger.info(f"Evaluation results: Loss: {eval_metrics['loss']:.6f}, Perplexity: {eval_metrics['perplexity']:.6f}")
         self.trainer_state.update(eval_metrics)
         #FIX:replace _trigger_callbacks with hooks.on_evaluate_end
-        self.hooks.on_evaluate_end(self.trainer_state)
+        self.hooks.call_hooks('on_evaluate_end', self.trainer_state)
 
         return eval_metrics
