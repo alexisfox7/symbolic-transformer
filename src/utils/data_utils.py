@@ -20,14 +20,6 @@ from accelerate.logging import get_logger
 
 logger = get_logger(__name__)
 
-def log_if_main(logger, message):
-    """Log only from main process when using accelerate."""
-    try:
-        from accelerate import Accelerator
-        if Accelerator().is_main_process:
-            logger.info(message)
-    except:
-        logger.info(message)
 
 def simple_collate_fn(batch, tokenizer, max_length=128):
     """Simple collate function for language modeling with dataset-aware text extraction."""
@@ -95,9 +87,9 @@ def load_and_prepare_data(dataset_name, dataset_config, tokenizer, max_samples,
     Returns:
         tuple: (dataloader, tokenizer) - maintaining compatibility with existing code
     """
-    log_if_main(logger, f"Loading dataset: {dataset_name}")
+    logger.info(f"Loading dataset: {dataset_name}")
     if dataset_config:
-        log_if_main(logger, f"Dataset config: {dataset_config}")
+        logger.info(f"Dataset config: {dataset_config}")
     
     # Handle different dataset loading patterns
     try:
@@ -108,7 +100,7 @@ def load_and_prepare_data(dataset_name, dataset_config, tokenizer, max_samples,
         else:
             dataset = load_dataset(dataset_name, split=split_str, trust_remote_code=True)
             
-        log_if_main(logger, f"Raw dataset loaded: {len(dataset)} samples")
+        logger.info(f"Raw dataset loaded: {len(dataset)} samples")
         
     except Exception as e:
         logger.error(f"Failed to load dataset {dataset_name}: {e}")
@@ -116,14 +108,14 @@ def load_and_prepare_data(dataset_name, dataset_config, tokenizer, max_samples,
         if "tinystories" in dataset_name.lower():
             try:
                 dataset = load_dataset("roneneldan/TinyStories", split=split_str)
-                log_if_main(logger, "Loaded TinyStories with fallback method")
+                logger.info("Loaded TinyStories with fallback method")
             except Exception:
                 raise e
         elif "wikipedia" in dataset_name.lower():
             try:
                 config = dataset_config or "20231101.en"
                 dataset = load_dataset("wikimedia/wikipedia", config, split=split_str)
-                log_if_main(logger, f"Loaded Wikipedia ({config}) with fallback method")
+                logger.info(f"Loaded Wikipedia ({config}) with fallback method")
             except Exception:
                 raise e
         else:
@@ -166,7 +158,7 @@ def load_and_prepare_data(dataset_name, dataset_config, tokenizer, max_samples,
     original_size = len(dataset)
     dataset = dataset.filter(is_valid_text)
     filtered_size = len(dataset)
-    log_if_main(logger, f"Filtered dataset: {original_size} -> {filtered_size} samples")
+    logger.info(f"Filtered dataset: {original_size} -> {filtered_size} samples")
     
     if filtered_size == 0:
         raise ValueError(f"No valid samples found in dataset {dataset_name}")
@@ -185,7 +177,7 @@ def load_and_prepare_data(dataset_name, dataset_config, tokenizer, max_samples,
         num_workers=0  # Keep simple for compatibility
     )
     
-    log_if_main(logger, f"Created DataLoader with {len(dataloader)} batches of size {batch_size}")
+    logger.info(f"Created DataLoader with {len(dataloader)} batches of size {batch_size}")
     return dataloader, tokenizer
 
 # Additional utility for dataset info
@@ -225,12 +217,12 @@ def load_combined_tinystories(dataset_path: str, tokenizer, max_samples: int,
     """
     from datasets import load_from_disk
     
-    log_if_main(logger, f"Loading combined dataset from: {dataset_path}")
+    logger.info(f"Loading combined dataset from: {dataset_path}")
     
     # Load the combined dataset
     try:
         dataset = load_from_disk(dataset_path)
-        log_if_main(logger, f"Loaded combined dataset: {len(dataset)} stories")
+        logger.info(f"Loaded combined dataset: {len(dataset)} stories")
     except Exception as e:
         logger.error(f"Failed to load combined dataset: {e}")
         return
@@ -238,12 +230,12 @@ def load_combined_tinystories(dataset_path: str, tokenizer, max_samples: int,
     # Apply sampling if requested
     if max_samples and max_samples < len(dataset):
         dataset = dataset.select(range(max_samples))
-        log_if_main(logger, f"Sampled down to: {len(dataset)} stories")
+        logger.info(f"Sampled down to: {len(dataset)} stories")
     
 
     original_size = len(dataset)
     filtered_size = len(dataset)
-    log_if_main(logger, f"Filtered dataset: {original_size} -> {filtered_size} stories")
+    logger.info(f"Filtered dataset: {original_size} -> {filtered_size} stories")
     
     # Create collate function
     def collate_wrapper(batch):
@@ -260,5 +252,5 @@ def load_combined_tinystories(dataset_path: str, tokenizer, max_samples: int,
         num_workers=0
     )
     
-    log_if_main(logger, f"Created DataLoader with {len(dataloader)} batches of size {batch_size}")
+    logger.info(f"Created DataLoader with {len(dataloader)} batches of size {batch_size}")
     return dataloader, tokenizer

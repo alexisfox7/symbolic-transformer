@@ -3,7 +3,6 @@ Utilities package for the transformer training framework (data handling and trai
 """
 
 from .data_utils import (
-    log_if_main,
     simple_collate_fn,
     load_and_prepare_data,
     get_dataset_info
@@ -23,7 +22,6 @@ from .training_utils import (
 
 __all__ = [
     # Data utilities
-    'log_if_main',
     'simple_collate_fn',
     'load_and_prepare_data',
     'get_dataset_info',

@@ -15,9 +15,13 @@ warnings.filterwarnings("ignore", message=".*kernel version.*")
 warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
+# Initialize accelerate state for logging
+from accelerate import PartialState
+_ = PartialState()
+
 from src.utils.training_utils import (
     create_base_parser, setup_training_environment, create_config_from_args,
-    setup_data_loaders, setup_trainer_with_hooks, test_generation, log_if_main, setup_data_loaders_with_combined
+    setup_data_loaders, setup_trainer_with_hooks, test_generation, setup_data_loaders_with_combined
 )
 from src.config.config import print_config
 from src.mytokenizers import create_tokenizer, add_reasoning_tokens
@@ -52,10 +56,10 @@ def main():
     train_dataloader, val_dataloader, tokenizer = setup_data_loaders_with_combined(args, config, tokenizer, logger, args.trainer_type)
     
     # create model
-    log_if_main(logger, "Creating Vanilla Transformer...", args.trainer_type)
+    logger.info("Creating Vanilla Transformer...")
     model = get_model("vanilla", config=config).to(device)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    log_if_main(logger, f"Model: {num_params/1e6:.2f}M parameters", args.trainer_type)
+    logger.info(f"Model: {num_params/1e6:.2f}M parameters")
     
     # setup optimizer
     optimizer = torch.optim.AdamW(
@@ -69,13 +73,13 @@ def main():
     )
     
     # train
-    log_if_main(logger, "Starting vanilla transformer training...", args.trainer_type)
+    logger.info("Starting vanilla transformer training...")
     training_result = trainer.train()
     
     # test generation
     test_generation(model, tokenizer, device, args, logger, "vanilla", args.trainer_type)
     
-    log_if_main(logger, "Vanilla transformer training completed!", args.trainer_type)
+    logger.info("Vanilla transformer training completed!")
 
 if __name__ == "__main__":
     main()

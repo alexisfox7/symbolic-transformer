@@ -20,18 +20,6 @@ warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 from src.config.config import get_preset_config
 from src.utils.data_utils import load_and_prepare_data
 
-def log_if_main(logger, message, trainer_type="simple"):
-    """Log only from main process when using accelerate."""
-    if trainer_type == "accelerate":
-        try:
-            import os
-            # Check if we're in a distributed setting
-            if os.environ.get('LOCAL_RANK', '0') == '0':
-                logger.info(message)
-        except:
-            pass
-    else:
-        logger.info(message)
 
 def create_base_parser(description="Train Transformer with Hook System"):
     """Create base argument parser with common arguments."""
@@ -94,17 +82,13 @@ def setup_training_environment(output_dir, model_type="Transformer", trainer_typ
     """Setup logging and output directory."""
     os.makedirs(output_dir, exist_ok=True)
     
-    # Only configure logging if not already configured
-    if not logging.getLogger().handlers:
-        logging.basicConfig(level=logging.INFO)
-    
     logger = get_logger(__name__)
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    log_if_main(logger, "="*60, trainer_type)
-    log_if_main(logger, f"{model_type.upper()} TRAINING WITH HOOK SYSTEM", trainer_type)
-    log_if_main(logger, "="*60, trainer_type)
+    logger.info("="*60)
+    logger.info(f"{model_type.upper()} TRAINING WITH HOOK SYSTEM")
+    logger.info("="*60)
     
     return logger, device
 
@@ -140,7 +124,7 @@ def create_train_val_split(dataset, val_ratio=0.1, seed=42):
 
 def setup_data_loaders(args, config, tokenizer, logger, trainer_type="simple"):
     """Setup training and validation data loaders."""
-    log_if_main(logger, "Loading data...", trainer_type)
+    logger.info("Loading data...")
     
     # load full dataset
     full_dataloader, tokenizer = load_and_prepare_data(
@@ -167,11 +151,11 @@ def setup_data_loaders(args, config, tokenizer, logger, trainer_type="simple"):
             val_dataset, batch_size=config.batch_size, shuffle=False,
             collate_fn=full_dataloader.collate_fn, drop_last=False
         )
-        log_if_main(logger, f"Train: {len(train_dataloader)} batches, Val: {len(val_dataloader)} batches", trainer_type)
+        logger.info(f"Train: {len(train_dataloader)} batches, Val: {len(val_dataloader)} batches")
     else:
         train_dataloader = full_dataloader
         val_dataloader = None
-        log_if_main(logger, f"Training: {len(train_dataloader)} batches (no validation)", trainer_type)
+        logger.info(f"Training: {len(train_dataloader)} batches (no validation)")
     
     return train_dataloader, val_dataloader, tokenizer
 
@@ -186,7 +170,7 @@ def setup_data_loaders_with_combined(args, config, tokenizer, logger, trainer_ty
     
     # Check if combined dataset exists
     if os.path.exists(combined_dataset_path):
-        log_if_main(logger, "Using combined TinyStories + structured stories dataset", trainer_type)
+        logger.info("Using combined TinyStories + structured stories dataset")
         try:
             from src.utils.data_utils import load_combined_tinystories
             
@@ -214,18 +198,18 @@ def setup_data_loaders_with_combined(args, config, tokenizer, logger, trainer_ty
                     val_dataset, batch_size=config.batch_size, shuffle=False,
                     collate_fn=train_dataloader.collate_fn, drop_last=False
                 )
-                log_if_main(logger, f"Train: {len(train_dataloader)} batches, Val: {len(val_dataloader)} batches", trainer_type)
+                logger.info(f"Train: {len(train_dataloader)} batches, Val: {len(val_dataloader)} batches")
             else:
                 val_dataloader = None
-                log_if_main(logger, f"Training: {len(train_dataloader)} batches (no validation)", trainer_type)
+                logger.info(f"Training: {len(train_dataloader)} batches (no validation)")
             
             return train_dataloader, val_dataloader, tokenizer
             
         except Exception as e:
-            log_if_main(logger, f"Failed to load combined dataset: {e}. Using standard TinyStories.", trainer_type)
+            logger.info(f"Failed to load combined dataset: {e}. Using standard TinyStories.")
     
     # Fallback to standard data loading
-    log_if_main(logger, "Using standard TinyStories dataset", trainer_type)
+    logger.info("Using standard TinyStories dataset")
     return setup_data_loaders(args, config, tokenizer, logger, trainer_type)
 
 
@@ -296,7 +280,7 @@ def test_generation(model, tokenizer, device, args, logger, model_type="", train
         
     from inference.generation import run_generation
     
-    log_if_main(logger, f"Testing {model_type.lower()} generation...", trainer_type)
+    logger.info(f"Testing {model_type.lower()} generation...")
     test_prompts = ["The brave knight", "Once upon a time", "The magical forest"]
     
     model.eval()
@@ -306,6 +290,6 @@ def test_generation(model, tokenizer, device, args, logger, model_type="", train
                 model=model, tokenizer=tokenizer, prompt_text=prompt,
                 device=device, max_new_tokens=args.generation_max_len
             )
-            log_if_main(logger, f"'{prompt}' → '{generated_text}'", trainer_type)
+            logger.info(f"'{prompt}' → '{generated_text}'")
         except Exception as e:
             logger.error(f"Generation failed for '{prompt}': {e}")
