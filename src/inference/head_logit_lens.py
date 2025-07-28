@@ -70,7 +70,10 @@ class HeadLogitLensHook(InferenceHook):
                 
                 # Apply layer norm if available
                 if self.layer_norm:
-                    full_hidden = self.layer_norm(full_hidden)
+                    # Layer norm expects [batch, seq, hidden], so add batch and seq dimensions
+                    full_hidden_3d = full_hidden.unsqueeze(0).unsqueeze(0)  # [1, 1, hidden]
+                    full_hidden_3d = self.layer_norm(full_hidden_3d)
+                    full_hidden = full_hidden_3d.squeeze(0).squeeze(0)  # Back to [hidden]
                 
                 # Compute logits using the full unembedding matrix
                 head_logits = self.lm_head(full_hidden)  # [vocab_size]
