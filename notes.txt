@@ -1,0 +1,3 @@
+validation is messed up since loss is diff
+add checkpointing hook
+add attention hook

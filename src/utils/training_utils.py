@@ -243,7 +243,6 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
                            config, args, val_dataloader=None, model_type=""):
     """Setup trainer with standard hooks."""
     from trainers import get_trainer
-    from trainers.hooks import ValidationHook
     
     trainer = get_trainer(
         trainer_type=trainer_type,
@@ -256,9 +255,9 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
     trainer.trainer_state['model_type'] = model_type
     
     # add validation hook FIRST so other hooks can use the metrics
-    if val_dataloader:
-        validation_hook = ValidationHook(val_dataloader, device, args.validate_every, model_type)
-        trainer.add_hook(validation_hook)
+    # if val_dataloader:
+    #     validation_hook = ValidationHook(val_dataloader, device, args.validate_every, model_type)
+    #     trainer.add_hook(validation_hook)
     
     # add standard hooks
     trainer.add_console_logging(log_every_n_batches=args.log_interval)
@@ -266,7 +265,7 @@ def setup_trainer_with_hooks(trainer_type, model, train_dataloader, optimizer, d
     if not args.disable_json_logging:
         trainer.add_json_logging(log_every_n_batches=args.json_log_steps)
         
-    trainer.add_checkpointing(save_every_n_epochs=1)
+    #trainer.add_checkpointing(save_every_n_epochs=1)
 
     if config.use_early_exit:
         trainer.add_early_exiting()

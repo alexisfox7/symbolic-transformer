@@ -133,3 +133,18 @@ class ModelHook(Hook):
         - output: [batch, seq_len, hidden_dim]
         """
         pass
+
+class InferenceHook(ModelHook):
+    """Base class for inference-specific hooks."""
+    
+    def on_generation_begin(self, prompt: str, config: Dict[str, Any]) -> None:
+        """Called at start of text generation."""
+        pass
+    
+    def on_generation_step(self, step: int, token_id: int, state: Dict[str, Any]) -> None:
+        """Called after each generation step."""
+        pass
+    
+    def on_generation_end(self, generated_ids: List[int], state: Dict[str, Any]) -> None:
+        """Called at end of generation."""
+        pass
