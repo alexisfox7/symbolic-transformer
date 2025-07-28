@@ -4,9 +4,10 @@ import torch.nn as nn
 from torch.nn import functional as F
 import math
 from sparsemax import Sparsemax
+from .base import HookableComponent
 
 #NOTE pretty sure this works, similar to karpathys
-class VanillaAttention(nn.Module):
+class VanillaAttention(HookableComponent):
     """Standard causal self-attention mechanism."""
 
     def __init__(self, config):
@@ -60,25 +61,15 @@ class VanillaAttention(nn.Module):
         att_dropout = self.attn_dropout(att)
         y = att_dropout @ v  # (B, nh, T, hd)
         
-        # Call hooks if available
-        # if hook_manager is not None and layer_idx is not None and hook_state is not None:
-        #     tokens = hook_state.get('tokens', [])
-        #     position = hook_state.get('position', 0)
-        #     state = hook_state.copy() if hook_state else {}
-        #     
-        #     # Call hook for each attention head
-        #     for head_idx in range(self.n_head):
-        #         hook_manager.on_attention_computed(
-        #             layer_idx=layer_idx,
-        #             head_idx=head_idx,
-        #             attention_weights=att[:, head_idx, :, :],  # [B, T, T]
-        #             query=q[:, head_idx, :, :],  # [B, T, hd]
-        #             key=k[:, head_idx, :, :],  # [B, T, hd]
-        #             value=v[:, head_idx, :, :],  # [B, T, hd]
-        #             tokens=tokens,
-        #             position=position,
-        #             state=state
-        #         )
+        # Call attention hooks
+        if self.has_hooks() and self.current_layer_idx is not None:
+            attention_outputs = {
+                'attention_weights': att,  # [B, n_head, T, T]
+                'query': q, 'key': k, 'value': v,  # [B, n_head, T, head_dim]
+                'output': y  # [B, n_head, T, head_dim]
+            }
+            state = {'layer_idx': self.current_layer_idx, 'input_shape': x.shape}
+            self.call_hooks('on_attention_computed', self.current_layer_idx, attention_outputs, state)
         
         # concatenate heads and project
         y = y.transpose(1, 2).contiguous().view(B, T, C)
@@ -87,7 +78,7 @@ class VanillaAttention(nn.Module):
         
         return y
 
-class SymbolicAttention(nn.Module):
+class SymbolicAttention(HookableComponent):
     """
     Symbolic self-attention with ALiBi positional encoding and optional Kronecker-lifted matrices.
     """
@@ -245,25 +236,15 @@ class SymbolicAttention(nn.Module):
         att_weights_dropout = self.attn_dropout(att_weights)
         y = att_weights_dropout @ v  # (B, nh, T, hs)
         
-        # call hooks if available
-        # if hook_manager is not None and layer_idx is not None and hook_state is not None:
-        #     tokens = hook_state.get('tokens', [])
-        #     position = hook_state.get('position', 0)
-        #     state = hook_state.copy() if hook_state else {}
-        #     
-        #     # call hook for each attention head
-        #     for head_idx in range(self.n_head):
-        #         hook_manager.on_attention_computed(
-        #             layer_idx=layer_idx,
-        #             head_idx=head_idx,
-        #             attention_weights=att_weights[:, head_idx, :, :],  # [B, T, T]
-        #             query=q[:, head_idx, :, :],  # [B, T, hd]
-        #             key=k[:, head_idx, :, :],  # [B, T, hd]
-        #             value=v[:, head_idx, :, :],  # [B, T, hd]
-        #             tokens=tokens,
-        #             position=position,
-        #             state=state
-        #         )
+        # Call attention hooks
+        if self.has_hooks() and self.current_layer_idx is not None:
+            attention_outputs = {
+                'attention_weights': att_weights,  # [B, n_head, T, T]
+                'query': q, 'key': k, 'value': v,  # [B, n_head, T, head_dim]
+                'output': y  # [B, n_head, T, head_dim]
+            }
+            state = {'layer_idx': self.current_layer_idx, 'input_shape': x.shape}
+            self.call_hooks('on_attention_computed', self.current_layer_idx, attention_outputs, state)
 
         # Concatenate heads
         y = y.transpose(1, 2).contiguous().view(B, T, C)
@@ -340,25 +321,15 @@ class TFTAttention(SymbolicAttention):
         att_weights_dropout = self.attn_dropout(att_weights)
         y = att_weights_dropout @ v  # (B, nh, T, hs)
         
-        # call hooks if available
-        # if hook_manager is not None and layer_idx is not None and hook_state is not None:
-        #     tokens = hook_state.get('tokens', [])
-        #     position = hook_state.get('position', 0)
-        #     state = hook_state.copy() if hook_state else {}
-        #     
-        #     # call hook for each attention head
-        #     for head_idx in range(self.n_head):
-        #         hook_manager.on_attention_computed(
-        #             layer_idx=layer_idx,
-        #             head_idx=head_idx,
-        #             attention_weights=att_weights[:, head_idx, :, :],  # [B, T, T]
-        #             query=q[:, head_idx, :, :],  # [B, T, hd]
-        #             key=k[:, head_idx, :, :],  # [B, T, hd]
-        #             value=v[:, head_idx, :, :],  # [B, T, hd]
-        #             tokens=tokens,
-        #             position=position,
-        #             state=state
-        #         )
+        # Call attention hooks
+        if self.has_hooks() and self.current_layer_idx is not None:
+            attention_outputs = {
+                'attention_weights': att_weights,  # [B, n_head, T, T]
+                'query': q, 'key': k, 'value': v,  # [B, n_head, T, head_dim]
+                'output': y  # [B, n_head, T, head_dim]
+            }
+            state = {'layer_idx': self.current_layer_idx, 'input_shape': x.shape}
+            self.call_hooks('on_attention_computed', self.current_layer_idx, attention_outputs, state)
 
         # concatenate heads
         y = y.transpose(1, 2).contiguous().view(B, T, C)

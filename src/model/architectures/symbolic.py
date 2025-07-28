@@ -97,10 +97,14 @@ class SymbolicTransformer(TransformerBase):
         xt = self.transformer.drop(tok_emb)
 
         for layer_idx, block in enumerate(self.transformer.h):
+            # Set hook context for this layer
+            block.attn.set_hook_context(self.hook_manager, layer_idx)
+            block.ffn.set_hook_context(self.hook_manager, layer_idx)
+            
             # Hook: on_layer_begin
             self.hook_manager.call_hooks('on_layer_begin', layer_idx, xt, state)
             
-            xt = block(xt) # , layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
+            xt = block(xt)
             
             # Hook: on_layer_end
             self.hook_manager.call_hooks('on_layer_end', layer_idx, xt, state)

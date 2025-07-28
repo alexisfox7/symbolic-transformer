@@ -109,13 +109,17 @@ class TFTTransformer(TransformerBase):
         xe = torch.zeros_like(xt)
 
         for layer_idx, block in enumerate(self.transformer.h):
+            # Set hook context for this layer
+            block.attn.set_hook_context(self.hook_manager, layer_idx)
+            block.ffn.set_hook_context(self.hook_manager, layer_idx)
+            
             # For TFT, the representative state is xe + xt
             representative_state = xe + xt
             
             # Hook: on_layer_begin
             self.hook_manager.call_hooks('on_layer_begin', layer_idx, representative_state, state)
             
-            xt, xe, xt_add = block(xt, xe) # , layer_idx=layer_idx, hook_manager=self.hook_manager, hook_state=hook_state)
+            xt, xe, xt_add = block(xt, xe)
             
             # Update representative state after block
             representative_state = xe + xt

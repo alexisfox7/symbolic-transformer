@@ -3,8 +3,9 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from sparsemax import Sparsemax
+from .base import HookableComponent
 
-class VanillaFFN(nn.Module):
+class VanillaFFN(HookableComponent):
     """Standard feed-forward network with GELU activation."""
     #TODO: old code
     def __init__(self, config):
@@ -21,24 +22,18 @@ class VanillaFFN(nn.Module):
         x = self.c_proj(x)
         x = self.dropout(x)
         
-        # Call hooks if available
-        # if layer_idx is not None and hook_state is not None:
-        #     tokens = hook_state.get('tokens', [])
-        #     position = hook_state.get('position', 0)
-        #     state = hook_state.copy() if hook_state else {}
-        #     
-        #     hook_manager.on_ffn_computed(
-        #         layer_idx=layer_idx,
-        #         ffn_input=ffn_input,
-        #         ffn_output=x,
-        #         tokens=tokens,
-        #         position=position,
-        #         state=state
-        #     )
+        # Call FFN hooks
+        if self.has_hooks() and self.current_layer_idx is not None:
+            ffn_outputs = {
+                'input': ffn_input,
+                'output': x
+            }
+            state = {'layer_idx': self.current_layer_idx}
+            self.call_hooks('on_ffn_computed', self.current_layer_idx, ffn_outputs, state)
         
         return x
     
-class VocabFFN(nn.Module):
+class VocabFFN(HookableComponent):
     """
     Vocabulary-constrained FFN that projects outputs back to vocabulary manifold.
     
