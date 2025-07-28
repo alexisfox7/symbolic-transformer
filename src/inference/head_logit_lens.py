@@ -31,18 +31,6 @@ class HeadLogitLensHook(InferenceHook):
         # Get the unembedding matrix (lm_head)
         self.lm_head = model.lm_head
         
-        # Create head-specific unembedding matrices by chunking the full embedding
-        # Each head gets 1/n_heads of the vocabulary embedding dimension
-        self.vocab_embeddings = model.transformer.wte.weight  # [vocab_size, n_embd]
-        
-        # Split embedding matrix into head-specific chunks
-        self.head_embeddings = []
-        for h in range(self.n_heads):
-            start_idx = h * self.head_dim
-            end_idx = (h + 1) * self.head_dim
-            head_emb = self.vocab_embeddings[:, start_idx:end_idx]  # [vocab_size, head_dim]
-            self.head_embeddings.append(head_emb)
-        
         # Get final layer norm if it exists
         if hasattr(model, 'transformer') and hasattr(model.transformer, 'ln_f'):
             self.layer_norm = model.transformer.ln_f
@@ -64,18 +52,28 @@ class HeadLogitLensHook(InferenceHook):
                 
             B, n_heads, T, head_dim = y.shape
             
-            # Focus on last position for generation: [batch, n_head, seq_len, head_dim] -> [batch, n_head, head_dim]
+            # Focus on last position for generation
             last_head_outputs = y[0, :, -1, :]  # Shape: [n_heads, head_dim]
             
             layer_head_predictions = []
             
             # Analyze each head separately
             for head_idx in range(n_heads):
-                head_state = last_head_outputs[head_idx]  # [head_dim]
-                head_embedding = self.head_embeddings[head_idx]  # [vocab_size, head_dim]
+                head_output = last_head_outputs[head_idx]  # [head_dim]
                 
-                # Compute logits using only this head's portion of the embedding
-                head_logits = torch.matmul(head_state, head_embedding.T)  # [vocab_size]
+                # Project head output to full embedding dimension
+                # Create a full-size hidden state with zeros except for this head's portion
+                full_hidden = torch.zeros(self.n_embd, device=head_output.device, dtype=head_output.dtype)
+                start_idx = head_idx * self.head_dim
+                end_idx = (head_idx + 1) * self.head_dim
+                full_hidden[start_idx:end_idx] = head_output
+                
+                # Apply layer norm if available
+                if self.layer_norm:
+                    full_hidden = self.layer_norm(full_hidden)
+                
+                # Compute logits using the full unembedding matrix
+                head_logits = self.lm_head(full_hidden)  # [vocab_size]
                 
                 # Get top-k predictions for this head
                 probs = F.softmax(head_logits, dim=-1)
