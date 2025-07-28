@@ -52,16 +52,21 @@ class HeadLogitLensHook(InferenceHook):
     def clear(self):
         """Clear stored predictions."""
         self.head_predictions = []
-        self.data = []
+        self.data = {}
     
-    def analyze_layer(self, hidden_state, layer_idx, position, tokens):
-        """Analyze predictions from each attention head at a specific layer."""
+    def on_attention_computed(self, layer_idx: int, attention_outputs: Dict[str, Any], state: Dict[str, Any]) -> None:
+        """Analyze predictions from each attention head using attention outputs."""
         with torch.no_grad():
+            # Get the attention output which is the combined output from all heads
+            attention_output = attention_outputs.get('output')  # [batch, seq_len, n_embd]
+            if attention_output is None:
+                return
+                
             # Apply layer norm if available
             if self.layer_norm:
-                h = self.layer_norm(hidden_state)
+                h = self.layer_norm(attention_output)
             else:
-                h = hidden_state
+                h = attention_output
             
             # Focus on last position for generation: [batch, seq, n_embd] -> [n_embd]
             last_hidden = h[0, -1, :]  # Shape: [n_embd]
@@ -83,16 +88,24 @@ class HeadLogitLensHook(InferenceHook):
                 probs = F.softmax(head_logits, dim=-1)
                 top_probs, top_indices = torch.topk(probs, self.top_k)
                 
-                # Decode tokens
-                top_tokens = [self.tokenizer.decode([idx.item()]) for idx in top_indices]
+                # Decode tokens with error handling
+                top_tokens = []
+                for idx in top_indices:
+                    try:
+                        token_text = self.tokenizer.decode([idx.item()], skip_special_tokens=False)
+                        token_text = repr(token_text) if '\n' in token_text or len(token_text.strip()) == 0 else token_text.strip()
+                        top_tokens.append(token_text)
+                    except:
+                        top_tokens.append(f"ID_{idx.item()}")
                 
                 # Store prediction for this head
                 head_prediction = {
                     'layer': layer_idx,
                     'head': head_idx,
-                    'position': position,
+                    'position': attention_output.shape[1] - 1,  # Last position
                     'tokens': top_tokens,
                     'probs': top_probs.tolist(),
+                    'token_ids': top_indices.tolist(),
                     'perplexity': torch.exp(-(probs * torch.log(probs + 1e-10)).sum()).item(),
                     'entropy': -(probs * torch.log(probs + 1e-10)).sum().item(),
                     'max_prob': top_probs[0].item()
@@ -135,26 +148,38 @@ def run_head_logit_lens_analysis(model, tokenizer, text, device):
         input_ids = torch.tensor([input_ids], dtype=torch.long)
     input_ids = input_ids.to(device)
     
-    # Prepare hook state
-    tokens = [tokenizer.decode([t]) for t in input_ids[0]]
-    hook_state = {'tokens': tokens, 'position': 0}
-    
     # Run forward pass
     model.eval()
     with torch.no_grad():
-        outputs = model(input_ids, hook_state=hook_state)
+        outputs = model(input_ids)
     
     # Get final prediction from the model's actual output
-    final_logits = outputs['logits'][0, -1, :]  # Last position logits
+    # Handle both dict and tensor returns
+    if isinstance(outputs, dict):
+        logits = outputs['logits']
+    else:
+        logits = outputs
+    
+    final_logits = logits[0, -1, :]  # Last position logits
     final_probs = F.softmax(final_logits, dim=-1)
     final_top_probs, final_top_indices = torch.topk(final_probs, 5)
-    final_top_tokens = [tokenizer.decode([idx.item()]) for idx in final_top_indices]
+    
+    # Decode tokens with error handling
+    final_top_tokens = []
+    for idx in final_top_indices:
+        try:
+            token_text = tokenizer.decode([idx.item()], skip_special_tokens=False)
+            token_text = repr(token_text) if '\n' in token_text or len(token_text.strip()) == 0 else token_text.strip()
+            final_top_tokens.append(token_text)
+        except:
+            final_top_tokens.append(f"ID_{idx.item()}")
     
     final_prediction = {
         'layer': 'FINAL',
-        'position': len(tokens) - 1,
+        'position': input_ids.shape[1] - 1,  # Last position
         'tokens': final_top_tokens,
         'probs': final_top_probs.tolist(),
+        'token_ids': final_top_indices.tolist(),
         'perplexity': torch.exp(-(final_probs * torch.log(final_probs + 1e-10)).sum()).item(),
         'input_text': text,
         'predicted_next': final_top_tokens[0]
