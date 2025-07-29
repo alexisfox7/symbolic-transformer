@@ -78,6 +78,10 @@ def create_base_parser(description="Train Transformer with Hook System"):
     parser.add_argument("--hook_weights", type=str, default=None,
                        help="Hook weights as comma-separated key:value pairs (e.g., 'early_exit:0.3,final_layer:0.7')")
     
+    # skip connection parameters
+    parser.add_argument("--change-skip", action="store_true", default=False,
+                       help="Change skip connection behavior")
+    
     return parser
 
 def add_symbolic_args(parser):
@@ -117,6 +121,7 @@ def create_config_from_args(args, symbolic_features=None):
     config.num_epochs = args.num_epochs
     config.use_sparsemax = args.use_sparsemax
     config.use_early_exit = args.use_early_exit
+    config.change_skip = args.change_skip
     
     # parse hook weights if provided
     if args.hook_weights:

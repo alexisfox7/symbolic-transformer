@@ -4,7 +4,7 @@
 set -e
 
 # CONFIG
-DIR="./outputs/cascade_kronecker_reason_batch16_earlyexit_1585"
+DIR="./outputs/cascade_kronecker_reason_batch16_change_skip"
 N=150000
 N_EMBD=384
 PRESET="small"
@@ -52,8 +52,9 @@ accelerate launch \
     --validate_every 1 \
     --use_proj kronecker --use_v kronecker \
     --cascade \
-    --use_early_exit \
-    --hook_weights "early_exit:0.15,final_layer:0.85"
+    --change_skip
+  #  --use_early_exit \
+  #  --hook_weights "early_exit:0.15,final_layer:0.85"
   #  --use_sparsemax
   
 echo "TFT Training completed!"

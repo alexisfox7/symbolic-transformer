@@ -192,7 +192,7 @@ class SymbolicAttention(HookableComponent):
         
         return alibi_bias
 
-    def forward(self, x): # , layer_idx=None, hook_manager=None, hook_state=None):
+    def forward(self, x):
         """
         Forward pass with optional Kronecker-lifted V matrix.
         
@@ -205,9 +205,11 @@ class SymbolicAttention(HookableComponent):
             qk = self.c_attn(x)
             q, k = qk.split(self.n_embd, dim=2)
             v = x  # V is identity
+
         elif self.use_v == 'normal':
             qkv = self.c_attn(x)
             q, k, v = qkv.split(self.n_embd, dim=2)
+
         elif self.use_v == 'kronecker':
             qk = self.c_attn(x)
             q, k = qk.split(self.n_embd, dim=2)
@@ -240,21 +242,20 @@ class SymbolicAttention(HookableComponent):
         att_weights_dropout = self.attn_dropout(att_weights)
         y = att_weights_dropout @ v  # (B, nh, T, hs)
         
-        # Call attention hooks
-        if self.has_hooks() and self.current_layer_idx is not None:
-            attention_outputs = {
-                'attention_weights': att_weights,  # [B, n_head, T, T]
-                'query': q, 'key': k, 'value': v,  # [B, n_head, T, head_dim]
-                'output': y  # [B, n_head, T, head_dim]
-            }
-            state = {
-                'layer_idx': self.current_layer_idx, 
-                'input_shape': x.shape,
-                'input_ids': self._parent_state.get('input_ids')
-            }
-            self.call_hooks('on_attention_computed', self.current_layer_idx, attention_outputs, state)
+        # call attention hooks
+        attention_outputs = {
+            'attention_weights': att_weights,  # [B, n_head, T, T]
+            'query': q, 'key': k, 'value': v,  # [B, n_head, T, head_dim]
+            'output': y  # [B, n_head, T, head_dim]
+        }
+        state = {
+            'layer_idx': self.current_layer_idx, 
+            'input_shape': x.shape,
+            'input_ids': self._parent_state.get('input_ids')
+        }
+        self.call_hooks('on_attention_computed', self.current_layer_idx, attention_outputs, state)
 
-        # Concatenate heads
+        # concatenate heads
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         
         if self.use_proj == 'none':
@@ -329,20 +330,6 @@ class TFTAttention(SymbolicAttention):
         att_weights_dropout = self.attn_dropout(att_weights)
         y = att_weights_dropout @ v  # (B, nh, T, hs)
         
-        # Call attention hooks
-        if self.has_hooks() and self.current_layer_idx is not None:
-            attention_outputs = {
-                'attention_weights': att_weights,  # [B, n_head, T, T]
-                'query': q, 'key': k, 'value': v,  # [B, n_head, T, head_dim]
-                'output': y  # [B, n_head, T, head_dim]
-            }
-            state = {
-                'layer_idx': self.current_layer_idx, 
-                'input_shape': x.shape,
-                'input_ids': self._parent_state.get('input_ids')
-            }
-            self.call_hooks('on_attention_computed', self.current_layer_idx, attention_outputs, state)
-
         # concatenate heads
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         
@@ -360,5 +347,19 @@ class TFTAttention(SymbolicAttention):
         
         y = self.resid_dropout(y)
         
+        # Call attention hooks
+        if self.has_hooks() and self.current_layer_idx is not None:
+            attention_outputs = {
+                'attention_weights': att_weights,  # [B, n_head, T, T]
+                'query': q, 'key': k, 'value': v,  # [B, n_head, T, head_dim]
+                'output': y  # [B, n_head, T, head_dim]
+            }
+            state = {
+                'layer_idx': self.current_layer_idx, 
+                'input_shape': x.shape,
+                'input_ids': self._parent_state.get('input_ids')
+            }
+            self.call_hooks('on_attention_computed', self.current_layer_idx, attention_outputs, state)
+            
         return y
     

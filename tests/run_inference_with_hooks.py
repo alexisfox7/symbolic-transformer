@@ -279,7 +279,7 @@ def main():
     parser.add_argument('--output-dir', type=str, default='vanilla',
                         help='Directory to save visualizations and analysis')
     parser.add_argument('--model-type', type=str, default='vanilla', choices=['vanilla', 'tft', 'symbolic'])
-    parser.add_argument('--prompt', type=str, default=" blah blah <story_type> Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. He smiled. Mia saw a cat.</story_type> <class>") 
+    parser.add_argument('--prompt', type=str, default=" blah blah <story_type> Ben saw a dog. He smiled. Ben saw a dog. He smiled. Ben saw a dog. He smiled. </story_type> <class>") 
     # Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. He smiled. Mia saw a cat. She laughed. Ben saw a dog. Mia saw a cat. She
     # "The door was open. Tim had a key to the door. Tim used", 
     
@@ -372,7 +372,7 @@ def main():
                 args.output_dir,
                 max_layers=args.max_matrix_layers,
                 max_heads=args.max_matrix_heads,
-                exclude_first_n=10
+                exclude_first_n=0
             )
             logger.info(f"Matrix visualizations saved to: {args.output_dir}")
         except Exception as e:

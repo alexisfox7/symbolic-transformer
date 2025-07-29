@@ -44,7 +44,8 @@ class TransformerConfig:
     top_k: int = 50                          # top-k sampling
     
     use_early_exit: bool = False             # whether or not to add early exit hook 
-    hook_weights: Dict[str, float] = field(default_factory=lambda: {"early_exit": 0.25, "final_layer": 0.75})  # hook weights
+    hook_weights: Dict[str, float] = field(default_factory=lambda: {"early_exit": 0.0, "final_layer": 1.0})  # hook weights
+    change_skip: bool = False                # Change skip connection behavior
 
     def __post_init__(self):
         """Post-initialization validation."""

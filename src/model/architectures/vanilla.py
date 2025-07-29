@@ -77,13 +77,9 @@ class VanillaTransformer(TransformerBase):
         x = self.transformer.drop(tok_emb + pos_emb)
 
         for layer_idx, block in enumerate(self.transformer.h):
-            # Set hook context for this layer
-            block.attn.set_hook_context(self.hook_manager, layer_idx)
-            block.ffn.set_hook_context(self.hook_manager, layer_idx)
-            
-            # Set parent state with input_ids for hooks
-            block.attn.set_parent_state(state)
-            block.ffn.set_parent_state(state)
+            # Set context for this layer (hook manager, parent state, and layer index)
+            block.attn.set_context(self.hook_manager, state, layer_idx)
+            block.ffn.set_context(self.hook_manager, state, layer_idx)
             
             # Hook: on_layer_begin
             self.hook_manager.call_hooks('on_layer_begin', layer_idx, x, state)

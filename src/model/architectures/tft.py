@@ -23,19 +23,22 @@ class TFTTransformerBlock(nn.Module):
 
         self.ffn = VanillaFFN(config)
 
-    def forward(self, xt, xe): # , layer_idx=None, hook_manager=None, hook_state=None):
+    def forward(self, xt, xe): 
         x_comb = self.ln_1(xt + xe)
         xt_norm = self.ln_2(xt)
         
         # attention
-        attn_out = self.attn(x_comb, xt_norm) # , layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        attn_out = self.attn(x_comb, xt_norm) 
+        
         xt_add = xt + attn_out
-       
+        if self.config.change_skip:
+            xt_add = attn_out
+
         xe = xt_add + xe
         xe = self.ln_3(xe)
         
         # ffn
-        ffn_out = self.ffn(xe) # , layer_idx=layer_idx, hook_manager=hook_manager, hook_state=hook_state)
+        ffn_out = self.ffn(xe)
         xe = xe + ffn_out   
 
         # output depends on whether or not cascading
@@ -109,13 +112,9 @@ class TFTTransformer(TransformerBase):
         xe = torch.zeros_like(xt)
 
         for layer_idx, block in enumerate(self.transformer.h):
-            # Set hook context for this layer
-            block.attn.set_hook_context(self.hook_manager, layer_idx)
-            block.ffn.set_hook_context(self.hook_manager, layer_idx)
-            
-            # Set parent state with input_ids for hooks
-            block.attn.set_parent_state(state)
-            block.ffn.set_parent_state(state)
+            # Set context for this layer (hook manager, parent state, and layer index)
+            block.attn.set_context(self.hook_manager, state, layer_idx)
+            block.ffn.set_context(self.hook_manager, state, layer_idx)
             
             # For TFT, the representative state is xe + xt
             representative_state = xe + xt
@@ -126,7 +125,7 @@ class TFTTransformer(TransformerBase):
             xt, xe, xt_add = block(xt, xe)
             
             # Update representative state after block
-            representative_state = xe
+            representative_state = xt_add
             
             # Hook: on_layer_end  
             self.hook_manager.call_hooks('on_layer_end', layer_idx, representative_state, state)
