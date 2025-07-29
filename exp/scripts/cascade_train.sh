@@ -52,7 +52,7 @@ accelerate launch \
     --validate_every 1 \
     --use_proj kronecker --use_v kronecker \
     --cascade \
-    --change_skip
+    --change-skip
   #  --use_early_exit \
   #  --hook_weights "early_exit:0.15,final_layer:0.85"
   #  --use_sparsemax
