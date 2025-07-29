@@ -31,11 +31,15 @@ class HeadLogitLensHook(InferenceHook):
         # Get the unembedding matrix (lm_head)
         self.lm_head = model.lm_head
         
-        # Get final layer norm if it exists
+        # Get final normalization layer - could be LayerNorm or ChannelNorm
         if hasattr(model, 'transformer') and hasattr(model.transformer, 'ln_f'):
-            self.layer_norm = model.transformer.ln_f
+            self.norm_layer = model.transformer.ln_f
+            # Check if it's ChannelNorm (perfect for head-wise analysis)
+            from ..model.components.norm import ChannelNorm
+            self.is_channel_norm = isinstance(self.norm_layer, ChannelNorm)
         else:
-            self.layer_norm = None
+            self.norm_layer = None
+            self.is_channel_norm = False
     
     def clear(self):
         """Clear stored predictions."""
@@ -68,15 +72,21 @@ class HeadLogitLensHook(InferenceHook):
                 end_idx = (head_idx + 1) * self.head_dim
                 full_hidden[start_idx:end_idx] = head_output
                 
-                # Apply layer norm if available
-                if self.layer_norm:
-                    # Layer norm expects [batch, seq, hidden], so add batch and seq dimensions
+                if self.is_channel_norm:
+                    # ChannelNorm is perfect for head-wise analysis since it normalizes each head independently
+                    # Add batch and seq dimensions that ChannelNorm expects
                     full_hidden_3d = full_hidden.unsqueeze(0).unsqueeze(0)  # [1, 1, hidden]
-                    full_hidden_3d = self.layer_norm(full_hidden_3d)
-                    full_hidden = full_hidden_3d.squeeze(0).squeeze(0)  # Back to [hidden]
-                
-                # Compute logits using the full unembedding matrix
-                head_logits = self.lm_head(full_hidden)  # [vocab_size]
+                    normalized_3d = self.norm_layer(full_hidden_3d)
+                    normalized = normalized_3d.squeeze(0).squeeze(0)  # Back to [hidden]
+                    head_logits = self.lm_head(normalized)  # [vocab_size]
+                    
+                elif self.norm_layer is not None:
+                    # Regular LayerNorm - skip it to avoid artificial statistics from mostly-zero vector
+                    head_logits = self.lm_head(full_hidden)  # [vocab_size]
+                    
+                else:
+                    # No normalization layer
+                    head_logits = self.lm_head(full_hidden)  # [vocab_size]
                 
                 # Get top-k predictions for this head
                 probs = F.softmax(head_logits, dim=-1)

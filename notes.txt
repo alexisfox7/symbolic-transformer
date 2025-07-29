@@ -3,3 +3,8 @@ add checkpointing hook
 add attention hook
 add logitlens hook
 make logging flexible
+yaml
+fix logging
+
+
+try doing softmax then doing sparsemax 

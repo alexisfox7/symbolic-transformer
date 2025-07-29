@@ -47,8 +47,6 @@ class LogitLensHook(InferenceHook):
             # Apply layer norm if available (like original logit lens)
             if self.layer_norm:
                 h = self.layer_norm(hidden_state)
-            else:
-                h = hidden_state
             
             # Get logits by applying unembedding matrix
             logits = self.lm_head(h)  # Shape: [batch, seq, vocab]
