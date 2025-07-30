@@ -14,7 +14,7 @@ import torch
 import argparse
 import os
 import sys
-from accelerate import PartialState
+# Using new logger module
 
 from mytokenizers.factory import add_reasoning_tokens
 from src.model import get_model
@@ -303,8 +303,7 @@ def main():
     
     args = parser.parse_args()
     
-    # Initialize accelerate state for logging
-    PartialState()
+    # Using new logger module
     args.output_dir = os.path.join('outputs', 'inference', args.output_dir)
     os.makedirs(args.output_dir, exist_ok=True)
     

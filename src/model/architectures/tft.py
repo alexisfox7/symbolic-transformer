@@ -125,7 +125,7 @@ class TFTTransformer(TransformerBase):
             xt, xe, xt_add = block(xt, xe)
             
             # Update representative state after block
-            representative_state = xt_add
+            representative_state = xe
             
             # Hook: on_layer_end  
             self.hook_manager.call_hooks('on_layer_end', layer_idx, representative_state, state)

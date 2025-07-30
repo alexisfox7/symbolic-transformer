@@ -1,12 +1,12 @@
 from typing import Any, Dict
 
-from accelerate.logging import get_logger # type: ignore
+from src.utils.logger import logger
 from .base import TrainingHook
 import os
 import json  
 import math
 from datetime import datetime
-logger = get_logger(__name__)
+# logger imported from src.utils.logger
 
 class ConsoleLogHook(TrainingHook):
     def __init__(self, log_every_n_batches: int):

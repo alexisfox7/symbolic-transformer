@@ -10,15 +10,7 @@ import sys
 import torch
 from torch.utils.data import DataLoader, random_split
 import warnings
-from accelerate.logging import get_logger
-from accelerate import PartialState
-
-# Initialize accelerate state for logging
-try:
-    PartialState()
-except RuntimeError:
-    # Already initialized
-    pass
+from src.utils.logger import logger
 
 # suppress accelerate kernel version warnings globally
 warnings.filterwarnings("ignore", message=".*kernel version.*")
@@ -98,7 +90,7 @@ def setup_training_environment(output_dir, model_type="Transformer", trainer_typ
     """Setup logging and output directory."""
     os.makedirs(output_dir, exist_ok=True)
     
-    logger = get_logger(__name__)
+    # logger imported from src.utils.logger
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
@@ -191,7 +183,7 @@ def setup_data_loaders_with_combined(args, config, tokenizer, logger, trainer_ty
     Setup data loaders - automatically uses combined dataset if available.
     Falls back to standard TinyStories if combined dataset not found.
     """
-    combined_dataset_path = "./outputs/combined_data"
+    combined_dataset_path = "./outputs/data/combined_data"
     
     # Check if combined dataset exists
     if os.path.exists(combined_dataset_path):

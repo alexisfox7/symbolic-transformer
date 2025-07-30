@@ -10,12 +10,12 @@ import os
 import torch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
-from accelerate.logging import get_logger
+from src.utils.logger import logger
 
 #FIX:remove callback import, keep only basetrainer
 from .base_trainer import BaseTrainer
 
-logger = get_logger(__name__)
+# logger imported from src.utils.logger
 
 class SimpleTrainer(BaseTrainer):
     """

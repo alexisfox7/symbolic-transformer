@@ -19,11 +19,11 @@ warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
 from accelerate import Accelerator
-from accelerate.logging import get_logger
+from src.utils.logger import logger
 
 from .base_trainer import BaseTrainer
 
-logger = get_logger(__name__)
+# logger imported from src.utils.logger
 
 class AccelerateTrainer(BaseTrainer):
     """Accelerate trainer without gradient accumulation complexity - FIXED with hooks."""

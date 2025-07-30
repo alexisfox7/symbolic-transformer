@@ -15,10 +15,10 @@ import torch
 from torch.utils.data import DataLoader
 from datasets import load_dataset
 from transformers import AutoTokenizer
-from accelerate.logging import get_logger
+from src.utils.logger import logger
 
 
-logger = get_logger(__name__)
+# logger imported from src.utils.logger
 
 
 def simple_collate_fn(batch, tokenizer, max_length=128):

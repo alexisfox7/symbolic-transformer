@@ -15,10 +15,7 @@ warnings.filterwarnings("ignore", message=".*kernel version.*")
 warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
-# Initialize accelerate state for logging
 # NOTE logging fed up
-from accelerate import PartialState
-_ = PartialState()
 
 from src.utils.training_utils import (
     create_base_parser, setup_training_environment, create_config_from_args,

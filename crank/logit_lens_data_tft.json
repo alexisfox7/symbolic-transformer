@@ -6,181 +6,199 @@
       "layer": 0,
       "position": 14,
       "tokens": [
-        "named",
-        "was",
-        "called",
-        "were",
-        "are"
+        "girl",
+        "Mia",
+        "boy",
+        "princess",
+        "Amy"
       ],
       "probs": [
-        0.33111584186553955,
-        0.13947871327400208,
-        0.10826507955789566,
-        0.06521770358085632,
-        0.01774272508919239
+        0.3531300127506256,
+        0.02973797358572483,
+        0.014236602932214737,
+        0.012035451829433441,
+        0.010115621611475945
       ],
       "token_ids": [
-        3706,
-        373,
-        1444,
-        547,
-        389
+        2576,
+        32189,
+        2933,
+        21752,
+        14235
       ],
-      "perplexity": 35.56254196166992,
+      "perplexity": 164.39906311035156,
       "current_token_id": 3706,
       "current_token": " named",
-      "similarity_to_current": 0.3068814277648926,
-      "similarity_to_predicted": 0.1083170473575592
+      "similarity_to_current": 0.0706004872918129,
+      "similarity_to_predicted": 0.145176500082016,
+      "similarity_to_baseline": 0.09089494496583939,
+      "baseline_token_id": 262,
+      "baseline_token": " the"
     },
     {
       "layer": 1,
       "position": 14,
       "tokens": [
-        "named",
-        ",",
-        "Lily",
-        "the",
-        "called"
+        "girl",
+        "three",
+        "Lucy",
+        "and",
+        "."
       ],
       "probs": [
-        0.20287592709064484,
-        0.10421985387802124,
-        0.07027886807918549,
-        0.06409135460853577,
-        0.04893249273300171
+        0.1513461470603943,
+        0.02059081941843033,
+        0.02004181034862995,
+        0.01978316903114319,
+        0.019531209021806717
       ],
       "token_ids": [
-        3706,
-        11,
-        20037,
-        262,
-        1444
+        2576,
+        1115,
+        22162,
+        290,
+        13
       ],
-      "perplexity": 58.87623596191406,
+      "perplexity": 428.14404296875,
       "current_token_id": 3706,
       "current_token": " named",
-      "similarity_to_current": 0.2762107253074646,
-      "similarity_to_predicted": 0.1328764259815216
+      "similarity_to_current": 0.059348732233047485,
+      "similarity_to_predicted": 0.16921177506446838,
+      "similarity_to_baseline": 0.1168215200304985,
+      "baseline_token_id": 262,
+      "baseline_token": " the"
     },
     {
       "layer": 2,
       "position": 14,
       "tokens": [
-        "called",
-        "a",
-        "the",
-        ",",
-        "very"
+        "three",
+        "Lucy",
+        "Daisy",
+        "and",
+        "girl"
       ],
       "probs": [
-        0.2512921392917633,
-        0.07655007392168045,
-        0.05660264194011688,
-        0.04684796929359436,
-        0.03242768719792366
+        0.04789288714528084,
+        0.03981756046414375,
+        0.03241308778524399,
+        0.032387491315603256,
+        0.03186642751097679
       ],
       "token_ids": [
-        1444,
-        257,
-        262,
-        11,
-        845
+        1115,
+        22162,
+        40355,
+        290,
+        2576
       ],
-      "perplexity": 84.89569854736328,
+      "perplexity": 386.41229248046875,
       "current_token_id": 3706,
       "current_token": " named",
-      "similarity_to_current": 0.20695117115974426,
-      "similarity_to_predicted": 0.12541164457798004
+      "similarity_to_current": 0.009696252644062042,
+      "similarity_to_predicted": 0.20001651346683502,
+      "similarity_to_baseline": 0.18194422125816345,
+      "baseline_token_id": 262,
+      "baseline_token": " the"
     },
     {
       "layer": 3,
       "position": 14,
       "tokens": [
+        "three",
         "Sarah",
-        "Daisy",
-        "Jack",
-        "Sus",
-        "Lucy"
+        "Lucy",
+        "Rose",
+        "Daisy"
       ],
       "probs": [
-        0.12296421825885773,
-        0.09990592300891876,
-        0.04241124540567398,
-        0.03305758163332939,
-        0.029816655442118645
+        0.08357857167720795,
+        0.06624993681907654,
+        0.06429196894168854,
+        0.06040342524647713,
+        0.05086332932114601
       ],
       "token_ids": [
+        1115,
         10490,
-        40355,
-        3619,
-        8932,
-        22162
+        22162,
+        8049,
+        40355
       ],
-      "perplexity": 100.17047882080078,
+      "perplexity": 156.94924926757812,
       "current_token_id": 3706,
       "current_token": " named",
-      "similarity_to_current": 0.18202993273735046,
-      "similarity_to_predicted": 0.22930434346199036
+      "similarity_to_current": -0.0444299653172493,
+      "similarity_to_predicted": 0.2522527277469635,
+      "similarity_to_baseline": 0.20651200413703918,
+      "baseline_token_id": 262,
+      "baseline_token": " the"
     },
     {
       "layer": 4,
       "position": 14,
       "tokens": [
-        "Sus",
         "Sarah",
         "Lucy",
-        "Daisy",
-        "Ell"
+        "Jane",
+        "Rose",
+        "Daisy"
       ],
       "probs": [
-        0.16624172031879425,
-        0.14486992359161377,
-        0.11331143975257874,
-        0.06305240094661713,
-        0.04676299914717674
+        0.0877542719244957,
+        0.08479591459035873,
+        0.07944907248020172,
+        0.05845148488879204,
+        0.05660732463002205
       ],
       "token_ids": [
-        8932,
         10490,
         22162,
-        40355,
-        7122
+        12091,
+        8049,
+        40355
       ],
-      "perplexity": 36.57080841064453,
+      "perplexity": 88.03887176513672,
       "current_token_id": 3706,
       "current_token": " named",
-      "similarity_to_current": 0.08911877125501633,
-      "similarity_to_predicted": 0.3171294331550598
+      "similarity_to_current": 0.03539402782917023,
+      "similarity_to_predicted": 0.3080081343650818,
+      "similarity_to_baseline": 0.17222626507282257,
+      "baseline_token_id": 262,
+      "baseline_token": " the"
     },
     {
       "layer": 5,
       "position": 14,
       "tokens": [
-        "Sarah",
         "Lucy",
-        "Anna",
-        "Lily",
-        "Jane"
+        "Jane",
+        "Sarah",
+        "L",
+        "Lily"
       ],
       "probs": [
-        0.10540265589952469,
-        0.10368385910987854,
-        0.0869055837392807,
-        0.06884698569774628,
-        0.06175719574093819
+        0.14424702525138855,
+        0.10151775926351547,
+        0.08491578698158264,
+        0.05046159029006958,
+        0.04323417693376541
       ],
       "token_ids": [
-        10490,
         22162,
-        11735,
-        20037,
-        12091
+        12091,
+        10490,
+        406,
+        20037
       ],
-      "perplexity": 46.830101013183594,
+      "perplexity": 50.454166412353516,
       "current_token_id": 3706,
       "current_token": " named",
-      "similarity_to_current": 0.02902854047715664,
-      "similarity_to_predicted": 0.43413060903549194
+      "similarity_to_current": 0.06853494048118591,
+      "similarity_to_predicted": 0.45782470703125,
+      "similarity_to_baseline": 0.16891059279441833,
+      "baseline_token_id": 262,
+      "baseline_token": " the"
     }
   ],
   "final_prediction": {
@@ -188,19 +206,19 @@
     "position": 14,
     "tokens": [
       "Lucy",
+      "Jane",
       "Sarah",
-      "Lily",
-      "Anna",
-      "Jane"
+      "L",
+      "Lily"
     ],
     "probs": [
-      0.12517641484737396,
-      0.10300787538290024,
-      0.09602048993110657,
-      0.08331702649593353,
-      0.06334545463323593
+      0.1441272497177124,
+      0.09847520291805267,
+      0.08477895706892014,
+      0.04967157542705536,
+      0.04723634943366051
     ],
-    "perplexity": 39.628055572509766,
+    "perplexity": 50.40814208984375,
     "input_text": "Once upon a time there was a girl. The young pretty girl was named",
     "predicted_next": "Lucy"
   }
