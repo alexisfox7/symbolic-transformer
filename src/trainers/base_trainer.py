@@ -144,12 +144,12 @@ class BaseTrainer(ABC):
             "final_layer_loss": final_layer_loss.item()
         }
 
-        if self.model.config.use_early_exit:
-            aux_loss = self.collect_aux_losses()
-            total_loss = total_loss + aux_loss
-            losses["aux_loss"] = aux_loss.item()
-        else:
-            losses["aux_loss"] = 0.0
+        #if self.model.config.use_early_exit:
+        aux_loss = self.collect_aux_losses()
+        total_loss = total_loss + aux_loss
+        losses["aux_loss"] = aux_loss.item()
+        #else:
+        #    losses["aux_loss"] = 0.0
             
         losses["total_loss"] = total_loss.item()
 
