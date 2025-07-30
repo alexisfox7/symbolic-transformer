@@ -125,42 +125,44 @@ def get_preset_config(preset_name: str) -> TransformerConfig:
     return PRESETS[preset_name]
 
 def print_config(config: TransformerConfig, dataset_name: str = None, model=None):
-    print("=" * 60)
-    print("TRANSFORMER CONFIGURATION")
-    print("=" * 60)
+    from src.utils.logger import logger
     
-    print(f"\n🏗️  MODEL ARCHITECTURE:")
-    print(f"  Layers:              {config.n_layer}") 
-    print(f"  Attention Heads:     {config.n_head}")
-    print(f"  Embedding Dim:       {config.n_embd}")
-    print(f"  Head Dimension:      {config.n_embd // config.n_head}")
-    print(f"  Vocabulary Size:     {config.vocab_size or 'TBD'}")
-    print(f"  Max Sequence:        {config.block_size}")
-    print(f"  Dropout:             {config.dropout}")
-    print(f"  Bias in Linear:      {config.bias}")
+    logger.info("=" * 60)
+    logger.info("TRANSFORMER CONFIGURATION")
+    logger.info("=" * 60)
     
-    print(f"\n🔬 SYMBOLIC FEATURES:")
-    print(f"  Value Matrix:         {config.use_v}")
-    print(f"  Projection Matrix:    {config.use_proj}")
+    logger.info(f"\n🏗️  MODEL ARCHITECTURE:")
+    logger.info(f"  Layers:              {config.n_layer}") 
+    logger.info(f"  Attention Heads:     {config.n_head}")
+    logger.info(f"  Embedding Dim:       {config.n_embd}")
+    logger.info(f"  Head Dimension:      {config.n_embd // config.n_head}")
+    logger.info(f"  Vocabulary Size:     {config.vocab_size or 'TBD'}")
+    logger.info(f"  Max Sequence:        {config.block_size}")
+    logger.info(f"  Dropout:             {config.dropout}")
+    logger.info(f"  Bias in Linear:      {config.bias}")
     
-    print(f"\n🏋️  TRAINING SETUP:")
-    print(f"  Batch Size:          {config.batch_size}")
-    print(f"  Epochs:              {config.num_epochs}")
-    print(f"  Learning Rate:       {config.learning_rate}")
-    print(f"  Weight Decay:        {config.weight_decay}")
+    logger.info(f"\n🔬 SYMBOLIC FEATURES:")
+    logger.info(f"  Value Matrix:         {config.use_v}")
+    logger.info(f"  Projection Matrix:    {config.use_proj}")
     
-    print(f"\n🎲 GENERATION:")
-    print(f"  Temperature:         {config.temperature}")
-    print(f"  Top-K:               {config.top_k}")
+    logger.info(f"\n🏋️  TRAINING SETUP:")
+    logger.info(f"  Batch Size:          {config.batch_size}")
+    logger.info(f"  Epochs:              {config.num_epochs}")
+    logger.info(f"  Learning Rate:       {config.learning_rate}")
+    logger.info(f"  Weight Decay:        {config.weight_decay}")
+    
+    logger.info(f"\n🎲 GENERATION:")
+    logger.info(f"  Temperature:         {config.temperature}")
+    logger.info(f"  Top-K:               {config.top_k}")
     
     if dataset_name:
-        print(f"\n📊 DATASET:")
-        print(f"  Name:                {dataset_name}")
+        logger.info(f"\n📊 DATASET:")
+        logger.info(f"  Name:                {dataset_name}")
     
     if model is not None:
         total_params = sum(p.numel() for p in model.parameters())
-        print(f"\n📏 MODEL SIZE:")
-        print(f"  Parameters:          {total_params/1e6:.2f}M")
+        logger.info(f"\n📏 MODEL SIZE:")
+        logger.info(f"  Parameters:          {total_params/1e6:.2f}M")
     
-    print("=" * 60)
+    logger.info("=" * 60)
 

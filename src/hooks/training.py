@@ -35,8 +35,8 @@ class ConsoleLogHook(TrainingHook):
         batch_idx = state.get("current_batch_idx")
         current_epoch = state.get("current_epoch")
         total_epochs = state.get("num_epochs")
-        if batch_idx % self.log_every_n_batches == 0:
-            logger.info(f"Epoch {current_epoch}/{total_epochs}, Batch {batch_idx}")
+        #if batch_idx % self.log_every_n_batches == 0:
+        #    logger.info(f"Epoch {current_epoch}/{total_epochs}, Batch {batch_idx}")
 
     def on_batch_end(self, state: Dict[str, Any]) -> None:
         batch_idx = state.get("current_batch_idx")

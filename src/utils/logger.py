@@ -8,7 +8,7 @@ class AcceleratorPrintLogger:
         self.accelerator = accelerator
     
     def info(self, msg):
-        self.accelerator.print(f"[INFO] {msg}")
+        self.accelerator.print(f"{msg}")
     
     def debug(self, msg):
         self.accelerator.print(f"[DEBUG] {msg}")
