@@ -1,9 +1,24 @@
 """Unified logger for the entire project."""
-from accelerate import PartialState
-from accelerate.logging import get_logger
+from accelerate import Accelerator
 
-_ = PartialState()
+accelerator = Accelerator()
 
-logger = get_logger("log", log_level="DEBUG")
+class AcceleratorPrintLogger:
+    def __init__(self, accelerator):
+        self.accelerator = accelerator
+    
+    def info(self, msg):
+        self.accelerator.print(f"[INFO] {msg}")
+    
+    def debug(self, msg):
+        self.accelerator.print(f"[DEBUG] {msg}")
+    
+    def warning(self, msg):
+        self.accelerator.print(f"[WARNING] {msg}")
+    
+    def error(self, msg):
+        self.accelerator.print(f"[ERROR] {msg}")
+
+logger = AcceleratorPrintLogger(accelerator)
 
 __all__ = ['logger']
