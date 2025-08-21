@@ -14,6 +14,45 @@ import os
 from collections import defaultdict
 
 
+def get_residual_and_decompose_simple(model, input_ids, layer_idx, position_idx):
+    """
+    Simpler version using HuggingFace's output_hidden_states.
+    """
+    device = input_ids.device
+    
+    with torch.no_grad():
+        outputs = model(input_ids, output_hidden_states=True)
+        
+        # hidden_states includes embeddings as layer 0, so layer_idx+1
+        if layer_idx == -1:
+            # Initial embeddings
+            residual_at_pos = outputs.hidden_states[0][0, position_idx, :]
+        else:
+            # After layer layer_idx (so index is layer_idx + 1)
+            residual_at_pos = outputs.hidden_states[layer_idx + 1][0, position_idx, :]
+    
+    # Apply final LN and project (standard LogitLens)
+    residual_normed = model.transformer.ln_f(residual_at_pos.unsqueeze(0))
+    logits = model.lm_head(residual_normed)
+    
+    # Get top 3
+    top3_indices = torch.topk(logits[0], k=3).indices
+    top3_embeddings = model.transformer.wte(top3_indices)
+    
+    decomposed = {
+        'original': residual_at_pos,
+        'word1': top3_embeddings[0],
+        'word2': top3_embeddings[1],
+        'word3': top3_embeddings[2],
+        'dark_matter': residual_at_pos - top3_embeddings.sum(dim=0)
+    }
+    
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+    token_names = [tokenizer.decode([idx.item()]) for idx in top3_indices]
+    
+    return decomposed, token_names
+
+
 def extract_attention_from_gpt2(model, tokenizer, text, device='cpu'):
    """Extract attention patterns from GPT-2 model."""
    # Tokenize input
@@ -41,12 +80,20 @@ def extract_attention_from_gpt2(model, tokenizer, text, device='cpu'):
        for head_idx in range(layer_attention.shape[0]):
            head_attention = layer_attention[head_idx]  # [seq_len, seq_len]
           
+           # Use residual decomposition for the last position
+           position_idx = len(tokens) - 1
+           decomposed, token_names = get_residual_and_decompose_simple(
+               model, input_ids, layer_idx, position_idx
+           )
+           
            attention_data.append({
                'layer': layer_idx,
                'head': head_idx,
                'attention_matrix': head_attention.cpu(),
                'tokens': tokens,
-               'position': len(tokens) - 1  # Final position
+               'position': position_idx,
+               'decomposed': decomposed,
+               'vocab_tokens': token_names
            })
   
    return attention_data, tokens
@@ -118,7 +165,7 @@ def create_attention_visualization(attention_data, tokens, output_dir=None, max_
                print(f"Layer {layer}, Head {head}: Sequence too short ({seq_len}) to exclude {exclude_first_n} tokens")
       
        # Create heatmap with power scaling like in original code
-       power = 0.8
+       power = 1.0
        plot_matrix = np.power(attention_matrix, power)
   
        im = ax.imshow(plot_matrix, cmap='Blues', aspect='auto', vmin=0, vmax=1)
@@ -199,7 +246,7 @@ def analyze_attention_patterns(attention_data, tokens):
 
 def main():
    # Configuration
-   text = "Ben saw a dog. Ben saw a dog. Ben saw a"
+   text = "Ben laughed funny. Ben laughed funny. Ben laughed"
    output_dir = "gpt2_attention_visualization"
    device = 'cuda' if torch.cuda.is_available() else 'cpu'
   
@@ -233,14 +280,14 @@ def main():
    )
   
    # Excluding first few tokens to focus on interesting patterns - all layers
-   create_attention_visualization(
-       attention_data,
-       tokens,
-       output_dir,
-       max_layers=12,
-       max_heads=12,
-       exclude_first_n=3
-   )
+#    create_attention_visualization(
+#        attention_data,
+#        tokens,
+#        output_dir,
+#        max_layers=12,
+#        max_heads=12,
+#        exclude_first_n=3
+#    )
   
    print(f"\nVisualization complete! Check {output_dir} for results.")
 
