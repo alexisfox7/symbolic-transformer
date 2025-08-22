@@ -87,6 +87,18 @@ def get_residual_and_decompose(model, input_ids, layer_idx, position_idx):
         top3_embeddings.append(transformed)
     top3_embeddings = torch.stack(top3_embeddings)
     
+    # Use least squares to find coefficients for the three embeddings
+    # Solve: residual_at_pos = coeff1 * embedding1 + coeff2 * embedding2 + coeff3 * embedding3
+    A = top3_embeddings.T  # Shape: [hidden_dim, 3]
+    b = residual_at_pos    # Shape: [hidden_dim]
+    
+    # Solve least squares: A @ coeffs = b
+    coeffs, residuals, rank, s = torch.linalg.lstsq(A, b)
+    
+    # Reconstruct using the coefficients
+    reconstruction = torch.matmul(A, coeffs)
+    dark_matter = residual_at_pos - reconstruction
+    
     # Compute cosine similarities with intermediate representation
     intermediate_norm = F.normalize(residual_at_pos.unsqueeze(0), p=2, dim=1)
     similarities = {}
@@ -95,18 +107,21 @@ def get_residual_and_decompose(model, input_ids, layer_idx, position_idx):
         similarity = torch.cosine_similarity(intermediate_norm, token_norm, dim=1)
         similarities[f'word{i+1}'] = similarity.item()
     
+    # Store coefficients for analysis
+    coefficients = {f'coeff{i+1}': coeffs[i].item() for i in range(3)}
+    
     decomposed = {
         'original': residual_at_pos,
-        'word1': top3_embeddings[0],
-        'word2': top3_embeddings[1],
-        'word3': top3_embeddings[2],
-        'dark_matter': residual_at_pos - top3_embeddings.sum(dim=0)
+        'word1': coeffs[0] * top3_embeddings[0],
+        'word2': coeffs[1] * top3_embeddings[1], 
+        'word3': coeffs[2] * top3_embeddings[2],
+        'dark_matter': dark_matter
     }
     
     tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
     token_names = [tokenizer.decode([idx.item()]) for idx in top3_indices]
     
-    return decomposed, token_names, similarities, top3_values
+    return decomposed, token_names, similarities, top3_values, coefficients
 
 def compute_cosine_similarities(decomposed_dict, intermediate_rep):
     """
@@ -172,7 +187,7 @@ def compute_attention_to_decomposed_keys(
         query_vector = q[0, head_idx, query_position, :]
         
         # Get decomposed representations at key position
-        decomposed, token_names, similarities, _ = get_residual_and_decompose(
+        decomposed, token_names, similarities, _, coefficients = get_residual_and_decompose(
             model, input_ids, layer_idx-1, key_position
         )
         
@@ -194,7 +209,7 @@ def compute_attention_to_decomposed_keys(
             score = torch.dot(query_vector, rep_k) / (head_dim ** 0.5)
             attention_scores[rep_name] = score.item()
     
-    return attention_scores, token_names, similarities
+    return attention_scores, token_names, similarities, coefficients
 
 def analyze_decomposed_key_attention(model, tokenizer, text, layer_idx=5, head_idx=0):
     """Analyze how queries attend to decomposed keys."""
@@ -216,7 +231,7 @@ def analyze_decomposed_key_attention(model, tokenizer, text, layer_idx=5, head_i
     all_token_names = []
     
     for key_pos in range(len(tokens)):
-        scores, token_names, similarities = compute_attention_to_decomposed_keys(
+        scores, token_names, similarities, coefficients = compute_attention_to_decomposed_keys(
             model, input_ids, layer_idx, head_idx, query_position, key_pos
         )
         all_attention_scores.append(scores)
@@ -224,6 +239,10 @@ def analyze_decomposed_key_attention(model, tokenizer, text, layer_idx=5, head_i
         
         print(f"\nKey position {key_pos} ('{tokens[key_pos]}'):")
         print(f"  Top 3 projections: {token_names}")
+        print(f"  Least squares coefficients:")
+        for i, (key, coeff) in enumerate(coefficients.items()):
+            token_name = token_names[i]
+            print(f"    {key} ('{token_name}'): {coeff:.4f}")
         print(f"  Cosine similarities:")
         for i, (key, sim) in enumerate(similarities.items()):
             token_name = token_names[i]
@@ -285,7 +304,7 @@ def visualize_decomposed_key_attention(
     for i in range(len(rep_types)):
         for j in range(n_positions):
             val = attention_matrix[i, j]
-            if abs(val) > np.percentile(np.abs(attention_matrix), 75):
+            if abs(val) > np.percentile(np.abs(attention_matrix), 0):
                 ax1.text(j, i, f'{val:.2f}', ha='center', va='center',
                         color='white' if val < 0 else 'black', fontsize=8)
     
@@ -345,7 +364,7 @@ def main():
     model.eval()
     
     # Test text
-    text = "The cat sat on the mat"
+    text = "Ben saw a dog. Ben saw a dog. Ben saw a"
     
     # Analyze different layers and heads
     for layer_idx in [2, 5, 8]:
