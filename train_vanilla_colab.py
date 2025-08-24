@@ -183,7 +183,7 @@ def main():
     args.bias = True
     
     # Dataset settings
-    args.max_samples = 50000  # Number of Wikipedia articles
+    args.max_samples = 200000  # Number of Wikipedia articles
     args.val_ratio = 0.1
     args.validate_every = 1000  # Less frequent validation
     
