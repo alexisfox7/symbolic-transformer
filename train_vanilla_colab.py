@@ -165,7 +165,6 @@ def main():
     parser = create_base_parser("Train GPT-2 Small Size Vanilla Transformer on Wikipedia")
     parser.add_argument('--output_dir', type=str, default='./outputs/gpt2_wikipedia')
     parser.add_argument('--data_source', type=str, default='wikipedia', choices=['wikipedia', 'synthetic'])
-    parser.add_argument('--max_samples', type=int, default=200000)
     args = parser.parse_args()
     
     # Override with GPT-2 small configuration
@@ -184,7 +183,7 @@ def main():
     args.bias = True
     
     # Dataset settings
-    #args.max_samples = 200000  # Number of Wikipedia articles
+    args.max_samples = args.max_samples or 200000  # Use command line arg or default to 200k
     args.val_ratio = 0.1
     args.validate_every = 1000  # Less frequent validation
     
