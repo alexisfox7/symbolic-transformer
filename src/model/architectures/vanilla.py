@@ -60,11 +60,20 @@ class VanillaTransformer(TransformerBase):
         print(f"VanillaTransformerModel initialized with {self.get_num_params()/1e6:.2f}M parameters")
         print(f"Architecture: vocab_size={config.vocab_size}, n_embd={config.n_embd}, n_head={config.n_head}, n_layer={config.n_layer}")
 
-    def forward(self, input_ids, targets=None): # , hook_state=None):
+    def forward(self, input_ids, targets=None, labels=None): # , hook_state=None):
         device = input_ids.device
         b, t = input_ids.size()
 
         assert t <= self.config.block_size, f"Sequence length {t} exceeds block size {self.config.block_size}"
+
+        # Handle both 'labels' (HuggingFace convention) and 'targets' (internal convention)
+        if labels is not None and targets is None:
+            targets = labels
+        elif labels is not None and targets is not None:
+            # If both are provided, prioritize 'targets' but warn about inconsistency
+            if not torch.equal(labels, targets):
+                import warnings
+                warnings.warn("Both 'labels' and 'targets' provided with different values. Using 'targets'.")
 
         # Hook: on_forward_begin
         state = {'targets': targets, 'model': self, 'input_ids': input_ids}
