@@ -102,7 +102,7 @@ def setup_wikipedia_data_loaders(args, config, tokenizer, logger, trainer_type='
     """Setup data loaders for Wikipedia - replaces setup_data_loaders_with_combined"""
     
     # Load Wikipedia data
-    texts = load_and_prepare_wikipedia(num_articles=args.max_samples or 50000)
+    texts = load_and_prepare_wikipedia(num_articles=args.max_samples)
     
     # Split into train/val
     split_idx = int(len(texts) * (1 - args.val_ratio))
