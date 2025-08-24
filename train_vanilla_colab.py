@@ -165,6 +165,7 @@ def main():
     parser = create_base_parser("Train GPT-2 Small Size Vanilla Transformer on Wikipedia")
     parser.add_argument('--output_dir', type=str, default='./outputs/gpt2_wikipedia')
     parser.add_argument('--data_source', type=str, default='wikipedia', choices=['wikipedia', 'synthetic'])
+    parser.add_argument('--max_samples', type=int, default=200000)
     args = parser.parse_args()
     
     # Override with GPT-2 small configuration
@@ -183,7 +184,7 @@ def main():
     args.bias = True
     
     # Dataset settings
-    args.max_samples = 200000  # Number of Wikipedia articles
+    #args.max_samples = 200000  # Number of Wikipedia articles
     args.val_ratio = 0.1
     args.validate_every = 1000  # Less frequent validation
     
@@ -334,11 +335,9 @@ def main():
                 # Generate using your model's generate method
                 output = model.generate(
                     input_ids,
-                    max_length=50,
+                    max_new_tokens=40,  # Generate 40 new tokens (total ~45-50 tokens)
                     temperature=0.8,
-                    do_sample=True,
-                    top_p=0.9,
-                    pad_token_id=tokenizer.pad_token_id
+                    top_k=50  # Use top-k sampling instead of top-p
                 )
             
             generated = tokenizer.decode(output[0], skip_special_tokens=True)
