@@ -104,22 +104,28 @@ class VanillaTransformer(TransformerBase):
         # calculate lm loss 
         loss = None
         if targets is not None:
-            # Check if targets are already pre-shifted (standard HuggingFace format)
-            # Pre-shifted: targets.shape[1] == input_ids.shape[1] - 1
-            # Unshifted: targets.shape == input_ids.shape
-            if targets.shape[1] == input_ids.shape[1] - 1:
-                # Targets are pre-shifted (e.g., from HuggingFace datasets)
+            # Check if targets are already pre-shifted by comparing first tokens
+            # Pre-shifted: targets[0,0] should equal input_ids[0,1] (next token)
+            # Unshifted: targets[0,0] should equal input_ids[0,0] (same token)
+            
+            if targets.shape == input_ids.shape:
+                # Same shape - check if pre-shifted by comparing token content
+                if input_ids.shape[1] > 1 and targets[0, 0] == input_ids[0, 1]:
+                    # Targets are pre-shifted (first target token matches second input token)
+                    shift_logits = logits[..., :-1, :].contiguous()  # Remove last logit  
+                    shift_labels = targets.contiguous()  # Use targets as-is
+                elif targets[0, 0] == input_ids[0, 0]:
+                    # Targets are unshifted (first tokens match)
+                    shift_logits = logits[..., :-1, :].contiguous()
+                    shift_labels = targets[..., 1:].contiguous()
+                else:
+                    raise ValueError(f"Cannot determine if targets are pre-shifted. targets[0,0]={targets[0,0]} vs input_ids[0,0]={input_ids[0,0]} vs input_ids[0,1]={input_ids[0,1] if input_ids.shape[1] > 1 else 'N/A'}")
+            elif targets.shape[1] == input_ids.shape[1] - 1:
+                # Different shape - targets are shorter, assume pre-shifted
                 shift_logits = logits[..., :-1, :].contiguous()  # Remove last logit
                 shift_labels = targets.contiguous()  # Use targets as-is
-            elif targets.shape == input_ids.shape:
-                # Targets are unshifted (original format)
-                if targets[0, 0] != input_ids[0, 0]:
-                    raise ValueError("Unshifted targets should match input_ids at position [0,0]")
-                # shift labels for causal language modeling
-                shift_logits = logits[..., :-1, :].contiguous()
-                shift_labels = targets[..., 1:].contiguous()
             else:
-                raise ValueError(f"Invalid targets shape {targets.shape}. Expected either {input_ids.shape} (unshifted) or {(input_ids.shape[0], input_ids.shape[1]-1)} (pre-shifted)")
+                raise ValueError(f"Invalid targets shape {targets.shape}. Expected {input_ids.shape} or {(input_ids.shape[0], input_ids.shape[1]-1)}")
             
             loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
