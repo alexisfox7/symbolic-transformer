@@ -104,14 +104,22 @@ class VanillaTransformer(TransformerBase):
         # calculate lm loss 
         loss = None
         if targets is not None:
-            if targets[0, 0] != input_ids[0, 0]:
-                raise ValueError("Targets may be pre-shifted. Expected targets[0,0] == input_ids[0,0]")
-            if targets.shape != input_ids.shape:
-                raise ValueError(f"Targets shape {targets.shape} must match input_ids shape {input_ids.shape}")
-            
-            # shift labels for causal language modeling
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = targets[..., 1:].contiguous()
+            # Check if targets are already pre-shifted (standard HuggingFace format)
+            # Pre-shifted: targets.shape[1] == input_ids.shape[1] - 1
+            # Unshifted: targets.shape == input_ids.shape
+            if targets.shape[1] == input_ids.shape[1] - 1:
+                # Targets are pre-shifted (e.g., from HuggingFace datasets)
+                shift_logits = logits[..., :-1, :].contiguous()  # Remove last logit
+                shift_labels = targets.contiguous()  # Use targets as-is
+            elif targets.shape == input_ids.shape:
+                # Targets are unshifted (original format)
+                if targets[0, 0] != input_ids[0, 0]:
+                    raise ValueError("Unshifted targets should match input_ids at position [0,0]")
+                # shift labels for causal language modeling
+                shift_logits = logits[..., :-1, :].contiguous()
+                shift_labels = targets[..., 1:].contiguous()
+            else:
+                raise ValueError(f"Invalid targets shape {targets.shape}. Expected either {input_ids.shape} (unshifted) or {(input_ids.shape[0], input_ids.shape[1]-1)} (pre-shifted)")
             
             loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
