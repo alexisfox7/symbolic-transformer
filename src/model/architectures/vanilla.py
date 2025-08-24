@@ -112,16 +112,25 @@ class VanillaTransformer(TransformerBase):
                 # Same shape - check if pre-shifted by comparing token content
                 if input_ids.shape[1] > 1 and targets[0, 0] == input_ids[0, 1]:
                     # Targets are pre-shifted (first target token matches second input token)
-                    shift_logits = logits[..., :-1, :].contiguous()  # Remove last logit  
-                    shift_labels = targets.contiguous()  # Use targets as-is
+                    # For same-shape pre-shifted: input_ids=[A,B,C], targets=[B,C,D]
+                    # We want: logits for [A,B] to predict [B,C] (because D is not in input sequence)
+                    # So: logits[A,B] -> targets[B,C] (trim last logit, trim last target)
+                    shift_logits = logits[..., :-1, :].contiguous()  # Remove last logit
+                    shift_labels = targets[..., :-1].contiguous()  # Remove last target
                 elif targets[0, 0] == input_ids[0, 0]:
                     # Targets are unshifted (first tokens match)
+                    # For unshifted: input_ids=[A,B,C], targets=[A,B,C]  
+                    # We want: logits for [A,B] to predict [B,C]
+                    # So: logits[A,B] -> targets[B,C] (shift both)
                     shift_logits = logits[..., :-1, :].contiguous()
                     shift_labels = targets[..., 1:].contiguous()
                 else:
                     raise ValueError(f"Cannot determine if targets are pre-shifted. targets[0,0]={targets[0,0]} vs input_ids[0,0]={input_ids[0,0]} vs input_ids[0,1]={input_ids[0,1] if input_ids.shape[1] > 1 else 'N/A'}")
             elif targets.shape[1] == input_ids.shape[1] - 1:
                 # Different shape - targets are shorter, assume pre-shifted
+                # For shorter pre-shifted: input_ids=[A,B,C], targets=[B,C]
+                # We want: logits for [A,B] to predict [B,C]
+                # So: logits[A,B] -> targets[B,C] (trim logits)
                 shift_logits = logits[..., :-1, :].contiguous()  # Remove last logit
                 shift_labels = targets.contiguous()  # Use targets as-is
             else:
