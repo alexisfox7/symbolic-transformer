@@ -207,7 +207,7 @@ def create_combined_dataset(tinystories_samples=50000, wikipedia_samples=50000,
         "tinystories_samples": len(stories_data),
         "wikipedia_samples": len(wikipedia_data),
         "use_full_wikipedia": use_full_wikipedia,
-        "total_samples": len(combined_data),
+        "total_samples": len(dataset),  # Use dataset length instead of combined_data
         "created_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "features": list(dataset.features.keys())
     }
