@@ -19,7 +19,7 @@ def main():
     ds = load_dataset("wikimedia/wikipedia", "20231101.en", streaming=True)
 
     # How many articles to analyze
-    NUM_ARTICLES = 10000
+    NUM_ARTICLES = 100000
 
     # Collect texts with progress bar
     print(f"Collecting {NUM_ARTICLES} articles...")
@@ -63,7 +63,7 @@ def main():
         print(f"{coverage:.1%} coverage: {vocab_size:,} tokens")
 
     # Save analysis results
-    output_dir = "wikipedia_token_analysis"
+    output_dir = "wikipedia_token_analysis_100k"
     print(f"\nSaving analysis results to {output_dir}/...")
     analyzer.save_analysis(output_dir)
     

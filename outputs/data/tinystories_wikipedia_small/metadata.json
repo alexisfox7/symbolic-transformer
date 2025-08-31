@@ -1,0 +1,11 @@
+{
+  "description": "Combined TinyStories + Wikipedia dataset",
+  "tinystories_samples": 10000,
+  "wikipedia_samples": 10000,
+  "use_full_wikipedia": false,
+  "total_samples": 20000,
+  "created_date": "2025-08-30 23:57:17",
+  "features": [
+    "text"
+  ]
+}

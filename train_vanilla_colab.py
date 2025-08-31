@@ -98,11 +98,48 @@ def load_and_prepare_wikipedia(num_articles=50000, cache_dir="./data/wikipedia_c
     return texts
 
 
-def setup_wikipedia_data_loaders(args, config, tokenizer, logger, trainer_type='accelerate'):
-    """Setup data loaders for Wikipedia - replaces setup_data_loaders_with_combined"""
+def load_combined_dataset(dataset_path="./outputs/data/tinystories_wikipedia_combined"):
+    """Load combined TinyStories + Wikipedia dataset"""
+    from datasets import load_from_disk
     
-    # Load Wikipedia data
-    texts = load_and_prepare_wikipedia(num_articles=args.max_samples)
+    print(f"Loading combined dataset from {dataset_path}")
+    try:
+        dataset = load_from_disk(dataset_path)
+        texts = [item['text'] for item in dataset]
+        print(f"Loaded {len(texts)} combined samples")
+        return texts
+    except Exception as e:
+        print(f"Failed to load combined dataset: {e}")
+        return None
+
+
+def setup_data_loaders_combined(args, config, tokenizer, logger, trainer_type='accelerate'):
+    """Setup data loaders for combined dataset or fallback options"""
+    
+    texts = None
+    
+    # First try combined dataset
+    if args.data_source == 'combined':
+        texts = load_combined_dataset(args.dataset_path)
+        if texts:
+            logger.info(f"Using combined TinyStories + Wikipedia dataset")
+        else:
+            logger.info("Combined dataset not found, falling back to Wikipedia")
+            args.data_source = 'wikipedia'
+    
+    # Load Wikipedia if specified or fallback
+    if args.data_source == 'wikipedia':
+        texts = load_and_prepare_wikipedia(num_articles=args.max_samples)
+    
+    # Fallback to synthetic if everything else fails
+    if not texts:
+        logger.info("Using synthetic data as final fallback")
+        return setup_data_loaders_with_combined(args, config, tokenizer, logger, trainer_type)
+    
+    # Apply sampling if needed
+    if args.max_samples and len(texts) > args.max_samples:
+        texts = texts[:args.max_samples]
+        logger.info(f"Sampled down to {len(texts)} texts")
     
     # Split into train/val
     split_idx = int(len(texts) * (1 - args.val_ratio))
@@ -164,7 +201,9 @@ def main():
     # Parse arguments
     parser = create_base_parser("Train GPT-2 Small Size Vanilla Transformer on Wikipedia")
     parser.add_argument('--output_dir', type=str, default='./outputs/gpt2_wikipedia')
-    parser.add_argument('--data_source', type=str, default='wikipedia', choices=['wikipedia', 'synthetic'])
+    parser.add_argument('--data_source', type=str, default='combined', choices=['combined', 'wikipedia', 'synthetic'])
+    parser.add_argument('--dataset_path', type=str, default='./outputs/data/tinystories_wikipedia_combined',
+                       help='Path to combined dataset (only used with --data_source combined)')
     args = parser.parse_args()
     
     # Override with GPT-2 small configuration
@@ -255,9 +294,9 @@ def main():
     print(f"Estimated Parameters: {approx_params/1e6:.1f}M")
     print("="*60)
     
-    # Setup data loaders - Use Wikipedia instead of synthetic data
-    if args.data_source == 'wikipedia':
-        train_dataloader, val_dataloader, tokenizer = setup_wikipedia_data_loaders(
+    # Setup data loaders - Use combined dataset, Wikipedia, or synthetic data
+    if args.data_source in ['combined', 'wikipedia']:
+        train_dataloader, val_dataloader, tokenizer = setup_data_loaders_combined(
             args, config, tokenizer, logger, args.trainer_type
         )
     else:
