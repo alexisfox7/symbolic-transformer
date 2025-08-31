@@ -1,0 +1,18 @@
+{
+  "total_articles": 50000,
+  "mean_length": 1220.03552,
+  "median_length": 613.0,
+  "std_length": 2156.707951016625,
+  "min_length": 6,
+  "max_length": 66399,
+  "percentiles": {
+    "5th": 86.0,
+    "10th": 135.0,
+    "25th": 287.0,
+    "75th": 1271.0,
+    "90th": 2605.0,
+    "95th": 4266.0,
+    "99th": 10703.010000000002
+  },
+  "length_distribution": {
+    "very_short_0_50": 

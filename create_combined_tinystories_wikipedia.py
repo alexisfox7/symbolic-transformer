@@ -157,12 +157,44 @@ def create_combined_dataset(tinystories_samples=50000, wikipedia_samples=50000,
     print(f"  - TinyStories: {len(stories_data)} ({len(stories_data)/len(combined_data)*100:.1f}%)")
     print(f"  - Wikipedia: {len(wikipedia_data)} ({len(wikipedia_data)/len(combined_data)*100:.1f}%)")
     
-    # Create HuggingFace dataset
+    # Create HuggingFace dataset (memory-efficient for large datasets)
     print("Creating HuggingFace dataset...")
-    dataset = Dataset.from_list(combined_data)
     
-    # Remove source column for training (keep only text)
-    dataset = dataset.remove_columns(['source'])
+    if len(combined_data) > 1000000:  # Use chunked approach for large datasets
+        print(f"Large dataset detected ({len(combined_data):,} samples), using chunked processing...")
+        
+        # Process in chunks to avoid memory issues
+        chunk_size = 200000  # 200k samples per chunk
+        temp_datasets = []
+        
+        import gc
+        for i in range(0, len(combined_data), chunk_size):
+            chunk = combined_data[i:i+chunk_size]
+            print(f"Processing chunk {i//chunk_size + 1}/{(len(combined_data)-1)//chunk_size + 1} ({len(chunk):,} samples)")
+            
+            # Remove source column from chunk
+            chunk_clean = [{"text": item["text"]} for item in chunk]
+            temp_ds = Dataset.from_list(chunk_clean)
+            temp_datasets.append(temp_ds)
+            
+            # Clean up memory
+            del chunk, chunk_clean
+            gc.collect()
+        
+        # Concatenate all chunks
+        print("Concatenating chunks...")
+        from datasets import concatenate_datasets
+        dataset = concatenate_datasets(temp_datasets)
+        
+        # Clean up
+        del temp_datasets, combined_data
+        gc.collect()
+        
+    else:
+        # Use original method for smaller datasets
+        dataset = Dataset.from_list(combined_data)
+        # Remove source column for training (keep only text)
+        dataset = dataset.remove_columns(['source'])
     
     # Save dataset
     print(f"\nSaving combined dataset to: {output_path}")
