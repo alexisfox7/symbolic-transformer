@@ -1,0 +1,159 @@
+{
+    "metadata": {
+      "primary_format": "attention_analysis",
+      "total_samples": 10,
+      "valid_samples": 10,
+      "validity_rate": 1.0,
+      "generation_timestamp": "2025-08-31T17:39:20.472871",
+      "format_version": "1.1",
+      "quality_statistics": {
+        "average_score": 3.0,
+        "median_score": 3.0,
+        "min_score": 3.0,
+        "max_score": 3.0,
+        "score_count": 10
+      }
+    },
+    "samples": [
+      {
+        "id": "att_0001",
+        "format": "attention_analysis",
+        "content": "Sentence 1: The pot is made of clay\\nSentence 2: The plant hasn't been watered recently\\nSentence 3: Plants wilt when they need water\\nSentence 4: The soil around the plant is very dry\\n\\nQuestion: Will the plant wilt?\\nAnswer: Yes",
+        "metadata": {
+          "generation_method": "structured_attention",
+          "generation_order": 0
+        },
+        "validation": {
+          "is_valid": true,
+          "overall_score": 3.0,
+          "validation_type": "basic"
+        }
+      },
+      {
+        "id": "att_0002",
+        "format": "attention_analysis",
+        "content": "Sentence 1: Spring season is beginning\\nSentence 2: Flowers bloom when spring arrives\\nSentence 3: The garden has a wooden fence\\nSentence 4: The weather is getting warmer\\n\\nQuestion: Will the flowers bloom?\\nAnswer: Yes",
+        "metadata": {
+          "generation_method": "structured_attention",
+          "generation_order": 1
+        },
+        "validation": {
+          "is_valid": true,
+          "overall_score": 3.0,
+          "validation_type": "basic"
+        }
+      },
+      {
+        "id": "att_0003",
+        "format": "attention_analysis",
+        "content": "Sentence 1: A stranger is walking toward the house\\nSentence 2: The mailman delivered packages yesterday\\nSentence 3: The dog sees the approaching person\\nSentence 4: Dogs bark when strangers approach\\n\\nQuestion: Will the dog bark?\\nAnswer: Yes",
+        "metadata": {
+          "generation_method": "structured_attention",
+          "generation_order": 2
+        },
+        "validation": {
+          "is_valid": true,
+          "overall_score": 3.0,
+          "validation_type": "basic"
+        }
+      },
+      {
+        "id": "att_0004",
+        "format": "attention_analysis",
+        "content": "Sentence 1: The traffic light just turned red\\nSentence 2: The street was repaved last week\\nSentence 3: Cars stop when the traffic light turns red\\nSentence 4: There are cars approaching the intersection\\n\\nQuestion: Will the cars stop?\\nAnswer: Yes",
+        "metadata": {
+          "generation_method": "structured_attention",
+          "generation_order": 3
+        },
+        "validation": {
+          "is_valid": true,
+          "overall_score": 3.0,
+          "validation_type": "basic"
+        }
+      },
+      {
+        "id": "att_0005",
+        "format": "attention_analysis",
+        "content": "Sentence 1: The sidewalk was swept this morning\\nSentence 2: The temperature is above 32 degrees\\nSentence 3: Ice melts when temperatures rise above freezing\\nSentence 4: The thermometer shows 35 degrees Fahrenheit\\n\\nQuestion: Will the ice melt?\\nAnswer: Yes",
+        "metadata": {
+          "generation_method": "structured_attention",
+          "generation_order": 4
+        },
+        "validation": {
+          "is_valid": true,
+          "overall_score": 3.0,
+          "validation_type": "basic"
+        }
+      },
+      {
+        "id": "att_0006",
+        "format": "attention_analysis",
+        "content": "Sentence 1: The traffic light just turned red\\nSentence 2: The street was repaved last week\\nSentence 3: There are cars approaching the intersection\\nSentence 4: Cars stop when the traffic light turns red\\n\\nQuestion: Will the cars stop?\\nAnswer: Yes",
+        "metadata": {
+          "generation_method": "structured_attention",
+          "generation_order": 5
+        },
+        "validation": {
+          "is_valid": true,
+          "overall_score": 3.0,
+          "validation_type": "basic"
+        }
+      },
+      {
+        "id": "att_0007",
+        "format": "attention_analysis",
+        "content": "Sentence 1: Thunder is rumbling outside\\nSentence 2: The kitchen window is open\\nSentence 3: The cat heard the thunder\\nSentence 4: Cats hide when they hear loud noises\\n\\nQuestion: Will the cat hide?\\nAnswer: Yes",
+        "metadata": {
+          "generation_method": "structured_attention",
+          "generation_order": 6
+        },
+        "validation": {
+          "is_valid": true,
+          "overall_score": 3.0,
+          "validation_type": "basic"
+        }
+      },
+      {
+        "id": "att_0008",
+        "format": "attention_analysis",
+        "content": "Sentence 1: Ice melts when temperatures rise above freezing\\nSentence 2: The sidewalk was swept this morning\\nSentence 3: The temperature is above 32 degrees\\nSentence 4: The thermometer shows 35 degrees Fahrenheit\\n\\nQuestion: Will the ice melt?\\nAnswer: Yes",
+        "metadata": {
+          "generation_method": "structured_attention",
+          "generation_order": 7
+        },
+        "validation": {
+          "is_valid": true,
+          "overall_score": 3.0,
+          "validation_type": "basic"
+        }
+      },
+      {
+        "id": "att_0009",
+        "format": "attention_analysis",
+        "content": "Sentence 1: Birds fly south when winter approaches\\nSentence 2: The bird feeder is empty\\nSentence 3: Winter is coming soon\\nSentence 4: The temperature is dropping rapidly\\n\\nQuestion: Will the birds fly south?\\nAnswer: Yes",
+        "metadata": {
+          "generation_method": "structured_attention",
+          "generation_order": 8
+        },
+        "validation": {
+          "is_valid": true,
+          "overall_score": 3.0,
+          "validation_type": "basic"
+        }
+      },
+      {
+        "id": "att_0010",
+        "format": "attention_analysis",
+        "content": "Sentence 1: The classroom has blue walls\\nSentence 2: The teacher just asked a question\\nSentence 3: Students raise their hands when they know the answer\\nSentence 4: Sarah knows the answer to the teacher's question\\n\\nQuestion: Will Sarah raise her hand?\\nAnswer: Yes",
+        "metadata": {
+          "generation_method": "structured_attention",
+          "generation_order": 9
+        },
+        "validation": {
+          "is_valid": true,
+          "overall_score": 3.0,
+          "validation_type": "basic"
+        }
+      }
+    ]
+  }

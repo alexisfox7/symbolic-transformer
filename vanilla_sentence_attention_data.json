@@ -1,0 +1,212 @@
+[
+  {
+    "sample_id": "att_0001",
+    "question": "Will the plant wilt?",
+    "answer": "Yes",
+    "sentences": [
+      "The pot is made of clay",
+      "The plant hasn't been watered recently",
+      "Plants wilt when they need water",
+      "The soil around the plant is very dry"
+    ],
+    "generated_answer": "\"",
+    "sentence_attention": [
+      0.23281840011463226,
+      0.171430560991544,
+      0.06089216467134537,
+      0.03883757370814176
+    ],
+    "question_attention": 0.1369540997012054,
+    "other_attention": 0.35906720081313115,
+    "total_attention": 1.0
+  },
+  {
+    "sample_id": "att_0002",
+    "question": "Will the flowers bloom?",
+    "answer": "Yes",
+    "sentences": [
+      "Spring season is beginning",
+      "Flowers bloom when spring arrives",
+      "The garden has a wooden fence",
+      "The weather is getting warmer"
+    ],
+    "generated_answer": "Mrs",
+    "sentence_attention": [
+      0.22953309093346985,
+      0.13304520107321366,
+      0.17302146116432454,
+      0.023894272144097672
+    ],
+    "question_attention": 0.12120347399996001,
+    "other_attention": 0.3193025006849343,
+    "total_attention": 1.0
+  },
+  {
+    "sample_id": "att_0003",
+    "question": "Will the dog bark?",
+    "answer": "Yes",
+    "sentences": [
+      "A stranger is walking toward the house",
+      "The mailman delivered packages yesterday",
+      "The dog sees the approaching person",
+      "Dogs bark when strangers approach"
+    ],
+    "generated_answer": "\"",
+    "sentence_attention": [
+      0.34762897773723145,
+      0.03899637344791942,
+      0.08479747492462134,
+      0.08761916544076223
+    ],
+    "question_attention": 0.15384221462542708,
+    "other_attention": 0.2871157938240385,
+    "total_attention": 1.0
+  },
+  {
+    "sample_id": "att_0004",
+    "question": "Will the cars stop?",
+    "answer": "Yes",
+    "sentences": [
+      "The traffic light just turned red",
+      "The street was repaved last week",
+      "Cars stop when the traffic light turns red",
+      "There are cars approaching the intersection"
+    ],
+    "generated_answer": "\"",
+    "sentence_attention": [
+      0.17363931924085052,
+      0.06045549333952477,
+      0.07633256114752293,
+      0.09172486880622024
+    ],
+    "question_attention": 0.18097889138172957,
+    "other_attention": 0.41686886608415197,
+    "total_attention": 1.0
+  },
+  {
+    "sample_id": "att_0005",
+    "question": "Will the ice melt?",
+    "answer": "Yes",
+    "sentences": [
+      "The sidewalk was swept this morning",
+      "The temperature is above 32 degrees",
+      "Ice melts when temperatures rise above freezing",
+      "The thermometer shows 35 degrees Fahrenheit"
+    ],
+    "generated_answer": "the",
+    "sentence_attention": [
+      0.2537735446387346,
+      0.04557751324030375,
+      0.07492678756288375,
+      0.07509818161687912
+    ],
+    "question_attention": 0.20770144412171626,
+    "other_attention": 0.34292252881948243,
+    "total_attention": 0.9999999999999998
+  },
+  {
+    "sample_id": "att_0006",
+    "question": "Will the cars stop?",
+    "answer": "Yes",
+    "sentences": [
+      "The traffic light just turned red",
+      "The street was repaved last week",
+      "There are cars approaching the intersection",
+      "Cars stop when the traffic light turns red"
+    ],
+    "generated_answer": "\"",
+    "sentence_attention": [
+      0.1643345545454209,
+      0.05133059164975469,
+      0.15463263274190503,
+      0.031173550156373617
+    ],
+    "question_attention": 0.14274777448877624,
+    "other_attention": 0.45578089641776953,
+    "total_attention": 1.0
+  },
+  {
+    "sample_id": "att_0007",
+    "question": "Will the cat hide?",
+    "answer": "Yes",
+    "sentences": [
+      "Thunder is rumbling outside",
+      "The kitchen window is open",
+      "The cat heard the thunder",
+      "Cats hide when they hear loud noises"
+    ],
+    "generated_answer": "\"",
+    "sentence_attention": [
+      0.2754430871521778,
+      0.0751216594893247,
+      0.10263704201866065,
+      0.08632163635267569
+    ],
+    "question_attention": 0.12026250028097918,
+    "other_attention": 0.340214074706182,
+    "total_attention": 1.0
+  },
+  {
+    "sample_id": "att_0008",
+    "question": "Will the ice melt?",
+    "answer": "Yes",
+    "sentences": [
+      "Ice melts when temperatures rise above freezing",
+      "The sidewalk was swept this morning",
+      "The temperature is above 32 degrees",
+      "The thermometer shows 35 degrees Fahrenheit"
+    ],
+    "generated_answer": "He",
+    "sentence_attention": [
+      0.27147551257802377,
+      0.12482408881795354,
+      0.027168132268636923,
+      0.08096424374909017
+    ],
+    "question_attention": 0.1382615442470334,
+    "other_attention": 0.3573064783392622,
+    "total_attention": 1.0
+  },
+  {
+    "sample_id": "att_0009",
+    "question": "Will the birds fly south?",
+    "answer": "Yes",
+    "sentences": [
+      "Birds fly south when winter approaches",
+      "The bird feeder is empty",
+      "Winter is coming soon",
+      "The temperature is dropping rapidly"
+    ],
+    "generated_answer": "Answer:",
+    "sentence_attention": [
+      0.2720861771665854,
+      0.225742316665883,
+      0.008191778589790404,
+      0.010109032330705217
+    ],
+    "question_attention": 0.12129965906520898,
+    "other_attention": 0.36257103618182696,
+    "total_attention": 1.0
+  },
+  {
+    "sample_id": "att_0010",
+    "question": "Will Sarah raise her hand?",
+    "answer": "Yes",
+    "sentences": [
+      "The classroom has blue walls",
+      "The teacher just asked a question",
+      "Students raise their hands when they know the answer",
+      "Sarah knows the answer to the teacher's question"
+    ],
+    "generated_answer": "\ufffd",
+    "sentence_attention": [
+      0.13352364692535582,
+      0.08231859783079071,
+      0.32090415619960216,
+      0.2116230158997467
+    ],
+    "question_attention": 0.1700790468587397,
+    "other_attention": 0.08155153628576489,
+    "total_attention": 1.0
+  }
+]

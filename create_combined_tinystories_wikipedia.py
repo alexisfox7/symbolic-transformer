@@ -287,14 +287,37 @@ def main():
     print(f"\n🎉 Dataset creation complete! Use with train_vanilla_colab.py:")
     print(f"   python train_vanilla_colab.py --data_source combined --max_samples {len(dataset)}")
     
-    # Estimate training time and tokens
+    # Calculate actual token count
     print(f"\n📊 Dataset Statistics:")
     print(f"   Total samples: {len(dataset):,}")
     
-    # Rough token estimation (based on earlier analysis)
-    avg_tokens_per_sample = 250  # Conservative estimate
-    total_tokens = len(dataset) * avg_tokens_per_sample
-    print(f"   Estimated tokens: {total_tokens:,.0f} ({total_tokens/1e9:.2f}B)")
+    # Load tokenizer for actual token counting
+    try:
+        from transformers import GPT2Tokenizer
+        print("   Calculating actual token count...")
+        tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+        
+        # Sample-based estimation for very large datasets
+        sample_size = min(10000, len(dataset))
+        sample_indices = list(range(0, len(dataset), len(dataset) // sample_size))[:sample_size]
+        
+        total_sample_tokens = 0
+        for i in tqdm(sample_indices, desc="Counting tokens"):
+            text = dataset[i]['text']
+            tokens = tokenizer.encode(text)
+            total_sample_tokens += len(tokens)
+        
+        avg_tokens_per_sample = total_sample_tokens / len(sample_indices)
+        total_tokens = len(dataset) * avg_tokens_per_sample
+        print(f"   Actual avg tokens per sample: {avg_tokens_per_sample:.1f}")
+        print(f"   Total tokens: {total_tokens:,.0f} ({total_tokens/1e9:.2f}B)")
+        
+    except ImportError:
+        # Fallback to estimation
+        print("   GPT2Tokenizer not available, using estimation...")
+        avg_tokens_per_sample = 250  # Conservative estimate
+        total_tokens = len(dataset) * avg_tokens_per_sample
+        print(f"   Estimated tokens: {total_tokens:,.0f} ({total_tokens/1e9:.2f}B)")
     
     if args.preset == "full":
         print(f"\n⚠️  Full Wikipedia dataset selected - this will be very large!")

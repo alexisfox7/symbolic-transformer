@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "primary_format": "attention_analysis",
+    "total_samples": 2,
+    "valid_samples": 2,
+    "validity_rate": 1.0,
+    "generation_timestamp": "2025-09-01T12:00:00.000000",
+    "format_version": "1.1"
+  },
+  "samples": [
+    {
+      "id": "test_1",
+      "content": "Sentence 1: The cat was hungry. It hadn't eaten all day.\nSentence 2: There was food in the kitchen.\nSentence 3: The dog was sleeping peacefully.\nQuestion: Why might the cat go to the kitchen?\nAnswer: Because the cat is hungry and there is food in the kitchen."
+    },
+    {
+      "id": "test_2", 
+      "content": "Sentence 1: Tim had a key to the door.\nSentence 2: The door was locked.\nSentence 3: It was a sunny day outside.\nQuestion: How can Tim open the door?\nAnswer: Tim can use his key to open the door."
+    }
+  ]
+}
