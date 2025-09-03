@@ -316,7 +316,7 @@ def create_detailed_analysis_report(results, checkpoint_path, model_type, output
         report_lines.append('💡 RECOMMENDATION: Reduce "Other" attention to <10% for efficient reasoning')
         report_lines.append('Current model wastes too much attention on formatting instead of content')
     
-    return '\\n'.join(report_lines)
+    return '\n'.join(report_lines)
 
 def main():
     parser = argparse.ArgumentParser(description='Run detailed attention analysis with Other token breakdown')
