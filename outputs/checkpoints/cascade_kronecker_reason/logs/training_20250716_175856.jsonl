@@ -1,0 +1,4 @@
+{"event": "log_start", "timestamp": "2025-07-16T17:58:56.043792", "log_file": "./outputs/cascade_kronecker_reason/logs/training_20250716_175856.jsonl"}
+{"event": "log_start", "timestamp": "2025-07-16T17:58:56.043963", "log_file": "./outputs/cascade_kronecker_reason/logs/training_20250716_175856.jsonl"}
+{"event": "train_begin", "config": {"device": {"event": "batch", "epoch": 1, "batch": 0, "loss": 9.867514610290527, "perplexity": 19293.327896727762, "timestamp": "2025-07-16T17:58:56.548252"}
+{"event": "batch", "epoch": 1, "batch": 50, "loss": 3.399197578430176, "perplexity": 29.9400658512669, "timestamp": "2025-07-16T17:58:57.852361"}

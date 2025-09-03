@@ -4,14 +4,23 @@
 set -e
 
 # CONFIG
+<<<<<<< HEAD
 DIR="./outputs/cascade_fullvp"
 N=110000
+=======
+DIR="./outputs/cascade_kronecker_reason_batch16_change_skip"
+N=150000
+>>>>>>> working
 N_EMBD=384
 PRESET="small"
 
 NUM_GPUS=2
 
+<<<<<<< HEAD
 BATCH_SIZE=8
+=======
+BATCH_SIZE=16
+>>>>>>> working
 NUM_EPOCHS=8
 LEARNING_RATE=0.0006
 LOG_INTERVAL=50
@@ -50,8 +59,19 @@ accelerate launch \
     --clip_grad_norm 1.0 \
     --val_ratio 0.1 \
     --validate_every 1 \
+<<<<<<< HEAD
     --use_proj normal --use_v normal \
     --cascade
   #  --use_sparsemax
   
 echo "TFT Training completed!"
+=======
+    --use_proj kronecker --use_v kronecker \
+    --cascade \
+    --change-skip
+  #  --use_early_exit \
+  #  --hook_weights "early_exit:0.15,final_layer:0.85"
+  #  --use_sparsemax
+  
+echo "TFT Training completed!"
+>>>>>>> working

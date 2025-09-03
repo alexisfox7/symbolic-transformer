@@ -15,12 +15,23 @@ warnings.filterwarnings("ignore", message=".*kernel version.*")
 warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
+<<<<<<< HEAD
 from src.utils.training_utils import (
     create_base_parser, setup_training_environment, create_config_from_args,
     setup_data_loaders, setup_trainer_with_hooks, test_generation, log_if_main
 )
 from src.config.config import print_config
 from src.mytokenizers import create_tokenizer
+=======
+# NOTE logging fed up
+
+from src.utils.training_utils import (
+    create_base_parser, setup_training_environment, create_config_from_args,
+    setup_data_loaders, setup_trainer_with_hooks, test_generation, setup_data_loaders_with_combined
+)
+from src.config.config import print_config
+from src.mytokenizers import create_tokenizer, add_reasoning_tokens
+>>>>>>> working
 from src.model import get_model
 import torch
 
@@ -42,11 +53,16 @@ def main():
     
     # init tokenizer
     tokenizer = create_tokenizer(args.tokenizer_type)
+<<<<<<< HEAD
+=======
+    tokenizer = add_reasoning_tokens(tokenizer)
+>>>>>>> working
     config.update_from_tokenizer(tokenizer)
     
     print_config(config, dataset_name=args.dataset)
     
     # setup data
+<<<<<<< HEAD
     train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger, args.trainer_type)
     
     # create model
@@ -54,6 +70,16 @@ def main():
     model = get_model("vanilla", config=config).to(device)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     log_if_main(logger, f"Model: {num_params/1e6:.2f}M parameters", args.trainer_type)
+=======
+    #train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger, args.trainer_type)
+    train_dataloader, val_dataloader, tokenizer = setup_data_loaders_with_combined(args, config, tokenizer, logger, args.trainer_type)
+    
+    # create model
+    logger.info("Creating Vanilla Transformer...")
+    model = get_model("vanilla", config=config).to(device)
+    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logger.info(f"Model: {num_params/1e6:.2f}M parameters")
+>>>>>>> working
     
     # setup optimizer
     optimizer = torch.optim.AdamW(
@@ -67,13 +93,21 @@ def main():
     )
     
     # train
+<<<<<<< HEAD
     log_if_main(logger, "Starting vanilla transformer training...", args.trainer_type)
+=======
+    logger.info("Starting vanilla transformer training...")
+>>>>>>> working
     training_result = trainer.train()
     
     # test generation
     test_generation(model, tokenizer, device, args, logger, "vanilla", args.trainer_type)
     
+<<<<<<< HEAD
     log_if_main(logger, "Vanilla transformer training completed!", args.trainer_type)
+=======
+    logger.info("Vanilla transformer training completed!")
+>>>>>>> working
 
 if __name__ == "__main__":
     main()

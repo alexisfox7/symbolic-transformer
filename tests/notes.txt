@@ -1,0 +1,15 @@
+redo head logit lens
+validation is messed up since loss is diff
+add checkpointing hook (best_model.pt)
+add attention hook
+add logitlens hook
+make logging flexible
+make choosing data flexible
+yaml
+fix logging
+eventually fix import
+l2 norm 
+do ablation with the first layer (eliciting latent reps)
+
+intermediate reps as linear combos
+try doing softmax then doing sparsemax 

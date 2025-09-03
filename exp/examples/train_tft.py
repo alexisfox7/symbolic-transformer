@@ -18,12 +18,21 @@ warnings.filterwarnings("ignore", message=".*MPS.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="accelerate")
 
 from src.utils.training_utils import (
+<<<<<<< HEAD
     create_base_parser, add_symbolic_args, setup_training_environment, 
     create_config_from_args, setup_data_loaders, setup_trainer_with_hooks, 
     test_generation, log_if_main
 )
 from src.config.config import print_config
 from src.mytokenizers import create_tokenizer
+=======
+    create_base_parser, add_symbolic_args, setup_data_loaders_with_combined, setup_training_environment, 
+    create_config_from_args, setup_data_loaders, setup_trainer_with_hooks, 
+    test_generation
+)
+from src.config.config import print_config
+from src.mytokenizers import create_tokenizer, add_reasoning_tokens
+>>>>>>> working
 from src.model import get_model
 import torch
 
@@ -42,8 +51,13 @@ def main():
     
     # setup env
     logger, device = setup_training_environment(args.output_dir, "Token-Factored Transformer", args.trainer_type)
+<<<<<<< HEAD
     log_if_main(logger, f"TFT features: use_v={args.use_v}, use_proj={args.use_proj}, cascade={args.cascade}", args.trainer_type)
     log_if_main(logger, "Training TFT: stream separation without vocabulary constraints", args.trainer_type)
+=======
+    logger.info(f"TFT features: use_v={args.use_v}, use_proj={args.use_proj}, cascade={args.cascade}")
+    logger.info("Training TFT: stream separation without vocabulary constraints")
+>>>>>>> working
     
     # create config with TFT features
     tft_features = {
@@ -55,11 +69,16 @@ def main():
     
     # init tokenizer
     tokenizer = create_tokenizer(args.tokenizer_type)
+<<<<<<< HEAD
+=======
+    tokenizer = add_reasoning_tokens(tokenizer)
+>>>>>>> working
     config.update_from_tokenizer(tokenizer)
     
     print_config(config, dataset_name=args.dataset)
     
     # setup data
+<<<<<<< HEAD
     train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger, args.trainer_type)
     
     # create TFT model
@@ -67,14 +86,30 @@ def main():
     model = get_model("tft", config=config).to(device)  # Use "tft" model type
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     log_if_main(logger, f"TFT Model: {num_params/1e6:.2f}M parameters", args.trainer_type)
+=======
+    #train_dataloader, val_dataloader, tokenizer = setup_data_loaders(args, config, tokenizer, logger, args.trainer_type)
+    train_dataloader, val_dataloader, tokenizer = setup_data_loaders_with_combined(args, config, tokenizer, logger, args.trainer_type)
+    
+    # create TFT model
+    logger.info("Creating Token-Factored Transformer (TFT)...")
+    model = get_model("tft", config=config).to(device)  # Use "tft" model type
+    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logger.info(f"TFT Model: {num_params/1e6:.2f}M parameters")
+>>>>>>> working
     
     # log
     if hasattr(model, 'transformer') and hasattr(model.transformer, 'h'):
         first_block = model.transformer.h[0]
         if hasattr(first_block, 'attn'):
+<<<<<<< HEAD
             log_if_main(logger, f"TFT Attention features: use_v={getattr(first_block.attn, 'use_v', False)}, "
                        f"use_proj={getattr(first_block.attn, 'use_proj', False)}", args.trainer_type)
         log_if_main(logger, "TFT Architecture: Explicit stream separation (Xt + Xe) without vocabulary constraints", args.trainer_type)
+=======
+            logger.info(f"TFT Attention features: use_v={getattr(first_block.attn, 'use_v', False)}, "
+                       f"use_proj={getattr(first_block.attn, 'use_proj', False)}")
+        logger.info("TFT Architecture: Explicit stream separation (Xt + Xe) without vocabulary constraints")
+>>>>>>> working
     
     # setup optimizer, trainer with hooks 
     optimizer = torch.optim.AdamW(
@@ -90,17 +125,28 @@ def main():
     trainer.trainer_state['architecture_type'] = 'token_factored'
     
     # train
+<<<<<<< HEAD
     log_if_main(logger, "Starting Token-Factored Transformer training...", args.trainer_type)
     log_if_main(logger, "Architecture: X = Xt (symbolic stream) + Xe (contextual stream)", args.trainer_type)
+=======
+    logger.info("Starting Token-Factored Transformer training...")
+    logger.info("Architecture: X = Xt (symbolic stream) + Xe (contextual stream)")
+>>>>>>> working
     training_result = trainer.train()
 
     # test generation
     test_generation(model, tokenizer, device, args, logger, "TFT", args.trainer_type)
     
     
+<<<<<<< HEAD
     log_if_main(logger, "Token-Factored Transformer training completed!", args.trainer_type)
     log_if_main(logger, f"TFT features used: use_v={args.use_v}, use_proj={args.use_proj}, cascade={args.cascade}", args.trainer_type)
     log_if_main(logger, "Stream separation achieved without vocabulary constraints", args.trainer_type)
+=======
+    logger.info("Token-Factored Transformer training completed!")
+    logger.info(f"TFT features used: use_v={args.use_v}, use_proj={args.use_proj}, cascade={args.cascade}")
+    logger.info("Stream separation achieved without vocabulary constraints")
+>>>>>>> working
 
 if __name__ == "__main__":
     main()
