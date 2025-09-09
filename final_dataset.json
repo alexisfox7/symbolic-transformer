@@ -1,0 +1,2558 @@
+[
+    [
+      "paired_000001_A",
+      "Ben wanted to play with his toy ball with friends.",
+      "He said, \"Let's roll the ball back and forth!\"",
+      "His friends joined in, and they had fun."
+    ],
+    [
+      "paired_000001_B",
+      "Mia saw a little box with a lock on it.",
+      "She found a tiny key under a rug.",
+      "Mia put the key in the lock, and the box opened."
+    ],
+    [
+      "paired_000002_A",
+      "Leo could not reach his book on the tall shelf.",
+      "He got a small ladder from the garage.",
+      "Leo climbed up and got his book."
+    ],
+    [
+      "paired_000002_B",
+      "Sam saw his backpack and shoes on the floor.",
+      "He opened his closet door.",
+      "Sam put his things away inside."
+    ],
+    [
+      "paired_000003_A",
+      "Jake had a heavy book.",
+      "He saw the door was swinging shut.",
+      "Jake put the book down, and it stopped the door."
+    ],
+    [
+      "paired_000003_B",
+      "Zoe saw her little toy ladder was wobbly.",
+      "She found a tiny screw and a little screwdriver.",
+      "Zoe tightened the screw, and the ladder stood strong."
+    ],
+    [
+      "paired_000004_A",
+      "Jake could not reach his red crayon on the shelf.",
+      "He knew he needed a stool to stand on.",
+      "Jake got the stool and could now find his crayon."
+    ],
+    [
+      "paired_000004_B",
+      "Emma wanted to make something fun.",
+      "She got her colorful crayons and soft clay.",
+      "Emma drew a little house and made a small clay dog."
+    ],
+    [
+      "paired_000005_A",
+      "Sam held a little golden key.",
+      "He saw a wooden box with a small lock.",
+      "Sam turned the key, and the lock clicked open."
+    ],
+    [
+      "paired_000005_B",
+      "Sara wanted to play on the swing with her friends.",
+      "She said, \"Let's push my teddy bear high on the swing!\"",
+      "Her friends took turns pushing the teddy bear."
+    ],
+    [
+      "paired_000006_A",
+      "Ana has a big button.",
+      "She sees a little hole on her bag.",
+      "She pushes the button through the hole."
+    ],
+    [
+      "paired_000006_B",
+      "Max wants his toy.",
+      "It is too high to reach.",
+      "Max finds a long rope. He uses the rope to pull the toy down."
+    ],
+    [
+      "paired_000007_A",
+      "Leo's toy car is broken.",
+      "Leo finds some strong glue.",
+      "He glues the wheel back on and the car rolls again."
+    ],
+    [
+      "paired_000007_B",
+      "Lily sees a closed box.",
+      "She finds a little button on the side.",
+      "She pushes the button and the box opens."
+    ],
+    [
+      "paired_000008_A",
+      "Ben sees a big rock blocking his path.",
+      "He finds a strong stick.",
+      "Ben uses the stick to push the rock away."
+    ],
+    [
+      "paired_000008_B",
+      "Sam has a bag with a button on it.",
+      "Sam needs to open the bag.",
+      "Sam pushes the button to open it wide."
+    ],
+    [
+      "paired_000009_A",
+      "Ana sees a big, closed book.",
+      "Ana wants to read it.",
+      "Ana finds a little button on the side. She presses the button and the book opens up."
+    ],
+    [
+      "paired_000009_B",
+      "Sara wants to play a game with her friends.",
+      "She gets a big red ball.",
+      "Sara tells her friends, \"Let's play catch!\""
+    ],
+    [
+      "paired_000010_A",
+      "Ana wants her crayon from under the bed.",
+      "It is too far to reach.",
+      "Ana finds a long stick. She uses the stick to pull the crayon out."
+    ],
+    [
+      "paired_000010_B",
+      "Max wants his small cup.",
+      "The cup is inside a locked box.",
+      "Max finds a little key. He uses the key to open the box."
+    ],
+    [
+      "paired_000011_A",
+      "Max wanted to play with his friends.",
+      "He said, \"Let's all build a tall tower with the blocks!\"",
+      "Everyone built the tower together."
+    ],
+    [
+      "paired_000011_B",
+      "Leo held a shiny key in his hand.",
+      "He saw a little lock on a small box.",
+      "Leo put the key in the lock, and it clicked open."
+    ],
+    [
+      "paired_000012_A",
+      "Leo's toy dinosaur had a broken leg.",
+      "He found a small, sticky piece of tape.",
+      "Leo wrapped the tape around the leg, and the dinosaur stood up."
+    ],
+    [
+      "paired_000012_B",
+      "Zoe wanted to hear music from her toy.",
+      "She saw a big, colorful button on the toy's tummy.",
+      "Zoe pushed the button, and happy music started to play."
+    ],
+    [
+      "paired_000013_A",
+      "Emma saw a closed cookie jar.",
+      "She found a round red button on its lid.",
+      "Emma pressed the button, and the lid popped right open."
+    ],
+    [
+      "paired_000013_B",
+      "Tim could not get his crayon out of the box.",
+      "He found a small, pointy stick.",
+      "Tim used the stick to poke the crayon out easily."
+    ],
+    [
+      "paired_000014_A",
+      "Leo wanted to play a game with all his friends.",
+      "He said, \"Let's line up all our toy cars together!\"",
+      "They all played with the cars in a long line."
+    ],
+    [
+      "paired_000014_B",
+      "Emma had a tiny silver key.",
+      "She saw a small lock on her special bag.",
+      "Emma put the key in the lock, and her bag opened."
+    ],
+    [
+      "paired_000015_A",
+      "Sara wanted her stuffed bear from the tall shelf.",
+      "She found a little blue stool in the corner.",
+      "Sara climbed on the stool and hugged her bear."
+    ],
+    [
+      "paired_000015_B",
+      "Sam saw a small, closed treasure box.",
+      "He found a little switch on its side.",
+      "Sam slid the switch, and the box opened with a click."
+    ],
+    [
+      "paired_000016_A",
+      "Leo's toy car was stuck high on a shelf.",
+      "He could not reach it.",
+      "Leo found a small ladder and climbed up to get his car."
+    ],
+    [
+      "paired_000016_B",
+      "Lily saw a big locked book.",
+      "She wanted to read the story inside.",
+      "Lily found a tiny key and the key unlocked the book."
+    ],
+    [
+      "paired_000017_A",
+      "Tim saw a closed cup with a lid.",
+      "He wanted to see what was inside.",
+      "Tim found a little clip and opened the cup."
+    ],
+    [
+      "paired_000017_B",
+      "Zoe's favorite teddy bear was behind a big, heavy box.",
+      "She could not move the box alone.",
+      "Zoe found a long rope and pulled the box away to get her teddy."
+    ],
+    [
+      "paired_000018_A",
+      "Emma wanted to listen to music from the music box.",
+      "The music box had a little lock.",
+      "Emma found the right key and unlocked the music box to play a song."
+    ],
+    [
+      "paired_000018_B",
+      "Max wanted a toy airplane from the top of the closet.",
+      "It was too high for him to reach.",
+      "Max found a long rope and used it to bring the airplane down safely."
+    ],
+    [
+      "paired_000019_A",
+      "Sam's toy robot would not open its door.",
+      "The tiny door was stuck.",
+      "Sam found a small tool to fix it and the robot's door popped open."
+    ],
+    [
+      "paired_000019_B",
+      "Tim's friend was sad because her tower fell down.",
+      "Tim said, \"Let's build a new, big game together!\"",
+      "They both found more blocks and built a taller tower."
+    ],
+    [
+      "paired_000020_A",
+      "Kai wanted the door to open.",
+      "He saw the lock on it.",
+      "Kai turned the lock and the door opened."
+    ],
+    [
+      "paired_000020_B",
+      "Leo's little boat floated far away.",
+      "He could not reach it.",
+      "Leo found a long pole to fix the boat and pull it in."
+    ],
+    [
+      "paired_000021_A",
+      "Sara's kite got stuck in the tree.",
+      "She found a long rope.",
+      "Sara used the rope to fix the kite and pull it down."
+    ],
+    [
+      "paired_000021_B",
+      "Leo saw his friend was too small for the big swing.",
+      "Leo had some big blocks.",
+      "They used the blocks as steps to reach the swing."
+    ],
+    [
+      "paired_000022_A",
+      "Ben wanted to open his toy house door.",
+      "The door had a little lock.",
+      "Ben found the small key and opened the door."
+    ],
+    [
+      "paired_000022_B",
+      "Lily wanted a book on the high shelf.",
+      "She saw a small ladder nearby.",
+      "Lily used the ladder to reach and move the book down."
+    ],
+    [
+      "paired_000023_A",
+      "Emma had a small red button.",
+      "She saw the picture book had a secret spot.",
+      "Emma pressed the button on the book and a light turned on."
+    ],
+    [
+      "paired_000023_B",
+      "Mia wanted her kite from the tall tree branch.",
+      "She found a long rope and a small ladder.",
+      "Mia climbed the ladder and used the rope to get the kite."
+    ],
+    [
+      "paired_000024_A",
+      "Time for yummy food!",
+      "Sam put food on his plate.",
+      "Sam ate all his food."
+    ],
+    [
+      "paired_000024_B",
+      "Ben wanted to play with friends.",
+      "He said, 'Let's build a tall block tower and then roll the ball around it!'",
+      "They built the tower and rolled the ball together. Fun!"
+    ],
+    [
+      "paired_000025_A",
+      "Jake had a little key.",
+      "He saw a small lock on his secret book.",
+      "Jake turned the key, and the lock clicked open!"
+    ],
+    [
+      "paired_000025_B",
+      "Zoe wanted to play with friends inside.",
+      "She told them, 'First, let's play the matching game, then do the big puzzle together!'",
+      "They played the game and finished the puzzle. Yay!"
+    ],
+    [
+      "paired_000026_A",
+      "The light bulb was not working.",
+      "Sara went to find the little step ladder.",
+      "She used the ladder to change the bulb. Now the light worked!"
+    ],
+    [
+      "paired_000026_B",
+      "Max wanted to play with his friends.",
+      "He said, 'Let's play catch with the ball first, then a fun card game!'",
+      "They played catch and then had fun with cards."
+    ],
+    [
+      "paired_000027_A",
+      "Ben wanted to make something big and colorful.",
+      "He got his big blocks and his bright crayons.",
+      "Ben built a tall tower and drew happy faces all over it!"
+    ],
+    [
+      "paired_000027_B",
+      "Max saw his friend stuck at the top of the slide.",
+      "Max said, 'Hold my hand! I will help you slide down!'",
+      "Together, they slid down safely and went to the swing."
+    ],
+    [
+      "paired_000028_A",
+      "Emma's music box would not open.",
+      "She found a tiny screwdriver to gently move a piece.",
+      "Emma fixed it, and the box opened to play a happy song!"
+    ],
+    [
+      "paired_000028_B",
+      "Lily wanted to make something beautiful.",
+      "She got her bright paints and put on some happy music.",
+      "Lily painted a rainbow and danced around her art!"
+    ],
+    [
+      "paired_000029_A",
+      "Ana saw her friend could not play the game.",
+      "Ana said, \"I can help with the toy!\"",
+      "They played the game together."
+    ],
+    [
+      "paired_000029_B",
+      "Emma wanted her toy kite from the high branch.",
+      "Emma found a long rope.",
+      "She threw the rope and pulled her kite down."
+    ],
+    [
+      "paired_000030_A",
+      "Sam had a tiny key.",
+      "He saw a blue box with a lock.",
+      "Sam used the key and opened the box."
+    ],
+    [
+      "paired_000030_B",
+      "Kai's toy house door was broken open.",
+      "Kai found a strong rope.",
+      "He tied the door shut, and it stayed closed."
+    ],
+    [
+      "paired_000031_A",
+      "Mia saw a fancy cup with a closed top.",
+      "Mia saw a little button on the side.",
+      "She pushed the button and the cup's top popped open."
+    ],
+    [
+      "paired_000031_B",
+      "Leo's little robot would not move its arms.",
+      "Leo found a small, long tool to reach inside.",
+      "He poked the robot, and its arms could move."
+    ],
+    [
+      "paired_000032_A",
+      "Leo needed his shiny fixing tool.",
+      "It was up high on a shelf.",
+      "Leo found a tall ladder. He climbed the ladder and got his fixing tool."
+    ],
+    [
+      "paired_000032_B",
+      "Jake saw a funny cup with a tight lid.",
+      "Jake found a little key.",
+      "He used the key and opened the cup's lid."
+    ],
+    [
+      "paired_000033_A",
+      "Ben wanted to play a game with his friends.",
+      "Ben said, \"Let's play with our cards and blocks!\"",
+      "They all played the card and block game together."
+    ],
+    [
+      "paired_000033_B",
+      "Sam wanted his teddy bear from the tall closet.",
+      "Sam found a small, sturdy ladder.",
+      "He used the ladder and got his teddy bear."
+    ],
+    [
+      "paired_000034_A",
+      "Joy saw a closed bag.",
+      "She found a big button.",
+      "The button opened the bag."
+    ],
+    [
+      "paired_000034_B",
+      "Mia's cat was high in the tree.",
+      "She found a long rope.",
+      "Mia used the rope to help the cat down."
+    ],
+    [
+      "paired_000035_A",
+      "Zoe saw a closed door.",
+      "She found a small key.",
+      "The key opened the door."
+    ],
+    [
+      "paired_000035_B",
+      "Lily could not reach her toy.",
+      "She got a long rope.",
+      "Lily used the rope to pull the toy close."
+    ],
+    [
+      "paired_000036_A",
+      "Kai's wagon wheel was broken.",
+      "He found a little tool.",
+      "Kai used the tool to fix the wheel."
+    ],
+    [
+      "paired_000036_B",
+      "Sara saw a closed box.",
+      "She found a tiny key.",
+      "The key opened the box."
+    ],
+    [
+      "paired_000037_A",
+      "Leo's toy robot was broken.",
+      "He found a tiny screwdriver tool.",
+      "Leo used the tool to open and fix the robot."
+    ],
+    [
+      "paired_000037_B",
+      "Ben saw a locked chest.",
+      "He found the shiny key.",
+      "The key opened the chest's lock."
+    ],
+    [
+      "paired_000038_A",
+      "Jake had a strong box.",
+      "He saw his little cup.",
+      "Jake put the cup inside his box."
+    ],
+    [
+      "paired_000038_B",
+      "Emma finished her yummy lunch.",
+      "She saw her dirty plate.",
+      "Emma put the plate in the sink."
+    ],
+    [
+      "paired_000039_A",
+      "Sam wanted to build with friends.",
+      "He asked everyone to bring their blocks.",
+      "They built a big, tall tower together."
+    ],
+    [
+      "paired_000039_B",
+      "Joy had a little key.",
+      "She saw a tiny box with a keyhole.",
+      "Joy turned the key and the box opened."
+    ],
+    [
+      "paired_000040_A",
+      "Ana's toy was stuck way up high.",
+      "She found a long, strong rope.",
+      "Ana used the rope to get her toy down."
+    ],
+    [
+      "paired_000040_B",
+      "Ben thought of a happy new song.",
+      "He drew big notes on a paper.",
+      "Ben sang his new song for everyone."
+    ],
+    [
+      "paired_000041_A",
+      "Ana wanted to play a game with friends.",
+      "She found a big, bouncy ball.",
+      "They all played kickball together outside."
+    ],
+    [
+      "paired_000041_B",
+      "Sara's swing rope broke.",
+      "She found a strong new rope.",
+      "Sara tied the rope and swung very high."
+    ],
+    [
+      "paired_000042_A",
+      "Leo wanted to keep his bag safe.",
+      "He found a small, shiny lock.",
+      "Leo put the lock on his bag."
+    ],
+    [
+      "paired_000042_B",
+      "Ben wanted to play with friends.",
+      "He got out the fun card game.",
+      "Everyone played the game and laughed."
+    ],
+    [
+      "paired_000043_A",
+      "Kai wanted to play with his friends.",
+      "He asked them to build a block tower game.",
+      "They all played together with the blocks."
+    ],
+    [
+      "paired_000043_B",
+      "Leo's ball was stuck up high.",
+      "He found a tall, sturdy ladder.",
+      "Leo climbed the ladder to get his ball."
+    ],
+    [
+      "paired_000044_A",
+      "Max wanted his red car on the high shelf.",
+      "He saw a long rope nearby.",
+      "Max used the rope to gently pull the car down."
+    ],
+    [
+      "paired_000044_B",
+      "Ben saw Lily wanted to go on the big swing.",
+      "Lily was too small to reach it. Ben asked, \"Do you want me to push you up?\"",
+      "Ben helped Lily get on the swing, and they played together."
+    ],
+    [
+      "paired_000045_A",
+      "Ben saw Tom could not find all his game cards.",
+      "Ben said, \"I can help you look under the table.\"",
+      "They both looked and found all the lost cards for the game."
+    ],
+    [
+      "paired_000045_B",
+      "Kai had a special book that was closed tight.",
+      "He saw a little button on the side of it.",
+      "Kai pushed the button, and the book popped open!"
+    ],
+    [
+      "paired_000046_A",
+      "Ana wanted to open her toy box.",
+      "She saw a big lock on the front of it.",
+      "Ana turned the key in the lock, and the box opened."
+    ],
+    [
+      "paired_000046_B",
+      "Leo wanted to get his ball from behind the fence.",
+      "He saw a small gate that was closed.",
+      "Leo found the latch and pulled it to open the gate."
+    ],
+    [
+      "paired_000047_A",
+      "Mia saw David's favorite toy car rolled under the couch.",
+      "Mia offered, \"I can help you reach it with my grabber toy.\"",
+      "David held the grabber, and Mia helped him pull out the car."
+    ],
+    [
+      "paired_000047_B",
+      "Ana's toy train had a wobbly wheel.",
+      "She found a small plastic tool.",
+      "Ana used the tool to fix the wheel, and the train could go!"
+    ],
+    [
+      "paired_000048_A",
+      "Joy wanted to close her toy bag.",
+      "She saw a big button right on the flap.",
+      "Joy pushed the button, and the bag snapped shut."
+    ],
+    [
+      "paired_000048_B",
+      "Mia wanted to read her special picture book.",
+      "The book was on a high shelf. Mia knew she needed to open the little step stool.",
+      "She opened the step stool, climbed up, and got her book."
+    ],
+    [
+      "paired_000049_A",
+      "Jake saw a small, locked box.",
+      "He found a tiny key beside it.",
+      "Jake put the key in, and the box popped open."
+    ],
+    [
+      "paired_000049_B",
+      "Leo wanted to get his toy kite from the high branch.",
+      "He saw a long rope on the ground.",
+      "Leo used the rope to pull the kite down."
+    ],
+    [
+      "paired_000050_A",
+      "Kai's little red ladder was broken.",
+      "He found some sticky glue.",
+      "Kai glued the ladder, and now it was strong again."
+    ],
+    [
+      "paired_000050_B",
+      "Joy wanted to play a game with her friends.",
+      "She thought of playing a big puzzle together.",
+      "Joy and her friends put the puzzle pieces together."
+    ],
+    [
+      "paired_000051_A",
+      "Jake had a tiny toy box.",
+      "He saw a red button on its side.",
+      "Jake pressed the button, and the box popped open."
+    ],
+    [
+      "paired_000051_B",
+      "Ana wanted to play a new game with her friends.",
+      "She showed them a fun animal puzzle.",
+      "Ana and her friends built the puzzle together."
+    ],
+    [
+      "paired_000052_A",
+      "Emma wanted to play with her friends outside.",
+      "She said, \"Let's play with the big red ball!\"",
+      "Emma and her friends threw the ball back and forth."
+    ],
+    [
+      "paired_000052_B",
+      "Jake wanted to open the big wooden door.",
+      "He looked inside his small red bag.",
+      "Jake found the right key and opened the door."
+    ],
+    [
+      "paired_000053_A",
+      "Lily wanted to make a picture of a rainbow.",
+      "She got her bright paints and crayons.",
+      "Lily drew a beautiful colorful rainbow."
+    ],
+    [
+      "paired_000053_B",
+      "Ana saw her friend trying to get the ball from under the swing.",
+      "Ana said, \"I can help push the swing up!\"",
+      "Together, they moved the swing and got the ball."
+    ],
+    [
+      "paired_000054_A",
+      "Leo saw his big red bag was closed tight.",
+      "He found a little blue button on the side.",
+      "Leo pushed the button and the bag popped open."
+    ],
+    [
+      "paired_000054_B",
+      "Kai wanted to open the big wooden box.",
+      "He saw a small, strong stick on the floor.",
+      "Kai used the stick to push the box lid open."
+    ],
+    [
+      "paired_000055_A",
+      "Leo had a tiny key.",
+      "He saw his toy bag was all closed up.",
+      "Leo put the tiny key in the lock and the bag opened wide."
+    ],
+    [
+      "paired_000055_B",
+      "Zoe wanted her favorite teddy bear.",
+      "The bear was on a high shelf, too far to reach.",
+      "Zoe found a little stool and climbed up to get her bear."
+    ],
+    [
+      "paired_000056_A",
+      "Ben saw his friend felt sad because her toy car was stuck.",
+      "Ben said, \"I can help you pull it out!\"",
+      "They both pulled, and the toy car rolled free."
+    ],
+    [
+      "paired_000056_B",
+      "Max saw the big front door was locked.",
+      "He found a silver key under the mat.",
+      "Max put the key in the lock and the door opened."
+    ],
+    [
+      "paired_000057_A",
+      "Zoe wanted her tiny marble.",
+      "It rolled under the big couch, too far to get.",
+      "She found a long broom and pushed the marble out."
+    ],
+    [
+      "paired_000057_B",
+      "Mia wanted to make pretty bubbles.",
+      "She found a bubble wand and a bottle of soap.",
+      "Mia blew the wand and many shiny bubbles floated up."
+    ],
+    [
+      "paired_000058_A",
+      "Joy wanted to play with all her friends.",
+      "She said, \"Let's all build a big tower with our blocks!\"",
+      "Everyone grabbed blocks and built a super tall tower together."
+    ],
+    [
+      "paired_000058_B",
+      "Jake's snack box was very hard to open.",
+      "He looked closely and saw a small catch on the side.",
+      "Jake pushed the catch, and the box clicked open."
+    ],
+    [
+      "paired_000059_A",
+      "Ben wanted to keep his toys safe.",
+      "He found a small, shiny lock.",
+      "Ben put the lock on his toy box."
+    ],
+    [
+      "paired_000059_B",
+      "Jake's cat was stuck on the roof.",
+      "He found a tall ladder and a strong rope.",
+      "Jake used the ladder and rope to help his cat down."
+    ],
+    [
+      "paired_000060_A",
+      "Tim wanted to hear a story.",
+      "He found a magic talking book.",
+      "Tim pushed the red button and the book read aloud."
+    ],
+    [
+      "paired_000060_B",
+      "Lily's box was tightly shut.",
+      "She found a big key.",
+      "Lily turned the key and the box opened."
+    ],
+    [
+      "paired_000061_A",
+      "Mia wanted her room door to stay shut.",
+      "She found a big, strong lock.",
+      "Mia put the lock on the door and it was closed tight."
+    ],
+    [
+      "paired_000061_B",
+      "Jake's tall treehouse door would not move.",
+      "He found a little ladder to help him.",
+      "Jake climbed the ladder to fix the door hinge, and it could move again."
+    ],
+    [
+      "paired_000062_A",
+      "Jake wanted his toy car from the tall shelf.",
+      "He saw a small step ladder nearby.",
+      "Jake used the ladder to reach his toy."
+    ],
+    [
+      "paired_000062_B",
+      "Mia saw her friend's cards fall down.",
+      "She said, \"Let me help pick them up!\"",
+      "Together, they put all the cards back in the box."
+    ],
+    [
+      "paired_000063_A",
+      "Emma's toy train had a broken wheel.",
+      "She found some sticky tape in the drawer.",
+      "Emma taped the wheel, and the train rolled again."
+    ],
+    [
+      "paired_000063_B",
+      "Ana wanted to make a little blue bird.",
+      "She got her soft blue clay.",
+      "Ana shaped the clay until her bird was ready."
+    ],
+    [
+      "paired_000064_A",
+      "Mia saw a locked box on the table.",
+      "She found a tiny silver key beside it.",
+      "Mia put the key in and the box popped open."
+    ],
+    [
+      "paired_000064_B",
+      "Sam wanted to make a new song.",
+      "He got his toy piano and started playing.",
+      "Sam played many happy notes for his song."
+    ],
+    [
+      "paired_000065_A",
+      "Jake wanted the toy robot to move.",
+      "He saw a big red button on its head.",
+      "Jake pressed the button, and the robot walked!"
+    ],
+    [
+      "paired_000065_B",
+      "Lily's lunchbox lid was stuck tight.",
+      "She found a rubber band for better grip.",
+      "Lily used the band to open the lid and reach her apple."
+    ],
+    [
+      "paired_000066_A",
+      "Jake wanted to play with friends.",
+      "He asked, \"Who wants to swing high?\"",
+      "They all went to the swing set together."
+    ],
+    [
+      "paired_000066_B",
+      "Ana held a small silver key.",
+      "She saw the big red door.",
+      "The key turned the lock and the door opened."
+    ],
+    [
+      "paired_000067_A",
+      "The wagon wheel would not move.",
+      "Ben found a long, thick rope.",
+      "He tied the rope and pulled; the wheel turned again."
+    ],
+    [
+      "paired_000067_B",
+      "Zoe wanted to play with her friends.",
+      "She said, \"Let's play a fun ball game!\"",
+      "Everyone ran outside to play the game together."
+    ],
+    [
+      "paired_000068_A",
+      "The birdhouse roof was loose.",
+      "Ben found a small, sturdy ladder.",
+      "He climbed the ladder, fixed the roof, and the birdhouse was safe."
+    ],
+    [
+      "paired_000068_B",
+      "Zoe got a cup with a lid that locked.",
+      "She wanted to drink her juice.",
+      "Zoe pushed the lock and the lid opened to drink."
+    ],
+    [
+      "paired_000069_A",
+      "Jake wanted to play with his friends.",
+      "He said, \"Let's all go down the slide!\"",
+      "All his friends went down the slide together."
+    ],
+    [
+      "paired_000069_B",
+      "Tim had a little cabinet door.",
+      "He wanted his special red cup.",
+      "Tim opened the door and found his cup."
+    ],
+    [
+      "paired_000070_A",
+      "The toy was too high to reach.",
+      "Ben thought about how to get it.",
+      "He stood on a box and got the toy easily."
+    ],
+    [
+      "paired_000070_B",
+      "Tim had a special water cup.",
+      "It had a little lock on its lid.",
+      "Tim pushed the lock and the lid popped open."
+    ],
+    [
+      "paired_000071_A",
+      "Leo saw his shoes and clothes on the floor.",
+      "He got his clean laundry basket ready.",
+      "Leo put all his clothes in the basket."
+    ],
+    [
+      "paired_000071_B",
+      "Kai had a little key in his hand.",
+      "His small bag had a tiny lock.",
+      "Kai used the key to open his bag easily."
+    ],
+    [
+      "paired_000072_A",
+      "Emma could not reach her toy car.",
+      "She saw a little stool nearby.",
+      "Emma stood on the stool and got her car."
+    ],
+    [
+      "paired_000072_B",
+      "Zoe wanted to open her red bag.",
+      "She found the silver key on the table.",
+      "Zoe turned the key, and the bag opened."
+    ],
+    [
+      "paired_000073_A",
+      "Lily had a big, empty box.",
+      "She saw her favorite storybook on the bed.",
+      "Lily put the book inside the box gently."
+    ],
+    [
+      "paired_000073_B",
+      "Joy saw her ball stuck high in the tree.",
+      "She got a tall ladder from the shed.",
+      "Joy climbed up and pulled her ball down."
+    ],
+    [
+      "paired_000074_A",
+      "Jake wanted to go outside to play.",
+      "He looked for the door key on the hook.",
+      "Jake unlocked the door and went out."
+    ],
+    [
+      "paired_000074_B",
+      "Emma wanted to play with her friends.",
+      "She asked if they wanted to do a big puzzle together.",
+      "They all sat down and did the puzzle happily."
+    ],
+    [
+      "paired_000075_A",
+      "Tim's toy box was stuck shut tight.",
+      "He found a small stick to help open it.",
+      "Tim pushed the stick, and the box opened wide."
+    ],
+    [
+      "paired_000075_B",
+      "Emma wanted water in her small cup.",
+      "She saw the water dispenser with a button.",
+      "Emma pushed the button, and water filled her cup."
+    ],
+    [
+      "paired_000076_A",
+      "Mia had a red button.",
+      "She saw a little box with a hole.",
+      "Mia pushed the button into the hole."
+    ],
+    [
+      "paired_000076_B",
+      "Max wanted his teddy bear from the high shelf.",
+      "He found a long stick.",
+      "Max used the stick to poke the bear down."
+    ],
+    [
+      "paired_000077_A",
+      "Sam had a small key.",
+      "He saw a little locked box.",
+      "Sam put the key in the lock."
+    ],
+    [
+      "paired_000077_B",
+      "Ana wanted to play with her friends.",
+      "She said, 'Let's build a tall tower with blocks!'",
+      "They all built the tall tower together."
+    ],
+    [
+      "paired_000078_A",
+      "Kai wanted his big blue ball.",
+      "It was stuck under the couch.",
+      "Kai found a broom stick. He used the stick to push the ball out."
+    ],
+    [
+      "paired_000078_B",
+      "Tim wanted to play with his friends.",
+      "He said, 'Let's share our trains and make a big track!'",
+      "They all played with the trains together."
+    ],
+    [
+      "paired_000079_A",
+      "Sam had a little key.",
+      "He saw his toy treasure chest.",
+      "Sam put the key in the lock of the chest."
+    ],
+    [
+      "paired_000079_B",
+      "Ana wanted to play with her friend.",
+      "She said, 'Let's push each other on the big swing!'",
+      "They pushed and swung high in the air."
+    ],
+    [
+      "paired_000080_A",
+      "Max had a small block.",
+      "He saw a toy cup on the table.",
+      "Max put the block into the cup."
+    ],
+    [
+      "paired_000080_B",
+      "Tim's toy robot arm fell off.",
+      "He found a little screwdriver.",
+      "Tim used the tool to put the arm back on. The robot waved its arm."
+    ],
+    [
+      "paired_000081_A",
+      "Ben wanted his toy car, but it was stuck under the couch.",
+      "He found a long stick.",
+      "Ben used the stick to push his car out."
+    ],
+    [
+      "paired_000081_B",
+      "Leo wanted to do a big puzzle with his friends.",
+      "He told everyone, \"You find the edge pieces, and I will find the middle!\"",
+      "Leo and his friends put the whole puzzle together."
+    ],
+    [
+      "paired_000082_A",
+      "Ben wanted to open his toy box.",
+      "He saw a big red button on the side.",
+      "Ben pushed the button and the toy box lid popped open."
+    ],
+    [
+      "paired_000082_B",
+      "Mia saw her shoes were messy with mud.",
+      "She got a wet cloth and a brush.",
+      "Mia wiped all the mud off her shoes."
+    ],
+    [
+      "paired_000083_A",
+      "Jake wanted to open his snack bag.",
+      "He found a small release button.",
+      "Jake pushed the button and the bag clicked open."
+    ],
+    [
+      "paired_000083_B",
+      "Ana's balloon floated up to the ceiling.",
+      "She saw a chair nearby.",
+      "Ana stood on the chair and gently pulled her balloon down."
+    ],
+    [
+      "paired_000084_A",
+      "Leo wanted a book from the very top shelf.",
+      "He got a small step ladder.",
+      "Leo climbed up and took his book."
+    ],
+    [
+      "paired_000084_B",
+      "Lily wanted to open her toy box, but it had a little lock.",
+      "She found the small key hanging nearby.",
+      "Lily used the key to open the toy box."
+    ],
+    [
+      "paired_000085_A",
+      "Tim saw his friend Pat was having trouble with a card game.",
+      "Tim said, \"Let me show you how to play this part.\"",
+      "Tim and Pat played the game happily together."
+    ],
+    [
+      "paired_000085_B",
+      "Joy wanted to build something big.",
+      "She got all her colorful blocks out.",
+      "Joy built a tall castle with many towers."
+    ],
+    [
+      "paired_000086_A",
+      "Zoe's toy wagon had a wobbly wheel.",
+      "She found her little tool kit.",
+      "Zoe tightened the screw, and the wheel was fixed!"
+    ],
+    [
+      "paired_000086_B",
+      "Kai had a big, empty cup.",
+      "He saw the water faucet.",
+      "Kai filled his cup with water."
+    ],
+    [
+      "paired_000087_A",
+      "Mia wanted to play with her friends.",
+      "She said, \"Let's build a big puzzle together!\"",
+      "They all worked and finished the puzzle."
+    ],
+    [
+      "paired_000087_B",
+      "Jake saw the treasure box was closed tight.",
+      "He found a shiny red button on the side.",
+      "Jake pushed the button, and the box popped open!"
+    ],
+    [
+      "paired_000088_A",
+      "Joy saw her ball stuck on the roof.",
+      "She found a long rope.",
+      "Joy used the rope to pull her ball down."
+    ],
+    [
+      "paired_000088_B",
+      "Max wanted to hear a story.",
+      "He found his special talking book.",
+      "Max pushed the button, and the book read a story."
+    ],
+    [
+      "paired_000089_A",
+      "Zoe's little toy was stuck under the couch.",
+      "She got a long stick.",
+      "Zoe used the stick to pull her toy out."
+    ],
+    [
+      "paired_000089_B",
+      "Sam wanted to make something new.",
+      "He found his colorful clay and crayons.",
+      "Sam shaped a little blue bird."
+    ],
+    [
+      "paired_000090_A",
+      "Kai wanted his favorite teddy bear.",
+      "The bear was on a high shelf.",
+      "Kai found a little stool and climbed up to get it."
+    ],
+    [
+      "paired_000090_B",
+      "Zoe saw her friend could not build a tall tower.",
+      "She said, \"I can help hold the blocks!\"",
+      "Together, they built a very tall tower."
+    ],
+    [
+      "paired_000091_A",
+      "Emma saw a closed toy chest.",
+      "She wanted her favorite cup inside.",
+      "She found a magic key and opened the chest."
+    ],
+    [
+      "paired_000091_B",
+      "Sam's robot toy was broken.",
+      "Its door would not open.",
+      "He found a tiny screwdriver and fixed the door."
+    ],
+    [
+      "paired_000092_A",
+      "Ben wanted the door to open.",
+      "The door had a lock.",
+      "He pressed the big green button and the door unlocked."
+    ],
+    [
+      "paired_000092_B",
+      "Emma wanted to play with her friends.",
+      "She said, \"Let's all go down the slide together!\"",
+      "All her friends went down the slide with her, laughing."
+    ],
+    [
+      "paired_000093_A",
+      "Kai's tall shelf was broken.",
+      "He could not reach the top to fix it.",
+      "He found a strong ladder and some glue, then fixed the shelf."
+    ],
+    [
+      "paired_000093_B",
+      "Jake saw the big closed door.",
+      "He wanted to go outside.",
+      "He found the right key and opened the door."
+    ],
+    [
+      "paired_000094_A",
+      "Ben saw a big heavy rock.",
+      "He needed to move it.",
+      "He found a long strong rope and pulled the rock away."
+    ],
+    [
+      "paired_000094_B",
+      "Leo wanted to keep his book and cup safe.",
+      "He found a special box.",
+      "He put the book and cup inside."
+    ],
+    [
+      "paired_000095_A",
+      "Joy's toy car was stuck up high.",
+      "She found a little red ladder.",
+      "Joy climbed up and got her toy car."
+    ],
+    [
+      "paired_000095_B",
+      "Jake wanted to open the small box.",
+      "He found a little gold key.",
+      "Jake put the key in, and the box clicked open."
+    ],
+    [
+      "paired_000096_A",
+      "Jake saw his friend drop all her game cards.",
+      "He said, \"I can help pick them up!\"",
+      "Together, they made a neat pile."
+    ],
+    [
+      "paired_000096_B",
+      "Joy wanted her storybook to glow.",
+      "She saw a little star button on it.",
+      "Joy pushed the button, and the book lit up."
+    ],
+    [
+      "paired_000097_A",
+      "Ana wanted a drink of cool water.",
+      "She found a bright green cup.",
+      "Ana filled the cup and drank her water."
+    ],
+    [
+      "paired_000097_B",
+      "Sam wanted to play with his friends outside.",
+      "He said, \"Let's roll the big, soft ball!\"",
+      "Everyone giggled as they rolled the ball far."
+    ],
+    [
+      "paired_000098_A",
+      "Leo held his small red cup.",
+      "He saw a thirsty little flower.",
+      "Leo poured water into the flower."
+    ],
+    [
+      "paired_000098_B",
+      "Emma wanted to build a big house with her friends.",
+      "She said, \"Let's use all the big square blocks!\"",
+      "Together, they made a super tall block castle."
+    ],
+    [
+      "paired_000099_A",
+      "Tim needed to open the sticky door.",
+      "He knew he needed to push it hard.",
+      "Tim pushed, and the door slid open."
+    ],
+    [
+      "paired_000099_B",
+      "Kai wanted his toy robot to move.",
+      "He found its tiny winding key.",
+      "Kai turned the key, and the robot started walking."
+    ],
+    [
+      "paired_000100_A",
+      "Mia wanted her teddy bear.",
+      "It was too high on the shelf.",
+      "She used a long rope to fix the problem and get it down."
+    ],
+    [
+      "paired_000100_B",
+      "Kai wanted to carry his lunch.",
+      "He found a big, yellow bag.",
+      "He put his lunch in the bag and closed it."
+    ],
+    [
+      "paired_000101_A",
+      "Mia wanted to play with her friends.",
+      "She said, \"Let's play cards!\"",
+      "They all sat down and played a fun card game."
+    ],
+    [
+      "paired_000101_B",
+      "Max wanted to build a tall tower.",
+      "He got many colorful blocks.",
+      "He stacked the blocks up high and made a big tower."
+    ],
+    [
+      "paired_000102_A",
+      "Sara wanted to play with her friends.",
+      "She asked, \"Who wants to swing?\"",
+      "They all ran to the swings and played together."
+    ],
+    [
+      "paired_000102_B",
+      "Mia could not open the sticky book.",
+      "She knew to gently twist the cover.",
+      "The book opened easily for her to read."
+    ],
+    [
+      "paired_000103_A",
+      "Sara wanted to play with her friends.",
+      "She said, \"Let's all go down the slide!\"",
+      "They all went down the slide, one by one."
+    ],
+    [
+      "paired_000103_B",
+      "Jake could not reach his red ball.",
+      "It was high on a tall shelf.",
+      "He used a small stool to fix his height and get the ball."
+    ],
+    [
+      "paired_000104_A",
+      "Zoe wanted to keep her toys safe.",
+      "She found a special bag with a lock.",
+      "She put her toys inside and locked the bag."
+    ],
+    [
+      "paired_000104_B",
+      "Tim could not reach the juicy apple.",
+      "It was high up on the tree branch.",
+      "He used a long rope to shake the branch and get the apple."
+    ],
+    [
+      "paired_000105_A",
+      "Jake's toy car was broken.",
+      "He needed to fix a small piece. He used a tiny stick to push it into place.",
+      "The car was fixed and could move and roll!"
+    ],
+    [
+      "paired_000105_B",
+      "Sam wanted to play a fun game with friends.",
+      "He thought they could build a big tower with blocks.",
+      "Sam and his friends built a tall tower. They all clapped!"
+    ],
+    [
+      "paired_000106_A",
+      "Max wanted to go inside the playhouse.",
+      "The door was shut. He found a small key on the mat.",
+      "Max put the key in the door. It clicked open!"
+    ],
+    [
+      "paired_000106_B",
+      "Tim wanted to make a funny monster.",
+      "He got some soft clay and squished it. Then he found his red crayons.",
+      "Tim made a silly clay monster. He drew big eyes on it!"
+    ],
+    [
+      "paired_000107_A",
+      "Sam saw his friend Leo feeling sad. Leo's toy car was stuck.",
+      "Sam said, \"Let's push it with a stick!\" He found a strong stick.",
+      "Sam and Leo pushed the car. It popped free!"
+    ],
+    [
+      "paired_000107_B",
+      "Tim had a special bookmark.",
+      "He saw his big story book open on the floor.",
+      "Tim put the bookmark inside the book. Now he knew his page!"
+    ],
+    [
+      "paired_000108_A",
+      "Sam found a tiny, shiny key.",
+      "He saw his play teacup with a secret opening.",
+      "Sam put the key in the cup. Click! A tiny treat popped out."
+    ],
+    [
+      "paired_000108_B",
+      "Emma wanted her bouncy ball. It rolled under the couch.",
+      "She saw a long stick and a short rope. She thought to tie the rope to the stick.",
+      "Emma used the stick with the rope. She pulled the ball out!"
+    ],
+    [
+      "paired_000109_A",
+      "Mia wanted to go into the quiet room.",
+      "The big door was a little bit open. She saw a thick book nearby.",
+      "Mia pushed the book against the door. It opened wide!"
+    ],
+    [
+      "paired_000109_B",
+      "Zoe's kitten was stuck on a high branch.",
+      "She saw a small ladder nearby. She thought to move the ladder to the tree.",
+      "Zoe moved the ladder. She climbed up and got her kitten down."
+    ],
+    [
+      "paired_000110_A",
+      "Joy's toy car was broken.",
+      "She needed to find a new wheel.",
+      "She put the wheel on, and it moved."
+    ],
+    [
+      "paired_000110_B",
+      "Sara wanted to play with her friends.",
+      "She said, \"Let's build a tall tower with blocks!\"",
+      "They all stacked blocks together and laughed."
+    ],
+    [
+      "paired_000111_A",
+      "Lily's teddy bear was stuck up high.",
+      "She found a long rope.",
+      "She used the rope to move the bear down."
+    ],
+    [
+      "paired_000111_B",
+      "Kai wanted to open his little bag.",
+      "He found the zipper.",
+      "He pulled the zipper and the bag opened."
+    ],
+    [
+      "paired_000112_A",
+      "Mia had a shiny key.",
+      "She saw a small locked box.",
+      "She put the key in and the box opened."
+    ],
+    [
+      "paired_000112_B",
+      "Kai's ball was stuck on the roof.",
+      "He found a tall ladder.",
+      "He used the ladder to reach his ball."
+    ],
+    [
+      "paired_000113_A",
+      "Jake's toy car wheel fell off.",
+      "He found a small tool.",
+      "He used the tool to fix the wheel."
+    ],
+    [
+      "paired_000113_B",
+      "Tim saw his lunch box was closed tight.",
+      "He found the big latch.",
+      "He pulled the latch and the box opened."
+    ],
+    [
+      "paired_000114_A",
+      "Zoe saw her friend struggling with a block tower.",
+      "She said, \"Let's stack these blocks together!\"",
+      "They built the tower up high and smiled."
+    ],
+    [
+      "paired_000114_B",
+      "Ben saw a closed door.",
+      "He saw a big button next to it.",
+      "He pushed the button and the door opened."
+    ],
+    [
+      "paired_000115_A",
+      "Max wanted to open the door with the lock.",
+      "He saw a big red button next to it.",
+      "Max pushed the button and the door opened."
+    ],
+    [
+      "paired_000115_B",
+      "Tim wanted to play a fun game with his friends.",
+      "He said, \"Let's all do the puzzle together!\"",
+      "Tim and his friends put all the puzzle pieces in place."
+    ],
+    [
+      "paired_000116_A",
+      "Joy wanted to get inside the big toy box.",
+      "She looked for a way to open it.",
+      "Joy saw a key next to a button and used the key to unlock the box."
+    ],
+    [
+      "paired_000116_B",
+      "Leo's toy truck was broken.",
+      "He needed to find some glue to fix it.",
+      "Leo put the pieces together with glue, and his truck was whole again."
+    ],
+    [
+      "paired_000117_A",
+      "Mia had a shiny key.",
+      "She saw a small lock on the little toy door.",
+      "Mia put the key in the lock and turned it."
+    ],
+    [
+      "paired_000117_B",
+      "It was time for Jake to get ready for the day.",
+      "He ate his yummy food and made his bed.",
+      "Jake was ready to play."
+    ],
+    [
+      "paired_000118_A",
+      "Max had a small golden key.",
+      "He saw a treasure box with a tiny keyhole.",
+      "Max put the key in the keyhole and turned it."
+    ],
+    [
+      "paired_000118_B",
+      "It was time for Zoe to pack her lunch.",
+      "She put her yummy food in her backpack.",
+      "Zoe was ready to go to school."
+    ],
+    [
+      "paired_000119_A",
+      "Ben saw his blue toy bag was closed.",
+      "He found a special big zipper pull.",
+      "Ben used it to open his toy bag easily."
+    ],
+    [
+      "paired_000119_B",
+      "Mia's teddy bear had a torn ear.",
+      "She found some strong sticky tape.",
+      "Mia put the tape on the bear's ear and it was fixed."
+    ],
+    [
+      "paired_000120_A",
+      "Sara wanted the ball on the high shelf.",
+      "She could not reach it herself.",
+      "Sara brought a little step stool and climbed up to get the ball."
+    ],
+    [
+      "paired_000120_B",
+      "Ana wanted to go into her playhouse.",
+      "The little door was shut tight.",
+      "Ana found the small knob and turned it, and the door opened."
+    ],
+    [
+      "paired_000121_A",
+      "Kai was thirsty for water.",
+      "He saw the water cooler with a big button.",
+      "Kai pushed the button and water filled his cup."
+    ],
+    [
+      "paired_000121_B",
+      "Max wanted to cross the muddy puddle.",
+      "He did not want his shoes to get wet.",
+      "Max found a big flat rock and hopped across it."
+    ],
+    [
+      "paired_000122_A",
+      "Sam wanted his toy car.",
+      "It was too high on the shelf.",
+      "Sam found a sturdy box and stood on it to get his car."
+    ],
+    [
+      "paired_000122_B",
+      "Jake wanted to play with his friends.",
+      "He said, \"Let's play with blocks, then kick the ball!\"",
+      "They built a big block tower and then kicked the ball together."
+    ],
+    [
+      "paired_000123_A",
+      "Leo wanted to play outside with friends.",
+      "He said, \"Let's play a fun game near the slide!\"",
+      "They all ran to the slide and played together."
+    ],
+    [
+      "paired_000123_B",
+      "Zoe saw her special cup.",
+      "The lid was stuck very tight.",
+      "She used her little book to push the lid off."
+    ],
+    [
+      "paired_000124_A",
+      "Ana wanted her toy robot to play.",
+      "She found the robot, it had a key and a button.",
+      "She turned the key and pushed the button, and the robot started singing."
+    ],
+    [
+      "paired_000124_B",
+      "Leo saw his toy car could not move.",
+      "One wheel was broken.",
+      "He found some tape to fix the wheel, and the car could move again."
+    ],
+    [
+      "paired_000125_A",
+      "Leo wanted to get his toy out.",
+      "The toy box was stuck and would not open.",
+      "He found a small stick to fix the latch, and the box opened."
+    ],
+    [
+      "paired_000125_B",
+      "Jake saw his friend sad by the swing.",
+      "His friend's puzzle piece fell under it.",
+      "Jake offered to help look, and they found the piece under the swing together."
+    ],
+    [
+      "paired_000126_A",
+      "Ana had a talking cup.",
+      "She saw its big play button.",
+      "She pressed the button on the cup, and it said, \"Hello!\""
+    ],
+    [
+      "paired_000126_B",
+      "Lily saw her teddy bear was torn.",
+      "She found her sewing tool kit.",
+      "She used a needle and thread to fix her bear, and it was soft again."
+    ],
+    [
+      "paired_000127_A",
+      "Ben's toy wagon had a wobbly wheel.",
+      "He found a small rock to wedge it tight.",
+      "Now the wagon rolled straight."
+    ],
+    [
+      "paired_000127_B",
+      "Lily saw a closed bag.",
+      "She found the zipper pull.",
+      "Lily opened her bag to get a book."
+    ],
+    [
+      "paired_000128_A",
+      "Ana wanted to open the door.",
+      "She saw a lock with a button on it.",
+      "Ana pushed the button and the lock clicked open."
+    ],
+    [
+      "paired_000128_B",
+      "Lily could not move the big block.",
+      "She found a strong stick.",
+      "Lily used the stick to push the block away."
+    ],
+    [
+      "paired_000129_A",
+      "Tim stood by the closed door.",
+      "He saw a big button next to it.",
+      "Tim pushed the button and the door slid open."
+    ],
+    [
+      "paired_000129_B",
+      "Lily could not reach the high window.",
+      "She saw a tall ladder nearby.",
+      "Lily climbed the ladder and opened the window."
+    ],
+    [
+      "paired_000130_A",
+      "Ana wanted to play with her friends.",
+      "She told them, \"Let's all go down the slide with my toy.\"",
+      "They all took turns sliding with the toy car."
+    ],
+    [
+      "paired_000130_B",
+      "Jake wanted to make a fun picture.",
+      "He got out his bright crayons.",
+      "Jake drew a dancing girl."
+    ],
+    [
+      "paired_000131_A",
+      "Emma saw a red box.",
+      "She found a secret button on its side.",
+      "Emma pushed the button and the box popped open."
+    ],
+    [
+      "paired_000131_B",
+      "Jake wanted his toy car from the high shelf.",
+      "He found a long stick.",
+      "Jake used the stick to reach the car."
+    ],
+    [
+      "paired_000132_A",
+      "Leo had a little cup.",
+      "He saw his big bag.",
+      "Leo put the cup in the bag."
+    ],
+    [
+      "paired_000132_B",
+      "Mia could not open the heavy box.",
+      "She found a strong rope.",
+      "Mia pulled the box open with the rope."
+    ],
+    [
+      "paired_000133_A",
+      "Kai's wagon handle was loose.",
+      "He found a piece of strong rope.",
+      "Kai tied the handle tight, and it was fixed!"
+    ],
+    [
+      "paired_000133_B",
+      "Sara wanted to close the playroom door.",
+      "She saw the big lock.",
+      "Sara turned the key and the door was locked."
+    ],
+    [
+      "paired_000134_A",
+      "Lily wanted to play a game with her friends.",
+      "She said, \"Let's use these cards to find the ball!\"",
+      "Everyone played together and found the ball fast."
+    ],
+    [
+      "paired_000134_B",
+      "Sara's little chair had a loose leg.",
+      "She found a big, sticky tape roll.",
+      "Sara wrapped the tape, and the chair felt strong again."
+    ],
+    [
+      "paired_000135_A",
+      "Emma's toy ladder had a broken rung.",
+      "She found a small piece of wood.",
+      "Emma taped the wood on, and the ladder was strong again."
+    ],
+    [
+      "paired_000135_B",
+      "Jake had a tiny key.",
+      "He saw his special diary book with a lock.",
+      "Jake put the key in the lock and opened his book."
+    ],
+    [
+      "paired_000136_A",
+      "Ben wants his toy.",
+      "It is high up.",
+      "Ben finds a little ladder and gets his toy."
+    ],
+    [
+      "paired_000136_B",
+      "Mia sees a red button.",
+      "It is on the door.",
+      "Mia pushes the button and the door opens."
+    ],
+    [
+      "paired_000137_A",
+      "Emma sees a little locked bag.",
+      "She finds a small key.",
+      "Emma opens the bag with the key."
+    ],
+    [
+      "paired_000137_B",
+      "Jake wants to build a tower.",
+      "He gets some colorful blocks.",
+      "Jake stacks the blocks and makes a tall tower."
+    ],
+    [
+      "paired_000138_A",
+      "Joy has a small key.",
+      "The key fits the little lock.",
+      "Joy turns the key and opens the door."
+    ],
+    [
+      "paired_000138_B",
+      "Zoe sees food on the floor.",
+      "She gets a little brush.",
+      "Zoe sweeps the food away."
+    ],
+    [
+      "paired_000139_A",
+      "Ana holds a little cup.",
+      "She sees a big bag of juice.",
+      "Ana pours the juice into her cup."
+    ],
+    [
+      "paired_000139_B",
+      "Jake cannot reach the red ball.",
+      "It is too high.",
+      "Jake gets a long stick and gets the ball down."
+    ],
+    [
+      "paired_000140_A",
+      "Jake wants to play.",
+      "A big toy is in the way.",
+      "Jake pushes the toy to make space."
+    ],
+    [
+      "paired_000140_B",
+      "Lily has a shiny key.",
+      "She sees a special box.",
+      "Lily uses the key to open the box."
+    ],
+    [
+      "paired_000141_A",
+      "Mia's toy box would not open.",
+      "She found a little key.",
+      "Mia used the key to open the toy box."
+    ],
+    [
+      "paired_000141_B",
+      "Zoe wanted to open a big box.",
+      "She found a shiny key.",
+      "Zoe put the key in and the box opened."
+    ],
+    [
+      "paired_000142_A",
+      "Mia held a story book.",
+      "She saw a red button on the book.",
+      "Mia pushed the button and the book played music."
+    ],
+    [
+      "paired_000142_B",
+      "Ben could not reach his teddy bear on the shelf.",
+      "He found a little step stool.",
+      "Ben climbed up and got his teddy bear."
+    ],
+    [
+      "paired_000143_A",
+      "Mia held a small red cup.",
+      "She saw a big empty box.",
+      "Mia put the cup inside the box."
+    ],
+    [
+      "paired_000143_B",
+      "Jake saw Lily stuck at the top of the slide.",
+      "He held out his hand to help her down.",
+      "Jake and Lily slid down together."
+    ],
+    [
+      "paired_000144_A",
+      "Tim wanted to build a big block tower with friends.",
+      "He asked everyone to bring their blocks.",
+      "They all built a very tall tower together."
+    ],
+    [
+      "paired_000144_B",
+      "Joy's jump rope was broken in the middle.",
+      "She found some tape in a drawer.",
+      "Joy taped the rope and could jump again."
+    ],
+    [
+      "paired_000145_A",
+      "Sara could not reach the high window.",
+      "She found a sturdy stool.",
+      "Sara stood on the stool and looked out the window."
+    ],
+    [
+      "paired_000145_B",
+      "Jake saw his friend's ball roll under the slide.",
+      "He helped his friend reach for it.",
+      "They both pulled the ball out together."
+    ],
+    [
+      "paired_000146_A",
+      "Sara saw Tom's blocks fall down.",
+      "She said, \"I can help pick them up!\"",
+      "Together, they put all the blocks away."
+    ],
+    [
+      "paired_000146_B",
+      "Ana could not reach her toy car.",
+      "She saw a little stool nearby.",
+      "Ana stood on the stool and got her car."
+    ],
+    [
+      "paired_000147_A",
+      "Kai wanted to play a game with friends.",
+      "He got out his animal cards.",
+      "Everyone sat down to play the card game."
+    ],
+    [
+      "paired_000147_B",
+      "Max wanted to make the light turn on.",
+      "He found a big red button on the wall.",
+      "Max pushed the button and the light came on."
+    ],
+    [
+      "paired_000148_A",
+      "Emma wanted her book on the high shelf.",
+      "She saw a small step stool nearby.",
+      "Emma climbed the stool and got her book."
+    ],
+    [
+      "paired_000148_B",
+      "Ana saw Ben's car stuck under the couch.",
+      "She said, \"I can help get it!\"",
+      "Together, they pushed the couch and got the car."
+    ],
+    [
+      "paired_000149_A",
+      "Zoe wanted her soft teddy bear from the tall closet.",
+      "She found a long stick on the floor.",
+      "Zoe used the stick to pull her bear down."
+    ],
+    [
+      "paired_000149_B",
+      "Leo saw a box with a tight lid.",
+      "He found a small red lever and slid it.",
+      "The box popped open for Leo."
+    ],
+    [
+      "paired_000150_A",
+      "Jake wanted the blue crayon under the table.",
+      "He could not reach it with his hand.",
+      "Jake found a ruler and pushed the crayon out."
+    ],
+    [
+      "paired_000150_B",
+      "Joy had a little key.",
+      "She saw a toy box with a tiny keyhole.",
+      "Joy put the key in and turned it to open the box."
+    ],
+    [
+      "paired_000151_A",
+      "Mia wanted to make something fun.",
+      "She got her colorful blocks and put on music.",
+      "Mia built a big block tower and danced happily."
+    ],
+    [
+      "paired_000151_B",
+      "Tim's toy car was stuck on a high shelf.",
+      "He found a little ladder and a long rope.",
+      "Tim used the ladder to climb and the rope to pull his car down."
+    ],
+    [
+      "paired_000152_A",
+      "Kai wanted to play with his friends outside.",
+      "He said, \"Let's all go on the slide, then swing high!\"",
+      "They giggled down the slide, then swung very high together."
+    ],
+    [
+      "paired_000152_B",
+      "Zoe's special box would not open.",
+      "She found a tiny key and asked her grown-up for help.",
+      "The grown-up used the key, and the box popped open for Zoe."
+    ],
+    [
+      "paired_000153_A",
+      "Leo's little red toy car could not move.",
+      "He found a strong string and tied it to the car.",
+      "Leo pulled the string, and the car zoomed across the floor."
+    ],
+    [
+      "paired_000153_B",
+      "Lily wanted to play a game with her friends.",
+      "She said, \"Let's do the big puzzle, then play with cards!\"",
+      "They put the puzzle together, then played a fun card game."
+    ],
+    [
+      "paired_000154_A",
+      "Tim had a big blue cup.",
+      "He saw the bedroom door closing slowly.",
+      "Tim put the cup down to keep the door open."
+    ],
+    [
+      "paired_000154_B",
+      "Leo's bright red ball was stuck on a branch.",
+      "He thought of using a long rope and a small ladder.",
+      "Leo used the ladder to reach, then pulled the ball with the rope."
+    ],
+    [
+      "paired_000155_A",
+      "Max wanted his favorite toy truck inside a closed box.",
+      "He found a big, strong key on the table.",
+      "Max used the key to open the box and found his truck!"
+    ],
+    [
+      "paired_000155_B",
+      "Emma wanted to keep her special teddy bear safe.",
+      "She found a little wooden box with a tiny lock.",
+      "Emma put her bear inside and clicked the lock shut."
+    ],
+    [
+      "paired_000156_A",
+      "Tim's toy truck wheel was loose.",
+      "He found a small blue tool.",
+      "Tim made the wheel strong again."
+    ],
+    [
+      "paired_000156_B",
+      "Jake saw his friend could not reach the swing.",
+      "Jake said, \"I can push you up!\"",
+      "His friend got on the swing easily."
+    ],
+    [
+      "paired_000157_A",
+      "Kai wanted his ball from the high shelf.",
+      "He found a long stick.",
+      "Kai used the stick to get his ball down."
+    ],
+    [
+      "paired_000157_B",
+      "Mia wanted her bag to close tightly.",
+      "She saw a big button on it.",
+      "Mia pushed the button and the bag closed."
+    ],
+    [
+      "paired_000158_A",
+      "Sam wanted to open his special book.",
+      "He saw a little lock on it.",
+      "Sam turned the lock and the book opened."
+    ],
+    [
+      "paired_000158_B",
+      "Kai's toy car was stuck under the couch.",
+      "He found a long toy shovel.",
+      "Kai used the shovel to pull his car out."
+    ],
+    [
+      "paired_000159_A",
+      "Lily wanted her kite from the tree branch.",
+      "She saw a small step ladder.",
+      "Lily climbed the ladder to get her kite."
+    ],
+    [
+      "paired_000159_B",
+      "Sam had a shiny small key.",
+      "He saw a box with a tiny lock.",
+      "Sam put the key in and the box opened."
+    ],
+    [
+      "paired_000160_A",
+      "Jake's favorite toy car was under the bed.",
+      "He found a long ruler.",
+      "Jake used the ruler to pull his car out."
+    ],
+    [
+      "paired_000160_B",
+      "Mia had a small blue key.",
+      "She saw a toy car with a keyhole.",
+      "Mia turned the key and the car zoomed!"
+    ],
+    [
+      "paired_000161_A",
+      "Ben could not reach his toy car.",
+      "It was high up on the shelf.",
+      "Ben found a long stick and used it to get his car."
+    ],
+    [
+      "paired_000161_B",
+      "Max had a tiny silver key.",
+      "He saw his small red bag with a lock.",
+      "Max put the key in the lock and opened his bag."
+    ],
+    [
+      "paired_000162_A",
+      "Max wanted to go outside and play.",
+      "He needed to open the big wooden door.",
+      "Max turned the doorknob and pulled the door open."
+    ],
+    [
+      "paired_000162_B",
+      "Leo saw his friend looking for a card.",
+      "His friend could not find the matching card for the game.",
+      "Leo pointed to the correct card, and they picked it up together."
+    ],
+    [
+      "paired_000163_A",
+      "Ana wanted to play a fun game with her friends.",
+      "She called out, \"Let's all slide down the big slide!\"",
+      "Ana and her friends ran to the slide and played together."
+    ],
+    [
+      "paired_000163_B",
+      "Leo found a small, locked treasure box.",
+      "He looked around and found a shiny golden key.",
+      "Leo put the key in the lock and successfully opened the box."
+    ],
+    [
+      "paired_000164_A",
+      "Zoe's favorite ball was stuck far away.",
+      "She found a long, strong rope.",
+      "Zoe threw the rope, tied it to the ball, and pulled it close."
+    ],
+    [
+      "paired_000164_B",
+      "Emma wanted to read her animal book and drink some juice.",
+      "She found a small, flat tray to hold them.",
+      "Emma put her book and cup on the tray and started to read."
+    ],
+    [
+      "paired_000165_A",
+      "Sam could not get his toy truck.",
+      "It was inside a box with a tight lid.",
+      "Sam found a strong spoon to pry open the box."
+    ],
+    [
+      "paired_000165_B",
+      "Tim saw his friend having trouble with the slide puzzle.",
+      "Tim pointed to the correct piece that would fit.",
+      "They worked together and solved the slide puzzle."
+    ],
+    [
+      "paired_000166_A",
+      "Leo's toy train stopped moving.",
+      "He found a small screwdriver to fix it.",
+      "Leo turned the screw and the train moved again."
+    ],
+    [
+      "paired_000166_B",
+      "Zoe wanted to turn on her light.",
+      "She saw a big button on the wall.",
+      "Zoe pushed the button and the light turned on bright."
+    ],
+    [
+      "paired_000167_A",
+      "Kai wanted to open his magic box.",
+      "He found a tiny key right next to it.",
+      "Kai put in the key and the box clicked open."
+    ],
+    [
+      "paired_000167_B",
+      "Tim could not open the heavy gate.",
+      "He saw a big lever to help move it.",
+      "Tim pulled the lever and the gate opened wide."
+    ],
+    [
+      "paired_000168_A",
+      "Leo wanted to play a fun game with friends.",
+      "He said, \"Let's all go down the slide!\"",
+      "Everyone went down the slide and laughed together."
+    ],
+    [
+      "paired_000168_B",
+      "Sara saw a secret box with a lid.",
+      "She found a small button on the side.",
+      "Sara pushed the button and the box popped open."
+    ],
+    [
+      "paired_000169_A",
+      "Kai saw his friend having trouble with a puzzle.",
+      "He offered to find the corner pieces.",
+      "Together, they put the puzzle together."
+    ],
+    [
+      "paired_000169_B",
+      "Emma could not reach her red ball.",
+      "She found a small stool to stand on.",
+      "Emma climbed on the stool and got her ball."
+    ],
+    [
+      "paired_000170_A",
+      "Lily's swing had a broken rope.",
+      "She found a strong new rope in the shed.",
+      "Lily tied the new rope and the swing worked perfectly."
+    ],
+    [
+      "paired_000170_B",
+      "Max wanted to build a big tower with his friends.",
+      "He said, \"Let's use all the blocks!\"",
+      "They all stacked the blocks and built a very tall tower."
+    ],
+    [
+      "paired_000171_A",
+      "Sara saw a box with a lock.",
+      "She found a little shiny key.",
+      "Sara opened the box with her key!"
+    ],
+    [
+      "paired_000171_B",
+      "Max wanted to play blocks with friends.",
+      "He said, \"Let's build a tall tower together!\"",
+      "Everyone helped Max build the big block tower."
+    ],
+    [
+      "paired_000172_A",
+      "Sara could not reach her red toy car.",
+      "She got a little step stool.",
+      "Sara climbed up and got her car!"
+    ],
+    [
+      "paired_000172_B",
+      "Max saw his friend struggling with a puzzle.",
+      "Max said, \"I can help find the blue piece!\"",
+      "Together, they finished the puzzle picture."
+    ],
+    [
+      "paired_000173_A",
+      "Jake wanted his book on the top shelf.",
+      "He found a small, sturdy step ladder.",
+      "Jake climbed up and took his book."
+    ],
+    [
+      "paired_000173_B",
+      "Sara held a shiny silver key.",
+      "She saw a big wooden door with a keyhole.",
+      "Sara turned the key and the door opened!"
+    ],
+    [
+      "paired_000174_A",
+      "Ana's crayon was broken in half.",
+      "She found a piece of tape.",
+      "Ana taped her crayon back together."
+    ],
+    [
+      "paired_000174_B",
+      "Jake wanted to play with his toy cars.",
+      "He asked his friends, \"Let's race our cars!\"",
+      "They all raced their cars really fast."
+    ],
+    [
+      "paired_000175_A",
+      "Mia saw her friend trying to catch a bouncy ball.",
+      "Mia said, \"Let's stand closer to the wall.\"",
+      "Together, they caught the ball with ease."
+    ],
+    [
+      "paired_000175_B",
+      "Max's toy train wheels fell off.",
+      "He found a small screwdriver.",
+      "Max put the wheels back on, and the train rolled!"
+    ],
+    [
+      "paired_000176_A",
+      "Zoe wanted to ride her bike, but the wheel was stuck.",
+      "She saw a small rock in the wheel.",
+      "Zoe pulled out the rock, and her bike could move again."
+    ],
+    [
+      "paired_000176_B",
+      "Tim wanted to make something fun. He thought of a happy little monster.",
+      "He started to shape the soft clay. He hummed a song while he worked.",
+      "Soon, a funny red monster stood on the table."
+    ],
+    [
+      "paired_000177_A",
+      "Zoe's swing set had a broken rope. She couldn't swing anymore.",
+      "She found a strong new rope in the garage.",
+      "Zoe tied the new rope, and now her swing worked perfectly."
+    ],
+    [
+      "paired_000177_B",
+      "Max saw a big wooden box. It had a little lock.",
+      "He looked around and found a small metal key.",
+      "Max put the key in the lock, and the box opened with a click."
+    ],
+    [
+      "paired_000178_A",
+      "Leo saw his friend Tom trying to push a big swing. Tom couldn't do it alone.",
+      "Leo said, \"I can help you push it higher!\"",
+      "Together, they pushed the swing way up high."
+    ],
+    [
+      "paired_000178_B",
+      "Lily had a tiny golden key.",
+      "She saw a special book with a little lock on it.",
+      "Lily put the key in the lock, and the book opened right up."
+    ],
+    [
+      "paired_000179_A",
+      "Mia held a small green button.",
+      "She saw a musical box with a button-shaped hole.",
+      "Mia pushed the button into the hole, and the box played a happy tune."
+    ],
+    [
+      "paired_000179_B",
+      "Emma saw her friend Sam was stuck on the slide. His teddy bear fell down.",
+      "Emma said, \"I can help you get your toy!\"",
+      "Emma helped Sam slide down, and they found the teddy bear together."
+    ],
+    [
+      "paired_000180_A",
+      "Kai had a little key.",
+      "He saw a closed box.",
+      "Kai put the key in, and the box opened."
+    ],
+    [
+      "paired_000180_B",
+      "Max wanted to play with friends.",
+      "He said, \"Let's all swing with our toys!\"",
+      "They all swung together and laughed."
+    ],
+    [
+      "paired_000181_A",
+      "Max saw a little red box.",
+      "He found a tiny silver key.",
+      "The key fit, and the box opened."
+    ],
+    [
+      "paired_000181_B",
+      "Emma needed to reach her tall toy.",
+      "She found a long grabby tool.",
+      "Emma used the tool and got her toy down."
+    ],
+    [
+      "paired_000182_A",
+      "Tim wanted to open the big book.",
+      "He found a small, shiny key.",
+      "Tim turned the key, and the book unlocked."
+    ],
+    [
+      "paired_000182_B",
+      "Kai saw a big, heavy rock.",
+      "He found a strong stick.",
+      "Kai pushed the rock with the stick, and it rolled away."
+    ],
+    [
+      "paired_000183_A",
+      "Ana wanted to play with friends.",
+      "She said, \"Let's build a tall block tower near the slide!\"",
+      "Everyone helped build the tower, and it was so tall."
+    ],
+    [
+      "paired_000183_B",
+      "Kai had an idea to make a funny monster.",
+      "He got out his soft blue clay.",
+      "Kai squished and shaped until his monster was done."
+    ],
+    [
+      "paired_000184_A",
+      "Sara had a tiny golden key.",
+      "She saw a little locked box inside her cup.",
+      "Sara turned the key, and the box popped open."
+    ],
+    [
+      "paired_000184_B",
+      "Zoe wanted a toy on a high shelf.",
+      "She got a little step ladder.",
+      "Zoe climbed up and got her toy easily."
+    ],
+    [
+      "paired_000185_A",
+      "Tim sees a little toy box. It has a tiny lock.",
+      "He finds a small, shiny key. The key fits the lock.",
+      "Tim turns the key and the box opens. Inside is his favorite toy cup!"
+    ],
+    [
+      "paired_000185_B",
+      "Zoe sees her friend Leo. Leo wants to swing, but he cannot push himself.",
+      "Zoe says, \"I can push you, Leo!\" She gently pushes his back.",
+      "Leo swings high and laughs with joy."
+    ],
+    [
+      "paired_000186_A",
+      "Sara sees a small playhouse door. It is shut tight with a lock.",
+      "She finds a silver key hidden nearby. The key slides into the lock.",
+      "Sara turns the key and the door opens with a click."
+    ],
+    [
+      "paired_000186_B",
+      "Ben's toy car has a broken string. He cannot pull it to play.",
+      "He finds some strong, red yarn. It will be a new string.",
+      "Ben ties the yarn on. Now his car can move and zoom very fast!"
+    ],
+    [
+      "paired_000187_A",
+      "Max sees his friend Lucy. Lucy dropped all her colorful cards on the floor.",
+      "Max says, \"I can help you pick them up!\" He starts to gather them.",
+      "Together, Max and Lucy quickly pick up all the cards."
+    ],
+    [
+      "paired_000187_B",
+      "Leo sees a special toy cabinet. It has a strange lock.",
+      "He looks around and finds a big, yellow button. Maybe it will open it.",
+      "Leo pushes the button and the cabinet door clicks open."
+    ],
+    [
+      "paired_000188_A",
+      "Lily wants her soft bunny. It is on the very top shelf.",
+      "She sees a sturdy little stool. The stool can help her reach.",
+      "Lily moves the stool, climbs on it, and gets her bunny."
+    ],
+    [
+      "paired_000188_B",
+      "Ana wants to open her special box. She cannot get it open.",
+      "She finds a little brass key. This key looks like it fits.",
+      "Ana puts the key in and turns it. The box opens wide!"
+    ],
+    [
+      "paired_000189_A",
+      "Sam's favorite ball rolled under the bed. He cannot reach it.",
+      "He finds a long, thin ruler. It will be a good helper tool.",
+      "Sam pushes the ruler under the bed. He moves the ball and gets it back!"
+    ],
+    [
+      "paired_000189_B",
+      "Ben sees his friend Mia. Mia is playing a card game but feels lost.",
+      "Ben says, \"I can show you how to play!\" He points to the cards.",
+      "Together, Ben and Mia play the game and have lots of fun."
+    ],
+    [
+      "paired_000190_A",
+      "Max saw a big box.",
+      "The box had a tiny lock on it.",
+      "Max found the right key and opened the box."
+    ],
+    [
+      "paired_000190_B",
+      "Tim's kite string was broken.",
+      "He could not make it fly high.",
+      "Tim found a long rope and tied it to the kite. His kite flew so high now!"
+    ],
+    [
+      "paired_000191_A",
+      "Sam wanted his favorite toy.",
+      "It was inside a very tight box.",
+      "Sam found a spoon and used it to open the box."
+    ],
+    [
+      "paired_000191_B",
+      "Ben saw his friend Maya looking sad.",
+      "Maya's tower of cards kept falling down.",
+      "Ben helped Maya hold the cards, and they built a big tower together."
+    ],
+    [
+      "paired_000192_A",
+      "Lily wanted to open a new toy.",
+      "The package was sealed super tight.",
+      "Lily found a small tool and used it to unwrap the toy. Her toy came right out!"
+    ],
+    [
+      "paired_000192_B",
+      "Sara wanted to make a new dance.",
+      "She put on some happy music and started to move.",
+      "Sara moved her body to the beat and made a beautiful dance."
+    ],
+    [
+      "paired_000193_A",
+      "Mia's toy birdhouse roof was broken.",
+      "She could not reach high enough to fix it.",
+      "Mia found a little ladder and climbed it. She fixed the roof, and it looked perfect!"
+    ],
+    [
+      "paired_000193_B",
+      "Leo wanted to make something fun.",
+      "He got out his big box of paints and brushes.",
+      "Leo sang a happy song while he painted a colorful picture."
+    ],
+    [
+      "paired_000194_A",
+      "Joy wanted to look at her special book.",
+      "The book had a tiny lock on its cover.",
+      "Joy found a little key and opened her book. She could read it now!"
+    ],
+    [
+      "paired_000194_B",
+      "Mia wanted her blue bear.",
+      "It was on a very high shelf, and she could not reach it.",
+      "Mia found a long stick and used it to move the bear down. She hugged her blue bear!"
+    ],
+    [
+      "paired_000195_A",
+      "Kai saw a closed box.",
+      "He looked in his small bag and found a special key.",
+      "Kai used the key on the box and it opened up."
+    ],
+    [
+      "paired_000195_B",
+      "Mia saw her friend try a puzzle.",
+      "Mia said, \"I see a blue piece!\" and pointed to it.",
+      "They put the blue piece in the puzzle together."
+    ],
+    [
+      "paired_000196_A",
+      "Zoe wanted to open the door.",
+      "She looked for the right key for the door's lock.",
+      "Zoe put the key in the lock and the door opened wide."
+    ],
+    [
+      "paired_000196_B",
+      "Joy wanted her favorite toy.",
+      "The toy was on a high shelf, so she found a tall ladder.",
+      "Joy climbed the ladder and got her toy down."
+    ],
+    [
+      "paired_000197_A",
+      "Emma saw her ball stuck on the roof.",
+      "She found a long rope and a small ladder to help.",
+      "Emma climbed the ladder and used the rope to pull her ball down."
+    ],
+    [
+      "paired_000197_B",
+      "Kai wanted to make something new.",
+      "He found his colorful crayons and thought about a dance.",
+      "Kai drew a fun dancing person on his paper."
+    ],
+    [
+      "paired_000198_A",
+      "Tim had a little key.",
+      "He saw his small bag that had a tiny lock.",
+      "Tim put the key in the bag lock and the bag popped open."
+    ],
+    [
+      "paired_000198_B",
+      "Sara's swing was broken; the seat fell off.",
+      "She found a strong rope in the shed to help fix it.",
+      "Sara tied the rope to the swing, and now it worked again."
+    ],
+    [
+      "paired_000199_A",
+      "Max's toy car broke and its wheel would not move.",
+      "He found some tape and glue to fix it.",
+      "Max used the tape to fix the wheel, and now his car could move fast."
+    ],
+    [
+      "paired_000199_B",
+      "Ana was thirsty and wanted some juice.",
+      "She opened the juice box and found a clean cup.",
+      "Ana poured juice into the cup and drank it all up."
+    ],
+    [
+      "paired_000200_A",
+      "Jake wanted his red ball.",
+      "It was stuck under a big table.",
+      "Jake used a long stick to move it closer."
+    ],
+    [
+      "paired_000200_B",
+      "Lily saw a small box.",
+      "It had a tiny lock on it.",
+      "Lily found a little key and opened the box."
+    ],
+    [
+      "paired_000201_A",
+      "Lily had a shiny silver key.",
+      "She saw a tiny house door.",
+      "Lily put the key in and the door opened."
+    ],
+    [
+      "paired_000201_B",
+      "Max's toy car wheel fell off.",
+      "He looked to find the wheel.",
+      "Max put the wheel back on and the car could roll."
+    ],
+    [
+      "paired_000202_A",
+      "Tim wanted to play with his friends.",
+      "He said, \"Let's all play on the big slide!\"",
+      "Everyone went up and slid down together."
+    ],
+    [
+      "paired_000202_B",
+      "Max could not get to the high treehouse.",
+      "He found a sturdy wooden ladder.",
+      "Max put the ladder up and climbed right in."
+    ],
+    [
+      "paired_000203_A",
+      "Leo held a small, golden key.",
+      "He saw a wooden treasure box with a lock.",
+      "Leo turned the key and the box clicked open."
+    ],
+    [
+      "paired_000203_B",
+      "Zoe wanted to make a new dance.",
+      "She put on her favorite song.",
+      "Zoe twirled and jumped, making a fun new dance."
+    ],
+    [
+      "paired_000204_A",
+      "Ben wanted the big blue block.",
+      "It was too far for him to reach.",
+      "Ben found a long rope to pull it closer."
+    ],
+    [
+      "paired_000204_B",
+      "Sam wanted to close the gate.",
+      "He found a big strong lock and a key.",
+      "Sam locked the gate to keep it safe."
+    ],
+    [
+      "paired_000205_A",
+      "Lily had a little key.",
+      "She saw a tiny lock on a box.",
+      "The key opened the lock."
+    ],
+    [
+      "paired_000205_B",
+      "Emma wanted to play with friends.",
+      "She said, \"Let's kick the ball together!\"",
+      "Everyone kicked the ball and smiled."
+    ],
+    [
+      "paired_000206_A",
+      "Leo wanted a toy on a high shelf.",
+      "He found a little stool.",
+      "Leo stood on the stool and got his toy."
+    ],
+    [
+      "paired_000206_B",
+      "Sam wanted to build a big tower with friends.",
+      "He said, \"Let's use all the big blocks!\"",
+      "They built a very tall tower together."
+    ],
+    [
+      "paired_000207_A",
+      "Sam's bird feeder was broken high up.",
+      "He found a sturdy little ladder.",
+      "Sam climbed the ladder and fixed the feeder."
+    ],
+    [
+      "paired_000207_B",
+      "Jake wanted to make a new song.",
+      "He found big and small blocks.",
+      "Jake tapped the blocks and sang a happy song."
+    ],
+    [
+      "paired_000208_A",
+      "Sara saw a big rock blocking her path.",
+      "She found a strong stick.",
+      "Sara used the stick to move the rock away."
+    ],
+    [
+      "paired_000208_B",
+      "Max wanted to play with friends at the park.",
+      "He said, \"Let's all go down the slide together!\"",
+      "Everyone giggled and slid down fast."
+    ],
+    [
+      "paired_000209_A",
+      "Sam had a little key.",
+      "He saw a tiny lock on a box.",
+      "Sam turned the key and the box opened."
+    ],
+    [
+      "paired_000209_B",
+      "Lily wanted to go outside.",
+      "The big door was closed tight.",
+      "She pushed the handle and the door swung open."
+    ],
+    [
+      "paired_000210_A",
+      "Max's toy truck had a broken wheel.",
+      "He found some strong tape in his drawer.",
+      "Max taped the wheel on and the truck rolled."
+    ],
+    [
+      "paired_000210_B",
+      "Kai wanted his favorite book from the big bag.",
+      "The bag was closed with a long zipper.",
+      "He pulled the zipper and the bag opened wide."
+    ],
+    [
+      "paired_000211_A",
+      "Zoe wanted to make a bright picture.",
+      "She got her colorful crayons and paper.",
+      "Zoe drew a happy yellow sun."
+    ],
+    [
+      "paired_000211_B",
+      "Jake's red car was stuck under the couch.",
+      "He found a long stick on the floor.",
+      "Jake used the stick to push his car out."
+    ],
+    [
+      "paired_000212_A",
+      "Sara saw Tom trying to stack blocks.",
+      "The tower kept falling down.",
+      "Sara helped Tom hold the blocks steady."
+    ],
+    [
+      "paired_000212_B",
+      "Emma wanted a drink from her special cup.",
+      "The cup was inside a big closed box.",
+      "She lifted the box lid and found her cup."
+    ],
+    [
+      "paired_000213_A",
+      "Zoe wanted to play a fun game with her friends.",
+      "She said, \"Let's all bounce the big red ball!\"",
+      "They bounced the ball and giggled together."
+    ],
+    [
+      "paired_000213_B",
+      "Kai could not reach his toy car on the high shelf.",
+      "He saw a little step stool nearby.",
+      "Kai stood on the stool and got his car down."
+    ]
+  ]

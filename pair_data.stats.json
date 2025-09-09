@@ -1,0 +1,9 @@
+{
+  "num_bases": 213,
+  "complete_pairs": 213,
+  "incomplete_pairs": 0,
+  "incomplete_bases": [],
+  "examples_generated": 2130,
+  "variants_per_target": 5,
+  "seed": 1337
+}
